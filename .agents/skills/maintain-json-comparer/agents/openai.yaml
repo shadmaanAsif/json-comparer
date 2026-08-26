@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain JSON Comparer"
+  short_description: "Safely evolve the JSON comparer project"
+  default_prompt: "Use $maintain-json-comparer to implement and verify a change to this project."

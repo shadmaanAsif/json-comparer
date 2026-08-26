@@ -1,0 +1,75 @@
+# JSON Comparer
+
+A privacy-first, standalone web application for comparing JSON API responses. It was implemented from the product, architecture, technology, and delivery specifications in `Claude/json-response-comparer/docs`. Parsing and comparison run in a Web Worker in the browser; payloads are not uploaded.
+
+See [FUNCTIONALITY.md](FUNCTIONALITY.md) for the complete implemented-functionality guide and current enhancement register.
+
+## Features
+
+- Paste or upload two JSON documents.
+- Ordered or unordered/multiset array comparison.
+- Added, removed, changed, and type-changed findings.
+- Unambiguous JSON Pointer paths plus readable display paths.
+- Exact-path implicit subtrees, single-segment (`*`) child subtrees, and explicit recursive (`**`) ignore rules.
+- Path/category filters, finding selection, and Markdown reports.
+- Input-size, depth, and finding-count limits.
+- Add data from a local file, bare HTTPS URL, or supported cURL command through an SSRF-hardened, administrator-allowlisted server endpoint.
+- Responsive, keyboard-accessible interface with reduced-motion support.
+
+Remote URL/cURL import accepts public HTTPS hosts during local development through `.env.development`. Production requires an explicit `FETCH_PROXY_ALLOWLIST`. The server enforces HTTPS/443, DNS and redirect validation, pinned resolved addresses, restricted-network denial, safe methods/headers, body/response limits, timeouts, credential stripping, and per-client rate limiting.
+
+## Development
+
+### Prerequisites
+
+- Node.js 20.9 or newer
+- pnpm 11 (`corepack enable` can provide it with supported Node.js installations)
+
+### Install and run
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+For a production run:
+
+```bash
+pnpm build
+pnpm start
+```
+
+For production, set `FETCH_PROXY_ALLOWLIST` to the exact API hostnames users may fetch. The `*` value is rejected in production and on non-loopback application origins. `NEXT_PUBLIC_MAX_DOCUMENT_BYTES` changes the per-document byte limit.
+
+Credential-bearing cURL commands are stripped of `Authorization` and `Cookie` headers by default. Only set `FETCH_PROXY_ALLOW_CREDENTIALS=true` in a controlled deployment after reviewing who can access the application and which hosts are allowlisted.
+
+## Quality checks
+
+```bash
+pnpm format:check
+pnpm standards:check
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+The reusable repository audit is documented in `.agents/skills/audit-project-standards/SKILL.md`. It checks naming, import direction, module boundaries, structure, and maintainability, then guides the manual ownership review that static checks cannot replace.
+
+## Architecture
+
+- `src/domain`: framework-independent comparison, structure, path, request parsing, and reporting logic.
+- `src/workers`: serializable worker adapter that owns parsing/comparison execution.
+- `src/features`: feature-owned React UI, hooks, browser API services, utilities, and styling.
+- `src/server`: server-only outbound-fetch policy and execution.
+- `app`: thin Next.js routes, metadata, document-level styling, and error boundary.
+
+The source specifications are retained under `docs/reference/` for implementation traceability.
+
+The implementation audit against the complete source README is in `docs/FEATURE_AUDIT.md`. The current release does not yet claim full artifact parity; that file distinguishes implemented, partial, and missing features.
+
+## Privacy and limits
+
+The application does not persist inputs. The default per-document limit is 10 MiB and can be lowered through `NEXT_PUBLIC_MAX_DOCUMENT_BYTES`. Reports can contain compared values; review them before sharing.

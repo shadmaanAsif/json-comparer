@@ -144,7 +144,7 @@ function compareObjectKeys(
       const detail =
         missingKind === "inconsistent-in-a"
           ? "This Response A item differs from the first A item."
-          : "Field exists in the Response A schema baseline but is missing here.";
+          : "Field is only in A relative to the Response B schema.";
       addStructureLeaves(valueA[key]!, [...path, key], missingKind, detail, addFinding);
     }
   }
@@ -155,7 +155,7 @@ function compareObjectKeys(
         const detail =
           missingKind === "inconsistent-in-a"
             ? "This Response A item differs from the first A item."
-            : "Field is extra relative to the Response A schema baseline.";
+            : "Field is only in B relative to the Response A schema baseline.";
         addStructureLeaves(valueB[key]!, [...path, key], kind, detail, addFinding);
       }
     }

@@ -24,7 +24,7 @@ If a command cannot run, report the exact blocker. Do not claim verification tha
 ## Scope rules
 
 - Keep JSON parsing and comparison local to the browser unless an approved requirement explicitly changes the privacy model.
-- Do not add remote URL/cURL fetching without the constitution's security gate. A `*` allowlist is local-development-only and must fail closed in production and on non-loopback origins.
+- Do not add remote URL/cURL fetching without the constitution's security gate. The `*` public-host wildcard and explicit localhost exception are local-development-only and must fail closed in production and on non-loopback origins. Localhost mode never permits private LAN or metadata targets.
 - Keep `src/domain` independent of React, Next.js, DOM, storage, logging, and network libraries.
 - Preserve explicit array modes, JSON Pointer identity, resource limits, accessible workflows, and report privacy warnings.
 - Add or update tests for every behavior change.

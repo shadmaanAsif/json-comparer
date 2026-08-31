@@ -1,0 +1,213 @@
+.ignore-path-selector {
+  position: relative;
+  min-width: 0;
+}
+
+.ignore-path-input-shell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 5px 7px;
+  background: #09131c;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ignore-path-selector.is-open .ignore-path-input-shell,
+.ignore-path-input-shell:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.ignore-path-input-shell > input {
+  flex: 1 1 190px;
+  min-width: 120px;
+  border: 0;
+  padding: 5px;
+  background: transparent;
+  color: var(--text);
+  outline: 0;
+}
+
+.ignore-path-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: min(100%, 340px);
+  min-height: 27px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 999px;
+  padding: 2px 3px 2px 9px;
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface-2));
+  color: var(--text);
+  font:
+    0.72rem/1.2 ui-monospace,
+    monospace;
+}
+
+.ignore-path-chip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  border: 0;
+  padding: 2px 0;
+  background: transparent;
+  color: inherit;
+  cursor: text;
+  font: inherit;
+}
+
+.ignore-path-chip-label > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ignore-path-edit-icon {
+  flex: none;
+  color: var(--muted);
+  font-family: sans-serif;
+  font-size: 0.8rem;
+}
+
+.ignore-path-chip-label:hover .ignore-path-edit-icon,
+.ignore-path-chip-label:focus-visible .ignore-path-edit-icon {
+  color: var(--accent);
+}
+
+.ignore-path-chip.is-editing {
+  width: min(100%, 390px);
+  max-width: 100%;
+  padding-left: 5px;
+}
+
+.ignore-path-chip-editor {
+  min-width: 80px;
+  flex: 1 1 210px;
+  border: 0;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  outline: 0;
+}
+
+.ignore-path-chip-action {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.ignore-path-chip-action.remove:hover,
+.ignore-path-chip-action.remove:focus-visible {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
+}
+
+.ignore-path-chip-action.save:hover,
+.ignore-path-chip-action.save:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.ignore-path-chip-action.cancel:hover,
+.ignore-path-chip-action.cancel:focus-visible {
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  color: var(--text);
+}
+
+.ignore-path-dropdown {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-2) 97%, black);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+}
+
+.ignore-path-options {
+  display: grid;
+  max-height: 230px;
+  overflow-y: auto;
+  padding: 5px;
+}
+
+.ignore-path-options > button,
+.ignore-path-custom-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font:
+    0.74rem/1.35 ui-monospace,
+    monospace;
+}
+
+.ignore-path-options > button:hover,
+.ignore-path-options > button.is-active,
+.ignore-path-custom-option:hover,
+.ignore-path-custom-option:focus-visible {
+  background: color-mix(in srgb, var(--accent) 13%, var(--surface));
+}
+
+.ignore-path-options > button small {
+  color: var(--accent);
+  font-family: inherit;
+  font-weight: 800;
+}
+
+.ignore-path-options > p {
+  margin: 0;
+  padding: 14px 10px;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.ignore-path-custom-option {
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--muted);
+}
+
+.ignore-path-custom-option strong {
+  overflow: hidden;
+  color: var(--accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .ignore-path-input-shell {
+  background: #f8fbfc;
+}
+
+[data-theme="light"] .ignore-path-dropdown {
+  background: #ffffff;
+}

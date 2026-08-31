@@ -1,6 +1,6 @@
 # JSON Comparer Constitution
 
-Version: 2.0.1
+Version: 2.1.0
 Ratified: 2026-08-21
 Applies to: humans, coding agents, automated agents, repository-local skills, and generated changes.
 
@@ -57,6 +57,8 @@ Remote URL/cURL import is prohibited until all of the following exist and are re
 - abort behavior, stable safe errors, abuse monitoring, and focused SSRF tests.
 
 If the hosting platform cannot enforce these controls, restrict targets to an administrator allowlist or omit the feature. Production deployments never permit a generic fetch proxy. A local-development-only `*` target policy is permitted when it is rejected in production and on non-loopback application origins, while all address, DNS pinning, redirect, method/header, credential, timeout, size, and rate controls remain active.
+
+An explicitly configured local-development exception may fetch HTTP or HTTPS only from the exact loopback targets `localhost`, `127.0.0.1`, and `::1`. It must fail closed in production and on non-loopback application origins, require localhost DNS to resolve exclusively to loopback addresses, revalidate every redirect, and continue blocking private LAN, link-local, metadata, multicast, reserved, and public HTTP targets. This exception is for comparing APIs running on the same development machine and must remain independently reversible.
 
 Accounts, sharing, and cloud persistence additionally require explicit tenancy, authorization, retention/deletion, encryption, audit, backup/restore, and IDOR-test requirements.
 
@@ -119,5 +121,6 @@ Every amendment includes rationale, affected requirements/architecture/tests, mi
 
 ## Amendment record
 
+- 2.1.0 (2026-08-26): With explicit user approval, permits an opt-in local-development exception for HTTP/HTTPS loopback APIs. Production, non-loopback app origins, private LAN, metadata, deceptive DNS, and public HTTP remain prohibited. See `docs/decisions/ADR-002-localhost-fetch.md`.
 - 2.0.1 (2026-08-26): Renamed the project and product from JSON Response Comparer to JSON Comparer with explicit user approval. This naming-only amendment changes no behavior, privacy, security, architecture, or rollout requirements.
 - 2.0.0 (2026-08-25): With explicit user approval, permits a reversible local-development wildcard for public HTTPS targets. Production and non-loopback use remain prohibited; all SSRF controls remain mandatory. See `docs/decisions/ADR-001-local-fetch-wildcard.md`.

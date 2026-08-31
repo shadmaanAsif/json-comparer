@@ -9,6 +9,13 @@ describe("parseCurlCommand", () => {
       headers: {},
       body: null
     }));
+  it("parses a bare localhost HTTP URL for the server-side development policy", () =>
+    expect(parseCurlCommand("http://localhost:8080/data")).toEqual({
+      url: "http://localhost:8080/data",
+      method: "GET",
+      headers: {},
+      body: null
+    }));
   it("parses realistic copied cURL commands", () =>
     expect(
       parseCurlCommand(

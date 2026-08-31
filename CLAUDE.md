@@ -40,7 +40,7 @@ Create a hook only when it owns a reusable stateful lifecycle. Create a service 
 - `Comparer.tsx` composes the workflow, owns top-level state, and coordinates worker/API/browser side effects.
 - `components/JsonInputPane.tsx` owns one JSON editor surface and its navigation/highlight presentation.
 - `components/ComparisonControls.tsx` owns comparison settings and action controls.
-- `components/ComparisonResults.tsx` owns result filtering, sections, selection, and review presentation.
+- `utils/result-projections.ts` owns pure result filtering and count projections; `components/ComparisonResults.tsx` owns sections, selection, and review presentation.
 - `components/ExportPreview.tsx` owns the report-preview surface.
 - `comparer.css` owns comparer-specific styling; `app/globals.css` is limited to theme tokens and document-level defaults.
 - `services/remote-fetch.ts` is the browser-to-API boundary.

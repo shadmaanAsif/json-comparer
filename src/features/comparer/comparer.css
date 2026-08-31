@@ -1,3 +1,5 @@
+@import "./components/ignore-path-selector.css";
+
 .hero {
   display: flex;
   justify-content: space-between;
@@ -546,6 +548,9 @@
     12px/1.65 ui-monospace,
     monospace;
 }
+.tree-with-navigation {
+  position: relative;
+}
 [data-theme="light"] .json-tree {
   background: #f8fbfc;
 }
@@ -559,6 +564,54 @@
 }
 .tree-leaf {
   margin-left: 24px;
+}
+.tree-highlight {
+  --tree-highlight-color: var(--changed);
+  margin-block: 2px;
+  border-radius: 5px;
+  padding: 2px 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tree-highlight-color) 24%, transparent),
+    color-mix(in srgb, var(--tree-highlight-color) 8%, transparent) 72%,
+    transparent
+  );
+  box-shadow: inset 3px 0 var(--tree-highlight-color);
+}
+.input-panel[data-side="A"] .tree-highlight-missing {
+  --tree-highlight-color: var(--removed);
+}
+.input-panel[data-side="B"] .tree-highlight-missing {
+  --tree-highlight-color: var(--added);
+}
+.tree-highlight-structure {
+  --tree-highlight-color: var(--type);
+}
+.tree-highlight-differences {
+  --tree-highlight-color: var(--changed);
+}
+.tree-highlight-invalid {
+  --tree-highlight-color: var(--danger);
+}
+.tree-highlight.is-active {
+  outline: 1px solid color-mix(in srgb, var(--tree-highlight-color) 82%, white);
+  outline-offset: 1px;
+  filter: saturate(1.2) brightness(1.12);
+}
+.tree-highlight-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  border: 1px solid color-mix(in srgb, var(--tree-highlight-color) 68%, transparent);
+  border-radius: 999px;
+  padding: 0 6px;
+  background: color-mix(in srgb, var(--tree-highlight-color) 14%, var(--surface));
+  color: color-mix(in srgb, var(--tree-highlight-color) 82%, white);
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.45;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .tree-key {
   color: #78b8e8;
@@ -728,8 +781,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
+  align-items: start;
 }
-.ignore-field-controls input,
 .results-toolbar input[type="search"] {
   width: 100%;
   border: 1px solid var(--border);
@@ -739,6 +792,7 @@
 }
 .ignore-field-controls .secondary-button {
   min-width: 74px;
+  min-height: 42px;
 }
 .primary-actions {
   display: flex;
@@ -793,6 +847,15 @@
   gap: 9px;
   flex-wrap: wrap;
   margin-bottom: 18px;
+}
+.comparison-outcome {
+  margin: -4px 0 18px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+.comparison-outcome strong {
+  color: var(--text);
+  font-size: 0.94rem;
 }
 .summary-chip {
   border: 1px solid var(--border);
@@ -884,6 +947,30 @@
   color: var(--muted);
   font-size: 0.76rem;
   white-space: nowrap;
+}
+.structure-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+.structure-filter-bar > span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+.structure-only-a-chip[aria-pressed="true"] {
+  border-color: var(--removed);
+  background: color-mix(in srgb, var(--removed) 17%, var(--surface));
+  color: var(--removed);
+}
+.structure-only-b-chip[aria-pressed="true"] {
+  border-color: var(--added);
+  background: color-mix(in srgb, var(--added) 17%, var(--surface));
+  color: var(--added);
 }
 .table-scroll {
   overflow-x: auto;
@@ -1315,6 +1402,10 @@ footer {
   .filter-chip-group .select-chip {
     flex: 1 1 auto;
     justify-content: center;
+  }
+  .structure-filter-bar {
+    align-items: flex-start;
+    flex-direction: column;
   }
   .input-panel {
     padding: 15px;

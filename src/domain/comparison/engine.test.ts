@@ -97,7 +97,7 @@ describe("compareJson", () => {
     );
   });
 
-  it("reports a deeply nested field missing in A at its exact leaf path", () => {
+  it("reports a deeply nested field only in B at its exact leaf path", () => {
     const result = compareJson(
       { data: { config: { countries: [{ code: "AE" }] } } },
       { data: { config: { countries: [{ code: "AE", phone: "+971" }] } } }

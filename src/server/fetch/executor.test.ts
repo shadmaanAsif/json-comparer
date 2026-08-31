@@ -1,12 +1,18 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { createPinnedLookup, executeSecureFetch, type RawResponse } from "./executor";
+import {
+  createPinnedLookup,
+  executeSecureFetch,
+  type FetchPolicy,
+  type RawResponse
+} from "./executor";
 
 const publicResolver = async (hostname: string) => [
   { address: hostname === "private.example.com" ? "127.0.0.1" : "1.1.1.1", family: 4 }
 ];
 const basePolicy = {
   allowlist: ["*.example.com"],
+  allowLocalhost: false,
   allowCredentials: false,
   timeoutMs: 1000,
   maxResponseBytes: 1024,
@@ -60,6 +66,34 @@ describe("executeSecureFetch", () => {
         { ...basePolicy, requester }
       )
     ).rejects.toThrow("not approved");
+  });
+  it("allows a revalidated redirect to loopback only under the localhost policy", async () => {
+    const requester = vi
+      .fn<NonNullable<FetchPolicy["requester"]>>()
+      .mockResolvedValueOnce({
+        status: 302,
+        statusText: "Found",
+        headers: { location: "http://localhost:8080/result" },
+        bodyText: ""
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        bodyText: '{"local":true}'
+      });
+    const resolver = async (hostname: string) => [
+      { address: hostname === "localhost" ? "127.0.0.1" : "1.1.1.1", family: 4 }
+    ];
+
+    await expect(
+      executeSecureFetch(
+        { url: "https://api.example.com", method: "GET", headers: {}, body: null },
+        { ...basePolicy, allowLocalhost: true, resolver, requester }
+      )
+    ).resolves.toMatchObject({ bodyText: '{"local":true}', isJson: true });
+    expect(requester).toHaveBeenCalledTimes(2);
+    expect(requester.mock.calls[1]?.[1].url.toString()).toBe("http://localhost:8080/result");
   });
   it("returns non-2xx bodies and detects JSON by parsing", async () => {
     const requester = async (): Promise<RawResponse> => ({

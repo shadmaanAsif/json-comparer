@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { executeSecureFetch } from "@/server/fetch/executor";
 import { checkRateLimit } from "@/server/fetch/rate-limit";
-import { configuredAllowlist, ProxyError } from "@/server/fetch/security";
+import { configuredAllowlist, isLocalhostTarget, ProxyError } from "@/server/fetch/security";
 
 export const runtime = "nodejs";
 const MAX_REQUEST_BYTES = 256 * 1024;
@@ -44,20 +44,19 @@ export async function POST(request: Request) {
   try {
     const input = schema.parse(await request.json());
     const allowlist = configuredAllowlist();
-    if (allowlist.includes("*")) {
+    const allowLocalhost = process.env.FETCH_PROXY_ALLOW_LOCALHOST === "true";
+    if (allowlist.includes("*") || allowLocalhost) {
       const inboundHost = new URL(request.url).hostname;
-      if (
-        process.env.NODE_ENV === "production" ||
-        !["localhost", "127.0.0.1", "::1"].includes(inboundHost)
-      )
+      if (process.env.NODE_ENV === "production" || !isLocalhostTarget(inboundHost))
         throw new ProxyError(
           "blocked_target",
-          "Wildcard remote fetch is available only from a local development server.",
+          "Development remote-fetch exceptions are available only from a local development server.",
           403
         );
     }
     const result = await executeSecureFetch(input, {
       allowlist,
+      allowLocalhost,
       allowCredentials: process.env.FETCH_PROXY_ALLOW_CREDENTIALS === "true",
       timeoutMs: numberEnv("FETCH_PROXY_TIMEOUT_MS", 10_000, 1000, 30_000),
       maxResponseBytes: numberEnv(

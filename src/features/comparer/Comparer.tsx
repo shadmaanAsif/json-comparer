@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { displayPath, parseIgnorePatterns } from "@/domain/comparison/path";
+import type { DisplayLineMaps } from "@/domain/comparison/display-format";
+import { displayPath } from "@/domain/comparison/path";
 import type { ArrayMode, ComparisonOptions, ComparisonResult } from "@/domain/comparison/types";
 import { createMarkdownReport } from "@/domain/reporting/markdown";
 import type { WorkerRequest, WorkerResponse } from "@/workers/comparison.worker";
@@ -17,13 +18,16 @@ import type { ExportPreviewData, ResponseSide, ReviewNote, WorkspaceStatus } fro
 import { alignValidInputText } from "./utils/display-alignment";
 import { downloadMarkdown } from "./utils/download";
 import { createLineHighlights } from "./utils/line-highlights";
+import { formatComparisonOutcome, projectComparisonResult } from "./utils/result-projections";
 
 export function Comparer() {
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
   const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
-  const [ignoreText, setIgnoreText] = useState("");
+  const [ignorePaths, setIgnorePaths] = useState<string[]>([]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [displayLineMaps, setDisplayLineMaps] = useState<DisplayLineMaps | null>(null);
+  const [comparisonDurationMs, setComparisonDurationMs] = useState<number | null>(null);
   const [status, setStatus] = useState<WorkspaceStatus>({
     tone: "idle",
     message: "Ready to compare."
@@ -31,8 +35,10 @@ export function Comparer() {
   const [busy, setBusy] = useState(false);
   const [pathFilter, setPathFilter] = useState("");
   const [showIgnored, setShowIgnored] = useState(false);
-  const [showOnlyA, setShowOnlyA] = useState(true);
-  const [showOnlyB, setShowOnlyB] = useState(true);
+  const [showOnlyInA, setShowOnlyInA] = useState(true);
+  const [showOnlyInB, setShowOnlyInB] = useState(true);
+  const [showStructureOnlyInA, setShowStructureOnlyInA] = useState(true);
+  const [showStructureOnlyInB, setShowStructureOnlyInB] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalSide, setModalSide] = useState<ResponseSide | null>(null);
   const [curlA, setCurlA] = useState<string | null>(null);
@@ -73,11 +79,11 @@ export function Comparer() {
   const options: ComparisonOptions = useMemo(
     () => ({
       arrayMode,
-      ignorePatterns: parseIgnorePatterns(ignoreText),
+      ignorePatterns: ignorePaths,
       maxDepth: 256,
       maxFindings: 100_000
     }),
-    [arrayMode, ignoreText]
+    [arrayMode, ignorePaths]
   );
 
   const updateImportedInput = (side: ResponseSide, raw: string) => {
@@ -87,41 +93,64 @@ export function Comparer() {
     setTextA(aligned?.textA ?? nextA);
     setTextB(aligned?.textB ?? nextB);
     setResult(null);
+    setDisplayLineMaps(null);
+    setComparisonDurationMs(null);
   };
 
   const updateTypedInput = (side: ResponseSide, raw: string) => {
     if (side === "A") setTextA(raw);
     else setTextB(raw);
     setResult(null);
+    setDisplayLineMaps(null);
+    setComparisonDurationMs(null);
   };
 
-  const visibleFindings = useMemo(
+  const resultProjection = useMemo(
     () =>
-      (result?.findings ?? []).filter((finding) => {
-        if (!showIgnored && finding.ignored) return false;
-        if (
-          pathFilter &&
-          !displayPath(finding.path).toLowerCase().includes(pathFilter.toLowerCase())
-        )
-          return false;
-        return true;
-      }),
-    [pathFilter, result, showIgnored]
+      result
+        ? projectComparisonResult(result, {
+            path: pathFilter,
+            showOnlyInA,
+            showOnlyInB,
+            showIgnored,
+            showStructureOnlyInA,
+            showStructureOnlyInB
+          })
+        : null,
+    [
+      pathFilter,
+      result,
+      showIgnored,
+      showOnlyInA,
+      showOnlyInB,
+      showStructureOnlyInA,
+      showStructureOnlyInB
+    ]
   );
-  const missingInA = visibleFindings.filter((finding) => finding.kind === "added" && showOnlyB);
-  const missingInB = visibleFindings.filter((finding) => finding.kind === "removed" && showOnlyA);
-  const modifiedFindings = visibleFindings.filter(
-    (finding) => finding.kind === "changed" || finding.kind === "type-changed"
-  );
-  const differenceFindings = [...missingInA, ...missingInB, ...modifiedFindings];
-  const structureFindings = (result?.structure ?? []).filter(
-    (finding) =>
-      (showIgnored || !finding.ignored) &&
-      (!pathFilter || displayPath(finding.path).toLowerCase().includes(pathFilter.toLowerCase()))
+  const ignorePathSuggestions = useMemo(
+    () =>
+      [...new Set((result?.findings ?? []).map((finding) => displayPath(finding.path)))].filter(
+        (path) => path !== "(root)"
+      ),
+    [result]
   );
   const lineHighlights = useMemo(
-    () => createLineHighlights(result, textA, textB, highlightToggles),
-    [highlightToggles, result, textA, textB]
+    () => createLineHighlights(resultProjection, textA, textB, highlightToggles, displayLineMaps),
+    [displayLineMaps, highlightToggles, resultProjection, textA, textB]
+  );
+  const displayedStatus = useMemo<WorkspaceStatus>(
+    () =>
+      status.source === "comparison" && resultProjection && comparisonDurationMs !== null
+        ? {
+            tone: "success",
+            source: "comparison",
+            message: formatComparisonOutcome(
+              resultProjection.counts.differences,
+              comparisonDurationMs
+            )
+          }
+        : status,
+    [comparisonDurationMs, resultProjection, status]
   );
 
   const stopWorker = () => {
@@ -131,7 +160,7 @@ export function Comparer() {
     setBusy(false);
   };
 
-  const runComparison = () => {
+  const runComparison = (overrideIgnorePaths?: string[]) => {
     stopWorker();
     const jobId = crypto.randomUUID();
     activeJobRef.current = jobId;
@@ -148,21 +177,21 @@ export function Comparer() {
       activeJobRef.current = null;
       if (!event.data.ok) {
         setResult(null);
+        setDisplayLineMaps(null);
         setStatus({ tone: "error", message: event.data.error });
         return;
       }
       setTextA(event.data.formattedA);
       setTextB(event.data.formattedB);
       setResult(event.data.result);
-      const actionable = event.data.result.findings.length - event.data.result.ignoredCount;
-      setStatus({
-        tone: "success",
-        message: `${actionable} actionable difference${actionable === 1 ? "" : "s"} found in ${event.data.durationMs.toFixed(1)} ms.`
-      });
+      setDisplayLineMaps(event.data.lineMaps);
+      setComparisonDurationMs(event.data.durationMs);
+      setStatus({ tone: "success", source: "comparison", message: "Comparison complete." });
     };
     worker.onerror = () => {
       stopWorker();
       setResult(null);
+      setDisplayLineMaps(null);
       setStatus({
         tone: "error",
         message: "The comparison worker stopped unexpectedly. Your inputs are still available."
@@ -172,7 +201,12 @@ export function Comparer() {
       jobId,
       textA,
       textB,
-      options,
+      options: overrideIgnorePaths
+        ? {
+            ...options,
+            ignorePatterns: overrideIgnorePaths
+          }
+        : options,
       maxBytes: MAX_DOCUMENT_BYTES
     } satisfies WorkerRequest);
   };
@@ -182,6 +216,8 @@ export function Comparer() {
     setTextA("");
     setTextB("");
     setResult(null);
+    setDisplayLineMaps(null);
+    setComparisonDurationMs(null);
     setSelected(new Set());
     setNotes({});
     setCurlA(null);
@@ -194,8 +230,7 @@ export function Comparer() {
     if (!raw.trim()) return;
     try {
       const formatted = JSON.stringify(JSON.parse(raw), null, 2);
-      if (side === "A") setTextA(formatted);
-      else setTextB(formatted);
+      updateImportedInput(side, formatted);
       setStatus({ tone: "success", message: `Response ${side} prettified.` });
     } catch (error) {
       setStatus({
@@ -308,6 +343,8 @@ export function Comparer() {
     setTextA(aligned?.textA ?? SAMPLE_A);
     setTextB(aligned?.textB ?? SAMPLE_B);
     setResult(null);
+    setDisplayLineMaps(null);
+    setComparisonDurationMs(null);
     setStatus({
       tone: "idle",
       message: "Sample loaded and aligned. Choose an array mode and compare."
@@ -416,38 +453,51 @@ export function Comparer() {
 
         <ComparisonControls
           arrayMode={arrayMode}
-          ignorePathsText={ignoreText}
+          ignorePaths={ignorePaths}
+          ignorePathSuggestions={ignorePathSuggestions}
           highlightVisibility={highlightToggles}
           isComparing={busy}
-          status={status}
+          status={displayedStatus}
           onArrayModeChange={setArrayMode}
-          onIgnorePathsTextChange={setIgnoreText}
-          onApplyIgnorePaths={runComparison}
+          onIgnorePathsChange={setIgnorePaths}
+          onApplyIgnorePaths={(paths) => runComparison(paths)}
           onHighlightVisibilityChange={setHighlightToggles}
-          onCompare={runComparison}
+          onCompare={() => runComparison()}
           onCancel={cancelComparison}
           onLoadSample={loadSample}
           onClear={clearWorkspace}
         />
       </section>
 
-      {result && (
+      {result && resultProjection && comparisonDurationMs !== null && (
         <ComparisonResults
           result={result}
-          visibleFindingCount={visibleFindings.length}
-          missingInA={missingInA}
-          missingInB={missingInB}
-          differences={differenceFindings}
-          structureFindings={structureFindings}
+          counts={resultProjection.counts}
+          comparisonDurationMs={comparisonDurationMs}
+          onlyInA={resultProjection.onlyInA}
+          onlyInB={resultProjection.onlyInB}
+          differences={resultProjection.differences}
+          structureFindings={resultProjection.structureFindings}
           selectedFindingIds={selected}
           notesByFindingId={notes}
-          filters={{ path: pathFilter, showOnlyA, showOnlyB, showIgnored }}
+          filters={{
+            path: pathFilter,
+            showOnlyInA,
+            showOnlyInB,
+            showIgnored,
+            showStructureOnlyInA,
+            showStructureOnlyInB
+          }}
           sections={expandedSections}
           onFiltersChange={(patch) => {
             if (patch.path !== undefined) setPathFilter(patch.path);
-            if (patch.showOnlyA !== undefined) setShowOnlyA(patch.showOnlyA);
-            if (patch.showOnlyB !== undefined) setShowOnlyB(patch.showOnlyB);
+            if (patch.showOnlyInA !== undefined) setShowOnlyInA(patch.showOnlyInA);
+            if (patch.showOnlyInB !== undefined) setShowOnlyInB(patch.showOnlyInB);
             if (patch.showIgnored !== undefined) setShowIgnored(patch.showIgnored);
+            if (patch.showStructureOnlyInA !== undefined)
+              setShowStructureOnlyInA(patch.showStructureOnlyInA);
+            if (patch.showStructureOnlyInB !== undefined)
+              setShowStructureOnlyInB(patch.showStructureOnlyInB);
           }}
           onSectionsChange={(patch) => setExpandedSections((current) => ({ ...current, ...patch }))}
           onToggleAllSections={toggleAllResultSections}
@@ -479,8 +529,9 @@ export function Comparer() {
 
       <footer>
         <p>
-          Remote URL and cURL import uses the server&apos;s HTTPS allowlist and SSRF protection.
-          Credentials are stripped unless explicitly enabled by the administrator.
+          URL and cURL import uses server-side target restrictions and SSRF protection. Public
+          targets require HTTPS; localhost requires the explicit development setting. Credentials
+          are stripped unless enabled by the administrator.
         </p>
       </footer>
       {showScrollTop && (

@@ -3,13 +3,16 @@ import { buildLineMap } from "./line-map";
 import { toJsonPointer } from "./path";
 import type { JsonValue, PathSegment } from "./types";
 
-export interface AlignedDisplayText {
-  textA: string;
-  textB: string;
+export interface DisplayLineMaps {
   lineMapA: Record<string, number>;
   lineMapB: Record<string, number>;
   placeholderLineMapA: Record<string, number>;
   placeholderLineMapB: Record<string, number>;
+}
+
+export interface AlignedDisplayText extends DisplayLineMaps {
+  textA: string;
+  textB: string;
 }
 
 interface DisplayLine {

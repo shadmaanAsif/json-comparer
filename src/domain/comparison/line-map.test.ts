@@ -26,4 +26,21 @@ describe("line map", () => {
     expect(map["/1"]).toBe(4);
     expect(map["/2"]).toBeUndefined();
   });
+
+  it("preserves nested object context across alignment gap lines", () => {
+    const map = buildLineMap(
+      [
+        "{",
+        '  "showGeo": {',
+        '    "showFaqs": true,',
+        "",
+        '    "showMediaMentions": false',
+        "  }",
+        "}"
+      ].join("\n")
+    );
+
+    expect(map["/showGeo/showMediaMentions"]).toBe(5);
+    expect(map["/showMediaMentions"]).toBeUndefined();
+  });
 });

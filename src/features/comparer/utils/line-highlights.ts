@@ -1,7 +1,8 @@
-import { formatAlignedForDisplay } from "@/domain/comparison/display-format";
+import { formatAlignedForDisplay, type DisplayLineMaps } from "@/domain/comparison/display-format";
 import { buildLineMap, nearestMappedLine } from "@/domain/comparison/line-map";
-import type { ComparisonResult, JsonValue } from "@/domain/comparison/types";
+import type { JsonValue } from "@/domain/comparison/types";
 import type { HighlightCategory } from "../types";
+import type { ComparisonResultProjection } from "./result-projections";
 
 export interface HighlightToggles {
   missing: boolean;
@@ -14,14 +15,19 @@ export interface LineHighlights {
   b: Record<number, HighlightCategory>;
 }
 
-interface DisplayLineMaps {
-  lineMapA: Record<string, number>;
-  lineMapB: Record<string, number>;
-  placeholderLineMapA: Record<string, number>;
-  placeholderLineMapB: Record<string, number>;
-}
+const HIGHLIGHT_PRIORITY: Record<HighlightCategory, number> = {
+  invalid: 4,
+  structure: 3,
+  differences: 2,
+  missing: 1
+};
 
-function displayLineMaps(textA: string, textB: string): DisplayLineMaps {
+function resolveDisplayLineMaps(
+  textA: string,
+  textB: string,
+  exactLineMaps?: DisplayLineMaps | null
+): DisplayLineMaps {
+  if (exactLineMaps) return exactLineMaps;
   const fallback = {
     lineMapA: buildLineMap(textA),
     lineMapB: buildLineMap(textB),
@@ -40,54 +46,55 @@ function displayLineMaps(textA: string, textB: string): DisplayLineMaps {
 }
 
 export function createLineHighlights(
-  result: ComparisonResult | null,
+  projection: ComparisonResultProjection | null,
   textA: string,
   textB: string,
-  toggles: HighlightToggles
+  toggles: HighlightToggles,
+  exactLineMaps?: DisplayLineMaps | null
 ): LineHighlights {
   const a: Record<number, HighlightCategory> = {};
   const b: Record<number, HighlightCategory> = {};
-  if (!result) return { a, b };
+  if (!projection) return { a, b };
 
-  const { lineMapA, lineMapB, placeholderLineMapA, placeholderLineMapB } = displayLineMaps(
+  const { lineMapA, lineMapB, placeholderLineMapA, placeholderLineMapB } = resolveDisplayLineMaps(
     textA,
-    textB
+    textB,
+    exactLineMaps
   );
   const mark = (
     target: Record<number, HighlightCategory>,
     line: number | undefined,
     category: HighlightCategory
   ) => {
-    if (line && !target[line]) target[line] = category;
+    if (line && (!target[line] || HIGHLIGHT_PRIORITY[category] > HIGHLIGHT_PRIORITY[target[line]]))
+      target[line] = category;
   };
 
   if (toggles.missing)
-    for (const finding of result.findings)
-      if (!finding.ignored) {
-        if (finding.kind === "removed") {
-          mark(a, nearestMappedLine(finding.pointer, lineMapA), "missing");
-          mark(b, nearestMappedLine(finding.pointer, placeholderLineMapB), "missing");
-        }
-        if (finding.kind === "added") {
-          mark(b, nearestMappedLine(finding.pointer, lineMapB), "missing");
-          mark(a, nearestMappedLine(finding.pointer, placeholderLineMapA), "missing");
-        }
+    for (const finding of [...projection.onlyInA, ...projection.onlyInB]) {
+      if (finding.kind === "removed") {
+        mark(a, nearestMappedLine(finding.pointer, lineMapA), "missing");
+        mark(b, nearestMappedLine(finding.pointer, placeholderLineMapB), "missing");
       }
+      if (finding.kind === "added") {
+        mark(b, nearestMappedLine(finding.pointer, lineMapB), "missing");
+        mark(a, nearestMappedLine(finding.pointer, placeholderLineMapA), "missing");
+      }
+    }
   if (toggles.structure)
-    for (const finding of result.structure)
-      if (!finding.ignored) {
-        if (finding.kind === "extra-in-b") {
-          mark(b, nearestMappedLine(finding.pointer, lineMapB), "structure");
-          mark(a, nearestMappedLine(finding.pointer, placeholderLineMapA), "structure");
-        } else {
-          mark(a, nearestMappedLine(finding.pointer, lineMapA), "structure");
-          if (finding.kind === "missing-in-b")
-            mark(b, nearestMappedLine(finding.pointer, placeholderLineMapB), "structure");
-        }
+    for (const finding of projection.structureFindings) {
+      if (finding.kind === "extra-in-b") {
+        mark(b, nearestMappedLine(finding.pointer, lineMapB), "structure");
+        mark(a, nearestMappedLine(finding.pointer, placeholderLineMapA), "structure");
+      } else {
+        mark(a, nearestMappedLine(finding.pointer, lineMapA), "structure");
+        if (finding.kind === "missing-in-b")
+          mark(b, nearestMappedLine(finding.pointer, placeholderLineMapB), "structure");
       }
+    }
   if (toggles.differences)
-    for (const finding of result.findings)
-      if (!finding.ignored && (finding.kind === "changed" || finding.kind === "type-changed")) {
+    for (const finding of projection.differences)
+      if (finding.kind === "changed" || finding.kind === "type-changed") {
         mark(a, nearestMappedLine(finding.pointer, lineMapA), "differences");
         mark(b, nearestMappedLine(finding.pointer, lineMapB), "differences");
       }

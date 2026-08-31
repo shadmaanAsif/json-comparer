@@ -19,6 +19,31 @@ export interface ResolvedTarget {
   family: 4 | 6;
 }
 export type Resolver = (hostname: string) => Promise<Array<{ address: string; family: number }>>;
+export interface TargetResolutionOptions {
+  allowLocalhost?: boolean;
+  resolver?: Resolver;
+}
+
+function normalizeHostname(hostname: string): string {
+  return hostname.toLowerCase().replace(/^\[|\]$/g, "");
+}
+
+export function isLoopbackAddress(address: string): boolean {
+  const normalized = normalizeHostname(address).split("%")[0]!;
+  if (normalized === "::1") return true;
+  if (normalized.startsWith("::ffff:")) return isLoopbackAddress(normalized.slice(7));
+  const parts = normalized.split(".").map(Number);
+  return (
+    parts.length === 4 &&
+    parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) &&
+    parts[0] === 127
+  );
+}
+
+export function isLocalhostTarget(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+}
 
 export function isBlockedAddress(address: string): boolean {
   const normalized = address.toLowerCase().split("%")[0]!;
@@ -63,28 +88,35 @@ export function configuredAllowlist(): string[] {
 export async function resolveSafeTarget(
   rawUrl: string,
   allowlist: string[],
-  resolver: Resolver = async (hostname) => lookup(hostname, { all: true, verbatim: true })
+  options: TargetResolutionOptions = {}
 ): Promise<ResolvedTarget> {
+  const resolver: Resolver =
+    options.resolver ?? (async (hostname) => lookup(hostname, { all: true, verbatim: true }));
   let url: URL;
   try {
     url = new URL(rawUrl);
   } catch {
     throw new ProxyError("invalid_request", "Enter a valid absolute HTTPS URL.");
   }
-  if (url.protocol !== "https:")
-    throw new ProxyError("blocked_target", "Only HTTPS targets are allowed.");
+  const hostname = normalizeHostname(url.hostname);
+  const localhostTarget = options.allowLocalhost === true && isLocalhostTarget(hostname);
+  if (url.protocol !== "https:" && !(localhostTarget && url.protocol === "http:"))
+    throw new ProxyError(
+      "blocked_target",
+      "Only HTTPS targets are allowed. Localhost HTTP requires the development-only server setting."
+    );
   if (url.username || url.password)
     throw new ProxyError("blocked_target", "Credentials in URLs are not allowed.");
-  if (url.port && url.port !== "443")
+  if (!localhostTarget && url.port && url.port !== "443")
     throw new ProxyError("blocked_target", "Only HTTPS port 443 is allowed.");
-  const hostname = url.hostname.toLowerCase();
-  if (!allowlist.length)
+  if (!localhostTarget && !allowlist.length)
     throw new ProxyError(
       "blocked_target",
       "Remote fetch is disabled until FETCH_PROXY_ALLOWLIST is configured.",
       503
     );
   if (
+    !localhostTarget &&
     !allowlist.some(
       (entry) =>
         entry === "*" ||
@@ -100,13 +132,24 @@ export async function resolveSafeTarget(
   const records = isIP(hostname)
     ? [{ address: hostname, family: isIP(hostname) }]
     : await resolver(hostname);
-  if (!records.length || records.some((record) => isBlockedAddress(record.address)))
+  if (localhostTarget) {
+    if (!records.length || records.some((record) => !isLoopbackAddress(record.address)))
+      throw new ProxyError(
+        "blocked_target",
+        "The localhost target did not resolve exclusively to a loopback network address.",
+        403
+      );
+  } else if (!records.length || records.some((record) => isBlockedAddress(record.address)))
     throw new ProxyError(
       "blocked_target",
       "The target resolved to a restricted network address.",
       403
     );
-  const chosen = records[0]!;
+  const chosen =
+    localhostTarget && hostname === "localhost"
+      ? (records.find((record) => record.family === 4 && isLoopbackAddress(record.address)) ??
+        records[0]!)
+      : records[0]!;
   return { url, address: chosen.address, family: chosen.family === 6 ? 6 : 4 };
 }
 

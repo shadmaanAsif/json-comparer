@@ -10,12 +10,12 @@ export function buildLineMap(formattedJson: string): Record<string, number> {
     stack.push({ path: [], indent: -1, array: root === "[", index: 0 });
   for (let lineIndex = 1; lineIndex < lines.length; lineIndex += 1) {
     const line = lines[lineIndex]!;
+    const trimmed = line.trim().replace(/,$/, "");
+    if (!trimmed) continue;
     const indent = line.match(/^\s*/)?.[0].length ?? 0;
     while (stack.length > 1 && indent <= stack.at(-1)!.indent) stack.pop();
     const parent = stack.at(-1);
     if (!parent) continue;
-    const trimmed = line.trim().replace(/,$/, "");
-    if (!trimmed) continue;
     if (trimmed === "}" || trimmed === "]") continue;
     const property = trimmed.match(/^"((?:\\.|[^"])*)":\s*(.*)$/);
     let path: PathSegment[];

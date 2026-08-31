@@ -3,13 +3,19 @@
 import { displayPath } from "@/domain/comparison/path";
 import type { ComparisonResult, Finding, StructureFinding } from "@/domain/comparison/types";
 import type { ReviewNote, ReviewNoteStatus } from "../types";
+import {
+  formatComparisonOutcome,
+  type ComparisonProjectionCounts
+} from "../utils/result-projections";
 import { ValueCell } from "./ValueCell";
 
 export interface ResultFilters {
   path: string;
-  showOnlyA: boolean;
-  showOnlyB: boolean;
+  showOnlyInA: boolean;
+  showOnlyInB: boolean;
   showIgnored: boolean;
+  showStructureOnlyInA: boolean;
+  showStructureOnlyInB: boolean;
 }
 
 export interface ResultSectionState {
@@ -20,9 +26,10 @@ export interface ResultSectionState {
 
 export interface ComparisonResultsProps {
   result: ComparisonResult;
-  visibleFindingCount: number;
-  missingInA: Finding[];
-  missingInB: Finding[];
+  counts: ComparisonProjectionCounts;
+  comparisonDurationMs: number;
+  onlyInA: Finding[];
+  onlyInB: Finding[];
   differences: Finding[];
   structureFindings: StructureFinding[];
   selectedFindingIds: ReadonlySet<string>;
@@ -38,14 +45,14 @@ export interface ComparisonResultsProps {
 }
 
 function findingLabel(finding: Finding) {
-  if (finding.kind === "added") return "Missing in A";
-  if (finding.kind === "removed") return "Missing in B";
+  if (finding.kind === "added") return "Only in B";
+  if (finding.kind === "removed") return "Only in A";
   return "Modified";
 }
 
 function structureLabel(kind: StructureFinding["kind"]) {
-  if (kind === "extra-in-b") return "Missing in A";
-  if (kind === "missing-in-b") return "Missing in B";
+  if (kind === "extra-in-b") return "Only in B";
+  if (kind === "missing-in-b") return "Only in A";
   if (kind === "inconsistent-in-a") return "Inconsistent in A";
   return "A has no schema item";
 }
@@ -61,9 +68,10 @@ const REVIEW_STATUS_OPTIONS: ReadonlyArray<{
 
 export function ComparisonResults({
   result,
-  visibleFindingCount,
-  missingInA,
-  missingInB,
+  counts,
+  comparisonDurationMs,
+  onlyInA,
+  onlyInB,
   differences,
   structureFindings,
   selectedFindingIds,
@@ -77,7 +85,7 @@ export function ComparisonResults({
   onToggleSelected,
   onNoteChange
 }: ComparisonResultsProps) {
-  const missingFindings = [...missingInA, ...missingInB];
+  const missingFindings = [...onlyInA, ...onlyInB];
   const allSectionsExpanded = Object.values(sections).every(Boolean);
 
   return (
@@ -107,21 +115,39 @@ export function ComparisonResults({
 
       <div className="summary-row" aria-label="Comparison summary">
         <span className="summary-chip removed">
-          <span>{result.counts.removed}</span> in A, not B
+          <span>
+            {counts.onlyInA.visible} / {counts.onlyInA.total}
+          </span>{" "}
+          Only in A
         </span>
         <span className="summary-chip added">
-          <span>{result.counts.added}</span> in B, not A
+          <span>
+            {counts.onlyInB.visible} / {counts.onlyInB.total}
+          </span>{" "}
+          Only in B
         </span>
         <span className="summary-chip changed">
-          <span>{result.counts.changed + result.counts["type-changed"]}</span> changed
+          <span>
+            {counts.modified.visible} / {counts.modified.total}
+          </span>{" "}
+          changed
         </span>
         <span className="summary-chip type-changed">
-          <span>{result.structure.filter((finding) => !finding.ignored).length}</span> structure
+          <span>
+            {counts.structure.visible} / {counts.structure.total}
+          </span>{" "}
+          structure
         </span>
-        {result.ignoredCount > 0 && (
-          <span className="ignored-summary">{result.ignoredCount} ignored</span>
+        {counts.ignored.total > 0 && (
+          <span className="ignored-summary">
+            {counts.ignored.visible} / {counts.ignored.total} ignored
+          </span>
         )}
       </div>
+
+      <p className="comparison-outcome" role="status" aria-live="polite">
+        {formatComparisonOutcome(counts.differences, comparisonDurationMs)}
+      </p>
 
       <div className="results-toolbar">
         <label className="path-filter">
@@ -137,17 +163,17 @@ export function ComparisonResults({
           <div className="filter-chip-group" role="group" aria-label="Result filters">
             <FilterChip
               className="only-a-chip"
-              pressed={filters.showOnlyA}
-              onClick={() => onFiltersChange({ showOnlyA: !filters.showOnlyA })}
+              pressed={filters.showOnlyInA}
+              onClick={() => onFiltersChange({ showOnlyInA: !filters.showOnlyInA })}
             >
-              In A, not B
+              Only in A
             </FilterChip>
             <FilterChip
               className="only-b-chip"
-              pressed={filters.showOnlyB}
-              onClick={() => onFiltersChange({ showOnlyB: !filters.showOnlyB })}
+              pressed={filters.showOnlyInB}
+              onClick={() => onFiltersChange({ showOnlyInB: !filters.showOnlyInB })}
             >
-              In B, not A
+              Only in B
             </FilterChip>
             <FilterChip
               className="ignored-chip"
@@ -157,66 +183,11 @@ export function ComparisonResults({
               Show ignored
             </FilterChip>
           </div>
-          <span className="shown-count">{visibleFindingCount} shown</span>
+          <span className="shown-count">
+            {counts.differences.visible} / {counts.differences.total} differences
+          </span>
         </div>
       </div>
-
-      <details
-        className="result-section"
-        open={sections.missing}
-        onToggle={(event) => {
-          const open = event.currentTarget.open;
-          onSectionsChange({ missing: open });
-        }}
-      >
-        <summary>
-          <span className="result-section-title">
-            <ResultSectionArrow />
-            Missing Fields
-          </span>
-          <small>
-            {missingFindings.length} shown · {selectedFindingIds.size} selected
-          </small>
-        </summary>
-        {missingFindings.length === 0 ? (
-          <EmptyResult title="No missing fields">
-            No matching missing-field rows under the active filters.
-          </EmptyResult>
-        ) : (
-          <div className="table-scroll">
-            <table>
-              <caption className="visually-hidden">Missing fields grouped by response</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Select</th>
-                  <th scope="col">Field path</th>
-                  <th scope="col">Source A</th>
-                  <th scope="col">Target B</th>
-                  <th scope="col">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                <MissingFindingGroup
-                  label="Missing in A"
-                  findings={missingInA}
-                  selectedFindingIds={selectedFindingIds}
-                  notesByFindingId={notesByFindingId}
-                  onToggleSelected={onToggleSelected}
-                  onNoteChange={onNoteChange}
-                />
-                <MissingFindingGroup
-                  label="Missing in B"
-                  findings={missingInB}
-                  selectedFindingIds={selectedFindingIds}
-                  notesByFindingId={notesByFindingId}
-                  onToggleSelected={onToggleSelected}
-                  onNoteChange={onNoteChange}
-                />
-              </tbody>
-            </table>
-          </div>
-        )}
-      </details>
 
       <details
         className="result-section"
@@ -231,11 +202,40 @@ export function ComparisonResults({
             <ResultSectionArrow />
             Structure Schema Compare
           </span>
-          <small>{structureFindings.length} shown</small>
+          <small>
+            {counts.structure.visible} / {counts.structure.total}
+          </small>
         </summary>
+        <div className="structure-filter-bar">
+          <span>Show schema differences</span>
+          <div className="filter-chip-group" role="group" aria-label="Structure schema filters">
+            <FilterChip
+              className="structure-only-a-chip"
+              pressed={filters.showStructureOnlyInA}
+              onClick={() =>
+                onFiltersChange({
+                  showStructureOnlyInA: !filters.showStructureOnlyInA
+                })
+              }
+            >
+              Only in A
+            </FilterChip>
+            <FilterChip
+              className="structure-only-b-chip"
+              pressed={filters.showStructureOnlyInB}
+              onClick={() =>
+                onFiltersChange({
+                  showStructureOnlyInB: !filters.showStructureOnlyInB
+                })
+              }
+            >
+              Only in B
+            </FilterChip>
+          </div>
+        </div>
         {structureFindings.length === 0 ? (
           <EmptyResult title="No structure issues">
-            The visible response shapes match the Response A baseline.
+            No structure findings match the active source and path filters.
           </EmptyResult>
         ) : (
           <div className="table-scroll">
@@ -268,6 +268,63 @@ export function ComparisonResults({
 
       <details
         className="result-section"
+        open={sections.missing}
+        onToggle={(event) => {
+          const open = event.currentTarget.open;
+          onSectionsChange({ missing: open });
+        }}
+      >
+        <summary>
+          <span className="result-section-title">
+            <ResultSectionArrow />
+            Missing Fields
+          </span>
+          <small>
+            {counts.missing.visible} / {counts.missing.total} · {selectedFindingIds.size} selected
+          </small>
+        </summary>
+        {missingFindings.length === 0 ? (
+          <EmptyResult title="No missing fields">
+            No matching missing-field rows under the active filters.
+          </EmptyResult>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <caption className="visually-hidden">Missing fields grouped by response</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Select</th>
+                  <th scope="col">Field path</th>
+                  <th scope="col">Source A</th>
+                  <th scope="col">Target B</th>
+                  <th scope="col">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <MissingFindingGroup
+                  label="Only in A"
+                  findings={onlyInA}
+                  selectedFindingIds={selectedFindingIds}
+                  notesByFindingId={notesByFindingId}
+                  onToggleSelected={onToggleSelected}
+                  onNoteChange={onNoteChange}
+                />
+                <MissingFindingGroup
+                  label="Only in B"
+                  findings={onlyInB}
+                  selectedFindingIds={selectedFindingIds}
+                  notesByFindingId={notesByFindingId}
+                  onToggleSelected={onToggleSelected}
+                  onNoteChange={onNoteChange}
+                />
+              </tbody>
+            </table>
+          </div>
+        )}
+      </details>
+
+      <details
+        className="result-section"
         open={sections.differences}
         onToggle={(event) => {
           const open = event.currentTarget.open;
@@ -279,7 +336,9 @@ export function ComparisonResults({
             <ResultSectionArrow />
             Differences
           </span>
-          <small>{differences.length} shown</small>
+          <small>
+            {counts.differences.visible} / {counts.differences.total}
+          </small>
         </summary>
         {differences.length === 0 ? (
           <EmptyResult title="No differences">

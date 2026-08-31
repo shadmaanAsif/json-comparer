@@ -2,6 +2,7 @@
 
 import type { ArrayMode } from "@/domain/comparison/types";
 import type { WorkspaceStatus } from "../types";
+import { IgnorePathSelector } from "./IgnorePathSelector";
 
 export interface HighlightVisibility {
   missing: boolean;
@@ -11,13 +12,14 @@ export interface HighlightVisibility {
 
 export interface ComparisonControlsProps {
   arrayMode: ArrayMode;
-  ignorePathsText: string;
+  ignorePaths: string[];
+  ignorePathSuggestions: string[];
   highlightVisibility: HighlightVisibility;
   isComparing: boolean;
   status: WorkspaceStatus;
   onArrayModeChange: (mode: ArrayMode) => void;
-  onIgnorePathsTextChange: (value: string) => void;
-  onApplyIgnorePaths: () => void;
+  onIgnorePathsChange: (paths: string[]) => void;
+  onApplyIgnorePaths: (paths: string[]) => void;
   onHighlightVisibilityChange: (value: HighlightVisibility) => void;
   onCompare: () => void;
   onCancel: () => void;
@@ -27,12 +29,13 @@ export interface ComparisonControlsProps {
 
 export function ComparisonControls({
   arrayMode,
-  ignorePathsText,
+  ignorePaths,
+  ignorePathSuggestions,
   highlightVisibility,
   isComparing,
   status,
   onArrayModeChange,
-  onIgnorePathsTextChange,
+  onIgnorePathsChange,
   onApplyIgnorePaths,
   onHighlightVisibilityChange,
   onCompare,
@@ -85,22 +88,13 @@ export function ComparisonControls({
               comma or line separated; exact includes descendants, `*` one segment, `**` subtree
             </small>
           </label>
-          <div className="ignore-field-controls">
-            <input
-              id="ignore-paths-input"
-              value={ignorePathsText}
-              onChange={(event) => onIgnorePathsTextChange(event.target.value)}
-              placeholder="config.partnerConfig.MOT_config, items.*.internalId"
-            />
-            <button
-              className="secondary-button"
-              type="button"
-              disabled={isComparing}
-              onClick={onApplyIgnorePaths}
-            >
-              Apply
-            </button>
-          </div>
+          <IgnorePathSelector
+            selectedPaths={ignorePaths}
+            suggestions={ignorePathSuggestions}
+            disabled={isComparing}
+            onChange={onIgnorePathsChange}
+            onApply={onApplyIgnorePaths}
+          />
         </div>
       </section>
 
@@ -113,7 +107,9 @@ export function ComparisonControls({
           onClick={() => toggleHighlight("missing")}
         >
           <span className="legend-pair">
-            <i className="legend-a" />A only <i className="legend-b" />B only
+            <i className="legend-a" />
+            Only in A <i className="legend-b" />
+            Only in B
           </span>{" "}
           Missing fields
         </button>

@@ -2,7 +2,13 @@
 
 A privacy-first, standalone web application for comparing JSON API responses. It was implemented from the product, architecture, technology, and delivery specifications in `Claude/json-response-comparer/docs`. Parsing and comparison run in a Web Worker in the browser; payloads are not uploaded.
 
-See [FUNCTIONALITY.md](FUNCTIONALITY.md) for the complete implemented-functionality guide and current enhancement register.
+## Documentation
+
+- [FUNCTIONALITY.md](FUNCTIONALITY.md) is the authoritative, complete catalogue of implemented user-facing features and terminology.
+- [docs/FEATURE_AUDIT.md](docs/FEATURE_AUDIT.md) records implemented, partial, and remaining source-specification coverage.
+- [docs/reference/SRS.md](docs/reference/SRS.md) contains product requirements, including planned behavior that may not be implemented yet.
+- [docs/reference/ARCHITECTURE.md](docs/reference/ARCHITECTURE.md) documents system boundaries, data flow, privacy, and security decisions.
+- [CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md), and [.agents/CONSTITUTION.md](.agents/CONSTITUTION.md) define engineering and agent-maintenance standards.
 
 ## Features
 
@@ -13,10 +19,10 @@ See [FUNCTIONALITY.md](FUNCTIONALITY.md) for the complete implemented-functional
 - Exact-path implicit subtrees, single-segment (`*`) child subtrees, and explicit recursive (`**`) ignore rules.
 - Path/category filters, finding selection, and Markdown reports.
 - Input-size, depth, and finding-count limits.
-- Add data from a local file, bare HTTPS URL, or supported cURL command through an SSRF-hardened, administrator-allowlisted server endpoint.
+- Add data from a local file, bare URL, or supported cURL command through an SSRF-hardened server endpoint.
 - Responsive, keyboard-accessible interface with reduced-motion support.
 
-Remote URL/cURL import accepts public HTTPS hosts during local development through `.env.development`. Production requires an explicit `FETCH_PROXY_ALLOWLIST`. The server enforces HTTPS/443, DNS and redirect validation, pinned resolved addresses, restricted-network denial, safe methods/headers, body/response limits, timeouts, credential stripping, and per-client rate limiting.
+Remote URL/cURL import accepts public HTTPS hosts during local development through `.env.development`. The development-only `FETCH_PROXY_ALLOW_LOCALHOST=true` setting additionally permits `http://localhost:<port>`, `http://127.0.0.1:<port>`, and `http://[::1]:<port>` when the app itself is running on loopback. Public HTTP, private LAN targets, production localhost access, and non-loopback app origins remain blocked. Production requires an explicit `FETCH_PROXY_ALLOWLIST`.
 
 ## Development
 
@@ -32,7 +38,9 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3001](http://localhost:3001).
+
+The checked-in `.env.development` enables loopback imports for local development. For example, Add Data can fetch `http://localhost:8080/api`. Restart `pnpm dev` after changing environment variables. To disable local API access, set `FETCH_PROXY_ALLOW_LOCALHOST=false`.
 
 For a production run:
 
@@ -41,7 +49,7 @@ pnpm build
 pnpm start
 ```
 
-For production, set `FETCH_PROXY_ALLOWLIST` to the exact API hostnames users may fetch. The `*` value is rejected in production and on non-loopback application origins. `NEXT_PUBLIC_MAX_DOCUMENT_BYTES` changes the per-document byte limit.
+For production, set `FETCH_PROXY_ALLOWLIST` to the exact API hostnames users may fetch. The `*` value and `FETCH_PROXY_ALLOW_LOCALHOST=true` are rejected in production and on non-loopback application origins. `NEXT_PUBLIC_MAX_DOCUMENT_BYTES` changes the per-document byte limit.
 
 Credential-bearing cURL commands are stripped of `Authorization` and `Cookie` headers by default. Only set `FETCH_PROXY_ALLOW_CREDENTIALS=true` in a controlled deployment after reviewing who can access the application and which hosts are allowlisted.
 

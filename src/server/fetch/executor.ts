@@ -1,5 +1,5 @@
 import { request as httpsRequest } from "node:https";
-import type { IncomingHttpHeaders } from "node:http";
+import { request as httpRequest, type IncomingHttpHeaders } from "node:http";
 import type { LookupFunction } from "node:net";
 import type { RemoteFetchRequest } from "@/domain/fetch/curl";
 import { ProxyError, resolveSafeTarget, sanitizeHeaders, type Resolver } from "./security";
@@ -18,6 +18,7 @@ export interface RawResponse {
 }
 export interface FetchPolicy {
   allowlist: string[];
+  allowLocalhost: boolean;
   allowCredentials: boolean;
   timeoutMs: number;
   maxResponseBytes: number;
@@ -46,12 +47,13 @@ function executePinnedRequest(
     const headers = sanitizeHeaders(request.headers, policy.allowCredentials);
     const body = ["GET", "HEAD"].includes(request.method) ? null : request.body;
     if (body !== null) headers["Content-Length"] = String(Buffer.byteLength(body));
-    const outgoing = httpsRequest(
+    const requestTransport = target.url.protocol === "http:" ? httpRequest : httpsRequest;
+    const outgoing = requestTransport(
       target.url,
       {
         method: request.method,
         headers,
-        servername: target.url.hostname,
+        ...(target.url.protocol === "https:" ? { servername: target.url.hostname } : {}),
         lookup: createPinnedLookup(target.address, target.family)
       },
       (response) => {
@@ -115,7 +117,10 @@ export async function executeSecureFetch(
 ): Promise<ProxyFetchResult> {
   let current = input.url;
   for (let redirects = 0; redirects <= policy.maxRedirects; redirects += 1) {
-    const target = await resolveSafeTarget(current, policy.allowlist, policy.resolver);
+    const target = await resolveSafeTarget(current, policy.allowlist, {
+      allowLocalhost: policy.allowLocalhost,
+      resolver: policy.resolver
+    });
     const response = await (policy.requester ?? executePinnedRequest)(input, target, policy);
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.location;

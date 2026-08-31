@@ -24,7 +24,7 @@ description: Safely analyze, implement, refactor, test, review, or document chan
 - **UI behavior:** Preserve native semantics, keyboard access, focus visibility, live status, responsive reflow, and privacy copy.
 - **Dependency or configuration:** Justify need, prefer existing capabilities, update the lockfile, and verify supported versions.
 - **Remote communication, persistence, auth, or telemetry:** Stop and apply the constitution's approval and security gates before implementation.
-- **Development fetch wildcard:** Permit only when explicitly approved, restricted to non-production loopback origins, and covered by tests proving restricted addresses remain blocked.
+- **Development fetch exceptions:** Permit the public-host wildcard or exact loopback HTTP/HTTPS only when explicitly approved, restricted to non-production loopback origins, and covered by tests proving private LAN, metadata, public HTTP, deceptive DNS, redirects, and production remain blocked.
 - **Architecture or accepted requirement:** Update the relevant reference and record assumptions or unresolved decisions.
 
 ## Implement safely

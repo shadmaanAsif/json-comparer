@@ -9,7 +9,7 @@ Local development may configure `FETCH_PROXY_ALLOWLIST=*` so the comparer can fe
 
 ## Rationale and consequences
 
-This enables short-lived local API testing without editing configuration for every public host. It must not be deployed as an open proxy. Private, loopback, link-local, metadata, multicast, and reserved targets remain unreachable, including through redirects or DNS results.
+This enables short-lived local API testing without editing configuration for every public host. It must not be deployed as an open proxy. Private, link-local, metadata, multicast, and reserved targets remain unreachable, including through redirects or DNS results. Loopback remains unreachable under this wildcard; the independent, explicitly configured exception in [ADR-002](ADR-002-localhost-fetch.md) governs local-machine APIs.
 
 ## Rollback
 

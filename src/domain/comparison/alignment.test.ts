@@ -11,7 +11,7 @@ const options: ComparisonOptions = {
 };
 
 describe("alignForDisplay", () => {
-  it("uses A as the shared-key baseline while keeping B-only keys in their slots", () => {
+  it("uses A as the shared-key baseline while keeping keys only in B in their slots", () => {
     const a: JsonValue = { first: 1, second: 2, third: 3 };
     const b: JsonValue = { before: true, third: 30, first: 10, after: true };
 

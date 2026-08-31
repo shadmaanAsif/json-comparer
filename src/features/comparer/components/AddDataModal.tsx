@@ -76,7 +76,7 @@ export function AddDataModal({
           </button>
         </div>
         <p id="add-modal-description">
-          Upload a local file, or fetch an administrator-approved HTTPS endpoint through the secure
+          Upload a local file, or fetch an administrator-approved endpoint through the secure
           server.
         </p>
         <div className="modal-leg">
@@ -113,9 +113,9 @@ export function AddDataModal({
             placeholder="curl https://api.example.com/data -H 'Accept: application/json'"
           />
           <p className="security-note">
-            Only allowlisted HTTPS hosts are accepted. Redirects are revalidated. Authorization and
-            Cookie headers are stripped unless the server administrator explicitly enables
-            credentials.
+            Public targets require allowlisted HTTPS. Localhost HTTP is accepted only when the
+            server enables its local-development exception. Redirects are revalidated. Authorization
+            and Cookie headers are stripped unless the administrator explicitly enables credentials.
           </p>
           {credentialWarning && (
             <p className="warning" role="alert">

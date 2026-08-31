@@ -18,6 +18,7 @@ flowchart LR
   API["Next.js Route Handler /api/fetch-proxy"]
   POL["Outbound request policy"]
   EXT["Approved external HTTPS API"]
+  LOCAL["Opt-in local-development loopback API"]
   OBS["Sanitized logs, metrics, traces"]
   DB["Optional P2 PostgreSQL metadata"]
   OBJ["Optional P2 encrypted object storage"]
@@ -27,6 +28,7 @@ flowchart LR
   UI <--> IDB
   UI -->|"validated URL/cURL request"| API
   API --> POL --> EXT
+  POL -. "development only" .-> LOCAL
   EXT -->|"bounded response stream"| API --> UI
   API --> OBS
   UI -. "consented, content-free telemetry" .-> OBS
@@ -131,6 +133,8 @@ sequenceDiagram
 ```
 
 Important deployment caveat: a generic proxy is high-risk. DNS resolution checks alone may not guarantee the HTTP client connects to the checked address. Use an egress-controlled network/proxy or a client that supports verified address pinning, and security-test redirect and rebinding cases. If the hosting platform cannot provide credible outbound controls, restrict imports to an administrator-configured hostname allowlist or remove server fetch from MVP.
+
+Local development may explicitly enable HTTP/HTTPS access to the exact loopback targets `localhost`, `127.0.0.1`, and `::1`. The route accepts this exception only in non-production when the application request itself uses a loopback hostname. The target resolver must return exclusively loopback addresses, the connection remains pinned, and every redirect is revalidated. Public HTTP, private LAN, link-local, metadata, multicast, reserved, production, and non-loopback-origin access remain blocked. `FETCH_PROXY_ALLOW_LOCALHOST=false` disables the exception independently of the public-host allowlist.
 
 ## 6. Persistence architecture
 

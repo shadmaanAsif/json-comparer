@@ -11,6 +11,7 @@ import {
   type EditorViewportMetrics
 } from "../utils/editor-navigation";
 import { getJsonSyntaxIssue } from "../utils/json-validation";
+import { CategoryDots, FindingStepper } from "./FindingNavigation";
 import { JsonTree } from "./JsonTree";
 
 export interface JsonInputPaneProps {
@@ -409,30 +410,14 @@ export function JsonInputPane({
                 onClick={() => nextError && jumpToLine(nextError)}
               />
             )}
-            {highlightedLines.length > 0 && (
-              <div className="error-stepper" aria-label={`Response ${side} finding navigation`}>
-                <CategoryDots categories={categoriesFor(highlightedLines)} />
-                <button
-                  type="button"
-                  onClick={() => navigateError(-1)}
-                  aria-label="Previous highlighted finding"
-                  title="Previous finding"
-                >
-                  ↑
-                </button>
-                <span aria-live="polite">
-                  {safeNavigationIndex + 1}/{highlightedLines.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => navigateError(1)}
-                  aria-label="Next highlighted finding"
-                  title="Next finding"
-                >
-                  ↓
-                </button>
-              </div>
-            )}
+            <FindingStepper
+              label={`Response ${side}`}
+              categories={categoriesFor(highlightedLines)}
+              current={safeNavigationIndex + 1}
+              total={highlightedLines.length}
+              onPrevious={() => navigateError(-1)}
+              onNext={() => navigateError(1)}
+            />
           </div>
           <aside className="json-minimap" aria-label={`Response ${side} highlighted lines`}>
             {highlightedLines.map((line) => (
@@ -451,7 +436,7 @@ export function JsonInputPane({
           </aside>
         </div>
       ) : (
-        <JsonTree raw={value} />
+        <JsonTree raw={value} lineHighlights={effectiveLineHighlights} />
       )}
 
       <div className="input-meta">
@@ -495,16 +480,6 @@ export function JsonInputPane({
         </div>
       )}
     </section>
-  );
-}
-
-function CategoryDots({ categories }: { categories: HighlightCategory[] }) {
-  return (
-    <span className="chip-dots" aria-hidden="true">
-      {categories.map((category) => (
-        <i key={category} className={`dot-${category}`} />
-      ))}
-    </span>
   );
 }
 

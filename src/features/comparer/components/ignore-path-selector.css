@@ -12,7 +12,7 @@
   border: 1px solid var(--border);
   border-radius: 9px;
   padding: 5px 7px;
-  background: #09131c;
+  background: var(--input-bg);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -205,9 +205,9 @@
 }
 
 [data-theme="light"] .ignore-path-input-shell {
-  background: #f8fbfc;
+  background: var(--input-bg);
 }
 
 [data-theme="light"] .ignore-path-dropdown {
-  background: #ffffff;
+  background: var(--surface);
 }

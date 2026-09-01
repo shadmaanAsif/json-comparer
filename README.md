@@ -9,6 +9,7 @@ A privacy-first, standalone web application for comparing JSON API responses. It
 - [docs/reference/SRS.md](docs/reference/SRS.md) contains product requirements, including planned behavior that may not be implemented yet.
 - [docs/reference/ARCHITECTURE.md](docs/reference/ARCHITECTURE.md) documents system boundaries, data flow, privacy, and security decisions.
 - [CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md), and [.agents/CONSTITUTION.md](.agents/CONSTITUTION.md) define engineering and agent-maintenance standards.
+- [plugins/json-comparer-toolkit/README.md](plugins/json-comparer-toolkit/README.md) documents the repository-local Claude Code plugin (release-gate and remote-fetch-security review skills) and how to install, test, and publish it.
 
 ## Features
 

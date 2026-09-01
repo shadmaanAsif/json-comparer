@@ -4,7 +4,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 
 ## Application identity
 
-- The application header displays an optional Author badge sourced from `NEXT_PUBLIC_APP_AUTHOR`.
+- The application header displays an optional, accent-styled “Crafted by” identity badge sourced from `NEXT_PUBLIC_APP_AUTHOR`, including initials derived from the configured display name.
 - The badge is omitted when the environment variable is empty or unset. The value is public display configuration and must not contain secrets.
 
 ## Comparison terminology
@@ -134,7 +134,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - Load Sample populates both panels without automatically comparing.
 - Clear removes documents, results, notes, selection, and cURL bars while preserving Ignore Paths.
 - A shared accessible status region announces validation, comparison, fetch, and export results.
-- Light and dark themes are available for the current session.
+- Light and dark themes are available for the current session. Both palettes consistently theme the page background, workspace surfaces, JSON editors, controls, tables, overlays, status colors, and difference highlights.
 - The two panels stack on narrower screens.
 - A Back to top control appears after scrolling down the page.
 

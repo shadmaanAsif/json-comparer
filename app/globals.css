@@ -13,22 +13,62 @@
   --changed: #ffc766;
   --type: #b99aff;
   --danger: #ff8c93;
+  --page-glow: #153149;
+  --workspace-bg: rgba(10, 20, 29, 0.9);
+  --workspace-shadow: rgba(0, 0, 0, 0.22);
+  --editor-bg: #09131c;
+  --editor-text: #dcebf0;
+  --panel-tint: rgba(20, 35, 49, 0.6);
+  --input-bg: #09131c;
+  --code-strong: #f0f6f8;
+  --code-muted: #bed0d8;
+  --tree-key: #78b8e8;
+  --success: #8ee6c8;
+  --privacy-border: #295a54;
+  --privacy-bg: rgba(16, 63, 56, 0.55);
+  --privacy-text: #a7f3df;
+  --primary-text: #06231e;
+  --primary-hover: #70e8ca;
+  --control-hover-border: #3b5b70;
+  --overlay-bg: rgba(0, 6, 10, 0.76);
+  --modal-border: #375164;
+  --modal-shadow: #000;
 }
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #eef4f6;
+  --bg: #f4f7f8;
   --surface: #ffffff;
-  --surface-2: #e6eef2;
-  --border: #b8c8d1;
-  --text: #10232c;
-  --muted: #536b77;
+  --surface-2: #edf3f5;
+  --border: #c9d7dd;
+  --text: #16303b;
+  --muted: #5b7280;
   --accent: #087f6b;
-  --accent-dark: #d5f2eb;
+  --accent-dark: #dff5ef;
   --added: #087947;
   --removed: #b52f3b;
   --changed: #8a5b00;
   --type: #6845a8;
   --danger: #b52f3b;
+  --page-glow: #cfe9e3;
+  --workspace-bg: rgba(255, 255, 255, 0.96);
+  --workspace-shadow: rgba(35, 65, 78, 0.13);
+  --editor-bg: #f7fafb;
+  --editor-text: #1c3540;
+  --panel-tint: #f2f6f7;
+  --input-bg: #fbfcfd;
+  --code-strong: #16303b;
+  --code-muted: #526c78;
+  --tree-key: #0b6695;
+  --success: #087947;
+  --privacy-border: #9dcec3;
+  --privacy-bg: #e4f4f0;
+  --privacy-text: #176454;
+  --primary-text: #ffffff;
+  --primary-hover: #076f5f;
+  --control-hover-border: #78919d;
+  --overlay-bg: rgba(17, 34, 42, 0.48);
+  --modal-border: #b9cbd3;
+  --modal-shadow: rgba(27, 52, 64, 0.24);
 }
 
 * {
@@ -40,7 +80,7 @@ html {
 }
 body {
   margin: 0;
-  background: radial-gradient(circle at 15% -10%, #153149 0, transparent 35rem), var(--bg);
+  background: radial-gradient(circle at 15% -10%, var(--page-glow) 0, transparent 35rem), var(--bg);
   color: var(--text);
   font-family:
     Inter,

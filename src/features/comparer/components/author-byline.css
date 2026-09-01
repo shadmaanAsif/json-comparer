@@ -1,0 +1,96 @@
+.author-byline {
+  position: relative;
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 178px;
+  max-width: min(290px, 100%);
+  margin-top: 3px;
+  padding: 6px 10px 6px 7px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 44%, var(--border));
+  border-radius: 13px;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent-dark) 86%, var(--surface)) 0%,
+    color-mix(in srgb, var(--type) 11%, var(--surface-2)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+    0 10px 28px color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+}
+
+.author-byline::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 45%, color-mix(in srgb, white 7%, transparent));
+  content: "";
+  pointer-events: none;
+}
+
+.author-avatar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, white);
+  border-radius: 10px;
+  background: linear-gradient(145deg, var(--accent), color-mix(in srgb, var(--type) 75%, black));
+  box-shadow: 0 5px 15px color-mix(in srgb, var(--accent) 22%, transparent);
+  color: #061612;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.author-identity {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.author-identity span {
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.author-identity strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.author-spark {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  color: var(--changed);
+  font-size: 0.76rem;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--changed) 55%, transparent);
+}
+
+[data-theme="light"] .author-byline {
+  background: linear-gradient(120deg, #effaf7 0%, #f7f3ff 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 22px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+[data-theme="light"] .author-avatar {
+  border-color: color-mix(in srgb, var(--accent) 72%, white);
+  background: linear-gradient(145deg, #0d927b, #5f43a0);
+  color: white;
+}

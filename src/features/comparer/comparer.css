@@ -1,3 +1,4 @@
+@import "./components/author-byline.css";
 @import "./components/ignore-path-selector.css";
 
 .hero {
@@ -20,7 +21,7 @@
   place-items: center;
   width: 45px;
   height: 45px;
-  border: 1px solid #2c5e5b;
+  border: 1px solid color-mix(in srgb, var(--accent) 46%, var(--border));
   border-radius: 12px;
   background: var(--accent-dark);
   color: var(--accent);
@@ -28,32 +29,17 @@
   font-weight: 800;
 }
 .hero h1 {
-  margin: 2px 0 8px;
+  margin: 2px 0 0;
   font-size: clamp(2rem, 4vw, 3.5rem);
   letter-spacing: -0.045em;
   line-height: 1;
 }
-.author-byline {
-  display: inline-flex;
+.hero-title-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 2px 0 10px;
-  padding: 5px 10px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-dark) 72%, transparent);
-  color: var(--text);
-  font-size: 0.78rem;
-}
-.author-byline span {
-  color: var(--accent);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.author-byline strong {
-  font-weight: 700;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
 .hero p:not(.eyebrow) {
   margin: 0;
@@ -73,10 +59,10 @@
 .privacy-badge {
   flex: none;
   padding: 9px 13px;
-  border: 1px solid #295a54;
+  border: 1px solid var(--privacy-border);
   border-radius: 999px;
-  background: rgba(16, 63, 56, 0.55);
-  color: #a7f3df;
+  background: var(--privacy-bg);
+  color: var(--privacy-text);
   font-size: 0.8rem;
   font-weight: 700;
 }
@@ -95,8 +81,8 @@
 .results {
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: rgba(10, 20, 29, 0.9);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  background: var(--workspace-bg);
+  box-shadow: 0 24px 80px var(--workspace-shadow);
   overflow: hidden;
 }
 .panel-layout-toolbar {
@@ -201,8 +187,8 @@
   border: 1px solid var(--border);
   border-radius: 11px;
   padding: var(--json-editor-padding);
-  background: #09131c;
-  color: #dcebf0;
+  background: var(--editor-bg);
+  color: var(--editor-text);
   font:
     13px/1.6 ui-monospace,
     SFMono-Regular,
@@ -218,7 +204,7 @@
   border: 1px solid var(--border);
   border-radius: 11px;
   overflow: hidden;
-  background: #09131c;
+  background: var(--editor-bg);
 }
 .editor-with-gutter .input-panel textarea,
 .editor-with-gutter textarea {
@@ -520,8 +506,8 @@
 [data-theme="light"] input,
 [data-theme="light"] select,
 [data-theme="light"] .export-preview textarea {
-  background: #f8fbfc;
-  color: #10232c;
+  background: var(--input-bg);
+  color: var(--text);
 }
 .panel-tabs {
   display: flex;
@@ -565,7 +551,7 @@
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 11px;
-  background: #09131c;
+  background: var(--editor-bg);
   font:
     12px/1.65 ui-monospace,
     monospace;
@@ -574,7 +560,7 @@
   position: relative;
 }
 [data-theme="light"] .json-tree {
-  background: #f8fbfc;
+  background: var(--editor-bg);
 }
 .tree-node {
   margin-left: 14px;
@@ -636,7 +622,7 @@
   letter-spacing: 0.04em;
 }
 .tree-key {
-  color: #78b8e8;
+  color: var(--tree-key);
 }
 .value-string {
   color: var(--added);
@@ -668,7 +654,7 @@
   align-items: end;
   border-top: 1px solid var(--border);
   padding: 18px 22px;
-  background: rgba(20, 35, 49, 0.6);
+  background: var(--panel-tint);
 }
 .highlight-controls {
   display: flex;
@@ -763,7 +749,7 @@
   padding: 3px;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: #09131c;
+  background: var(--editor-bg);
 }
 .segmented label {
   position: relative;
@@ -810,7 +796,7 @@
   border: 1px solid var(--border);
   border-radius: 9px;
   padding: 10px 12px;
-  background: #09131c;
+  background: var(--input-bg);
 }
 .ignore-field-controls .secondary-button {
   min-width: 74px;
@@ -835,10 +821,10 @@
 .primary-button {
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #06231e;
+  color: var(--primary-text);
 }
 .primary-button:hover {
-  background: #70e8ca;
+  background: var(--primary-hover);
 }
 .secondary-button {
   border: 1px solid var(--border);
@@ -846,7 +832,7 @@
   color: var(--text);
 }
 .secondary-button:hover {
-  border-color: #3b5b70;
+  border-color: var(--control-hover-border);
 }
 .status {
   margin: 0 0 0 auto;
@@ -857,7 +843,7 @@
   color: var(--danger);
 }
 .status.success {
-  color: #8ee6c8;
+  color: var(--success);
 }
 
 .results {
@@ -1032,7 +1018,7 @@ td {
 td strong {
   display: block;
   margin-bottom: 5px;
-  color: #f0f6f8;
+  color: var(--code-strong);
   overflow-wrap: anywhere;
 }
 td code {
@@ -1047,7 +1033,7 @@ td pre {
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #bed0d8;
+  color: var(--code-muted);
   font:
     11.5px/1.5 ui-monospace,
     monospace;
@@ -1066,7 +1052,7 @@ td pre {
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 7px 8px;
-  background: #09131c;
+  background: var(--input-bg);
   font-size: 0.72rem;
 }
 .review-status-group {
@@ -1182,7 +1168,7 @@ td pre {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 16px;
-  background: #09131c;
+  background: var(--editor-bg);
   font:
     12px/1.6 ui-monospace,
     monospace;
@@ -1198,23 +1184,23 @@ td pre {
 }
 .kind-pill.added {
   color: var(--added);
-  background: rgba(76, 195, 138, 0.12);
+  background: color-mix(in srgb, var(--added) 12%, var(--surface));
 }
 .kind-pill.removed {
   color: var(--removed);
-  background: rgba(255, 114, 123, 0.12);
+  background: color-mix(in srgb, var(--removed) 12%, var(--surface));
 }
 .kind-pill.changed {
   color: var(--changed);
-  background: rgba(255, 199, 102, 0.12);
+  background: color-mix(in srgb, var(--changed) 12%, var(--surface));
 }
 .kind-pill.type-changed {
   color: var(--type);
-  background: rgba(185, 154, 255, 0.12);
+  background: color-mix(in srgb, var(--type) 12%, var(--surface));
 }
 .ignored-pill {
   margin-left: 8px;
-  background: #293844;
+  background: var(--surface-2);
   color: var(--muted);
 }
 .ignored-row {
@@ -1285,7 +1271,7 @@ footer {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(0, 6, 10, 0.76);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
 }
 .add-modal {
@@ -1293,10 +1279,10 @@ footer {
   max-height: calc(100vh - 40px);
   overflow: auto;
   padding: 24px;
-  border: 1px solid #375164;
+  border: 1px solid var(--modal-border);
   border-radius: 16px;
   background: var(--surface);
-  box-shadow: 0 30px 100px #000;
+  box-shadow: 0 30px 100px var(--modal-shadow);
 }
 .add-modal h2,
 .add-modal h3 {
@@ -1315,7 +1301,7 @@ footer {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 11px;
-  background: #09131c;
+  background: var(--editor-bg);
 }
 .modal-leg textarea {
   width: 100%;

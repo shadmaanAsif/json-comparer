@@ -26,6 +26,12 @@ interface ComparerProps {
 
 export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const displayAuthor = author.trim();
+  const authorInitials = displayAuthor
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((name) => name.charAt(0))
+    .join("")
+    .toUpperCase();
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
   const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
@@ -381,13 +387,23 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
         <div>
           <span className="brand-mark" aria-hidden="true">{`{ }`}</span>
           <p className="eyebrow">Developer utility</p>
-          <h1>JSON Comparer</h1>
-          {displayAuthor && (
-            <div className="author-byline">
-              <span>Author</span>
-              <strong>{displayAuthor}</strong>
-            </div>
-          )}
+          <div className="hero-title-row">
+            <h1>JSON Comparer</h1>
+            {displayAuthor && (
+              <div className="author-byline">
+                <span className="author-avatar" aria-hidden="true">
+                  {authorInitials}
+                </span>
+                <span className="author-identity">
+                  <span>Crafted by</span>
+                  <strong>{displayAuthor}</strong>
+                </span>
+                <span className="author-spark" aria-hidden="true">
+                  ✦
+                </span>
+              </div>
+            )}
+          </div>
           <p>
             Inspect contract drift without uploading your payloads. Compare fields, values, and
             types directly in your browser.

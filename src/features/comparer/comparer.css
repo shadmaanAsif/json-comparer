@@ -33,6 +33,28 @@
   letter-spacing: -0.045em;
   line-height: 1;
 }
+.author-byline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 10px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-dark) 72%, transparent);
+  color: var(--text);
+  font-size: 0.78rem;
+}
+.author-byline span {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.author-byline strong {
+  font-weight: 700;
+}
 .hero p:not(.eyebrow) {
   margin: 0;
   max-width: 680px;

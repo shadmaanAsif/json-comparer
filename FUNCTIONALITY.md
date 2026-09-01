@@ -2,6 +2,11 @@
 
 This file is the authoritative catalogue of functionality implemented in the JSON Comparer application. Update it whenever user-visible behavior changes. Planned requirements belong in `docs/reference/SRS.md`, while implementation gaps and source-specification parity are tracked in `docs/FEATURE_AUDIT.md`.
 
+## Application identity
+
+- The application header displays an optional Author badge sourced from `NEXT_PUBLIC_APP_AUTHOR`.
+- The badge is omitted when the environment variable is empty or unset. The value is public display configuration and must not contain secrets.
+
 ## Comparison terminology
 
 - **Response A / Baseline:** the first JSON document and the structure-schema baseline.

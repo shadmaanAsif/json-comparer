@@ -11,7 +11,7 @@ import { ComparisonControls } from "./components/ComparisonControls";
 import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
 import { JsonInputPane } from "./components/JsonInputPane";
-import { MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B } from "./constants";
+import { APP_AUTHOR, MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B } from "./constants";
 import { fetchRemoteResponse } from "./services/remote-fetch";
 import { useSynchronizedEditors } from "./hooks/useSynchronizedEditors";
 import type { ExportPreviewData, ResponseSide, ReviewNote, WorkspaceStatus } from "./types";
@@ -20,7 +20,12 @@ import { downloadMarkdown } from "./utils/download";
 import { createLineHighlights } from "./utils/line-highlights";
 import { formatComparisonOutcome, projectComparisonResult } from "./utils/result-projections";
 
-export function Comparer() {
+interface ComparerProps {
+  author?: string;
+}
+
+export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
+  const displayAuthor = author.trim();
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
   const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
@@ -377,6 +382,12 @@ export function Comparer() {
           <span className="brand-mark" aria-hidden="true">{`{ }`}</span>
           <p className="eyebrow">Developer utility</p>
           <h1>JSON Comparer</h1>
+          {displayAuthor && (
+            <div className="author-byline">
+              <span>Author</span>
+              <strong>{displayAuthor}</strong>
+            </div>
+          )}
           <p>
             Inspect contract drift without uploading your payloads. Compare fields, values, and
             types directly in your browser.

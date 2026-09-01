@@ -17,3 +17,5 @@ export const SAMPLE_B = JSON.stringify(
 export const MAX_DOCUMENT_BYTES = Number(
   process.env.NEXT_PUBLIC_MAX_DOCUMENT_BYTES ?? 10 * 1024 * 1024
 );
+
+export const APP_AUTHOR = (process.env.NEXT_PUBLIC_APP_AUTHOR ?? "").trim();

@@ -6,6 +6,13 @@ import { Comparer } from "./Comparer";
 afterEach(cleanup);
 
 describe("Comparer JSON panel layout", () => {
+  it("shows the configured author in the application header", () => {
+    render(<Comparer author="User1" />);
+
+    expect(screen.getByText("Author")).toBeVisible();
+    expect(screen.getByText("User1")).toBeVisible();
+  });
+
   it("expands and collapses both JSON panels together", async () => {
     const user = userEvent.setup();
     render(<Comparer />);

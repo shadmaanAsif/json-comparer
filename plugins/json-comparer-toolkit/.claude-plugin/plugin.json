@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "json-comparer-toolkit",
+  "displayName": "JSON Comparer Toolkit",
+  "version": "0.1.0",
+  "description": "Repository-local Claude Code skills for maintaining the JSON Comparer app: release-gate verification and remote-fetch (SSRF) security review.",
+  "author": {
+    "name": "Shadmaan Asif",
+    "email": "shadmaan.asif@almosafer.com"
+  },
+  "repository": "https://github.com/shadmaanAsif/json-comparer",
+  "license": "UNLICENSED",
+  "keywords": ["json-comparer", "release-gates", "security-review", "internal-tooling"]
+}

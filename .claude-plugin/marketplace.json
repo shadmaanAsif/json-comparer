@@ -1,0 +1,17 @@
+{
+  "name": "json-comparer-plugins",
+  "owner": {
+    "name": "Shadmaan Asif",
+    "email": "shadmaan.asif@almosafer.com",
+    "url": "https://github.com/shadmaanAsif"
+  },
+  "description": "Claude Code plugins maintained alongside the JSON Comparer app.",
+  "plugins": [
+    {
+      "name": "json-comparer-toolkit",
+      "source": "./plugins/json-comparer-toolkit",
+      "description": "Release-gate verification and remote-fetch security review skills for this repository.",
+      "version": "0.1.0"
+    }
+  ]
+}

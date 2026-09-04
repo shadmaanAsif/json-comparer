@@ -75,8 +75,9 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 ## Comparison behavior
 
 - Explicit Ordered and Unordered array modes.
-- Ordered arrays compare items by index.
-- Unordered arrays use canonical multiset equality; duplicates remain significant.
+- Unordered arrays are selected by default and use canonical multiset equality; duplicates remain
+  significant.
+- Ordered arrays compare items by index and can be selected when item positions are meaningful.
 - Findings distinguish fields added in B, removed from B, value changes, and type changes.
 - Object key order does not affect comparison results.
 - Internal path identity uses RFC 6901 JSON Pointer; readable paths are shown in the UI.

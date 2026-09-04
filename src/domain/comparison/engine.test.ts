@@ -20,6 +20,10 @@ describe("compareJson", () => {
     expect(result.counts.changed).toBe(2);
   });
 
+  it("uses unordered multiset comparison by default", () => {
+    expect(compareJson([1, 2, 1], [2, 1, 1]).findings).toHaveLength(0);
+  });
+
   it("matches unordered arrays as multisets including duplicates", () => {
     expect(compareJson([1, 2, 1], [2, 1, 1], { arrayMode: "unordered" }).findings).toHaveLength(0);
     const result = compareJson([1, 1], [1], { arrayMode: "unordered" });
@@ -47,7 +51,7 @@ describe("compareJson", () => {
     const result = compareJson(
       { items: [{ id: 1, secret: "a" }], meta: { stamp: 1 } },
       { items: [{ id: 1, secret: "b" }], meta: { stamp: 2 } },
-      { ignorePatterns: ["items.*.secret", "meta.**"] }
+      { arrayMode: "ordered", ignorePatterns: ["items.*.secret", "meta.**"] }
     );
     expect(result.findings.every((finding) => finding.ignored)).toBe(true);
   });
@@ -100,7 +104,8 @@ describe("compareJson", () => {
   it("reports a deeply nested field only in B at its exact leaf path", () => {
     const result = compareJson(
       { data: { config: { countries: [{ code: "AE" }] } } },
-      { data: { config: { countries: [{ code: "AE", phone: "+971" }] } } }
+      { data: { config: { countries: [{ code: "AE", phone: "+971" }] } } },
+      { arrayMode: "ordered" }
     );
 
     expect(result.findings).toEqual(

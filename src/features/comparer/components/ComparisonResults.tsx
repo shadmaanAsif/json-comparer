@@ -89,7 +89,7 @@ export function ComparisonResults({
   const allSectionsExpanded = Object.values(sections).every(Boolean);
 
   return (
-    <section className="results" aria-labelledby="results-heading">
+    <section className="results" aria-labelledby="results-heading" data-tour="results">
       <div className="results-heading">
         <div>
           <p className="eyebrow">Comparison output</p>

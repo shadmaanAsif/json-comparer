@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const defaultOptions: ComparisonOptions = {
-  arrayMode: "ordered",
+  arrayMode: "unordered",
   ignorePatterns: [],
   maxDepth: 256,
   maxFindings: 100_000

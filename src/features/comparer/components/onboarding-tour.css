@@ -1,0 +1,137 @@
+.tour-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tour-button > span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.driver-popover.json-comparer-tour {
+  min-width: min(320px, calc(100vw - 32px));
+  max-width: min(380px, calc(100vw - 32px));
+  border: 1px solid var(--modal-border);
+  border-radius: 14px;
+  padding: 19px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 65px color-mix(in srgb, var(--modal-shadow) 78%, transparent);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-title {
+  padding-right: 30px;
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.driver-popover.json-comparer-tour .driver-popover-description {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.driver-popover.json-comparer-tour .tour-example {
+  display: grid;
+  gap: 6px;
+  margin-top: 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 11px;
+  background: var(--editor-bg);
+}
+
+.driver-popover.json-comparer-tour .tour-example strong {
+  color: var(--accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.driver-popover.json-comparer-tour .tour-example code {
+  color: var(--code-strong);
+  font:
+    0.74rem/1.55 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.driver-popover.json-comparer-tour .driver-popover-progress-text {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.driver-popover.json-comparer-tour .driver-popover-close-btn {
+  color: var(--muted);
+  border-radius: 7px;
+}
+
+.driver-popover.json-comparer-tour .driver-popover-close-btn:hover,
+.driver-popover.json-comparer-tour .driver-popover-close-btn:focus-visible {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-footer-btn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.driver-popover.json-comparer-tour .driver-popover-footer-btn:hover,
+.driver-popover.json-comparer-tour .driver-popover-footer-btn:focus-visible {
+  border-color: var(--control-hover-border);
+  background: var(--surface-2);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-next-btn {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--primary-text);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-next-btn:hover,
+.driver-popover.json-comparer-tour .driver-popover-next-btn:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-footer-btn:focus-visible,
+.driver-popover.json-comparer-tour .driver-popover-close-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 2px;
+}
+
+.driver-popover.json-comparer-tour .driver-popover-arrow-side-left {
+  border-left-color: var(--surface);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-arrow-side-right {
+  border-right-color: var(--surface);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-arrow-side-top {
+  border-top-color: var(--surface);
+}
+
+.driver-popover.json-comparer-tour .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--surface);
+}

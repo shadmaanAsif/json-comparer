@@ -53,7 +53,7 @@ export function ComparisonControls({
   return (
     <>
       <section className="options-bar" aria-labelledby="options-heading">
-        <div>
+        <div data-tour="array-mode">
           <p className="eyebrow" id="options-heading">
             Comparison settings
           </p>
@@ -81,7 +81,7 @@ export function ComparisonControls({
             </label>
           </fieldset>
         </div>
-        <div className="ignore-field">
+        <div className="ignore-field" data-tour="ignore-paths">
           <label htmlFor="ignore-paths-input">
             Ignore paths{" "}
             <small>
@@ -98,7 +98,7 @@ export function ComparisonControls({
         </div>
       </section>
 
-      <fieldset className="highlight-controls">
+      <fieldset className="highlight-controls" data-tour="highlight-controls">
         <legend>Highlight in JSON panels</legend>
         <button
           className="select-chip missing-chip"
@@ -133,7 +133,7 @@ export function ComparisonControls({
         </button>
       </fieldset>
 
-      <div className="primary-actions">
+      <div className="primary-actions" data-tour="primary-actions">
         <button className="primary-button" type="button" disabled={isComparing} onClick={onCompare}>
           {isComparing ? "Comparing…" : "Compare responses"}
         </button>

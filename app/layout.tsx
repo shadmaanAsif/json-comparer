@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "driver.js/dist/driver.css";
 import "./globals.css";
 import "@/features/comparer/comparer.css";
 

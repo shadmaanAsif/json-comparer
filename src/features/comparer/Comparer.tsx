@@ -13,6 +13,7 @@ import { ComparisonControls } from "./components/ComparisonControls";
 import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
 import { JsonInputPane } from "./components/JsonInputPane";
+import { OnboardingTour } from "./components/OnboardingTour";
 import { APP_AUTHOR, MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B } from "./constants";
 import { fetchRemoteResponse } from "./services/remote-fetch";
 import { useSynchronizedEditors } from "./hooks/useSynchronizedEditors";
@@ -36,7 +37,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     .toUpperCase();
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
-  const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
+  const [arrayMode, setArrayMode] = useState<ArrayMode>("unordered");
   const [ignorePaths, setIgnorePaths] = useState<string[]>([]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [displayLineMaps, setDisplayLineMaps] = useState<DisplayLineMaps | null>(null);
@@ -450,9 +451,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           </p>
         </div>
         <div className="hero-actions">
-          <div className="privacy-badge">
+          <div className="privacy-badge" data-tour="privacy">
             <span aria-hidden="true">●</span> Local processing
           </div>
+          <OnboardingTour hasResults={result !== null} />
           <button
             className="secondary-button"
             type="button"
@@ -481,6 +483,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           id="json-input-panels"
           className={`input-grid${jsonPanelsExpanded ? " panels-expanded" : ""}`}
           aria-label="JSON response inputs"
+          data-tour="json-inputs"
         >
           <JsonInputPane
             side="A"

@@ -6,6 +6,13 @@ import { Comparer } from "./Comparer";
 afterEach(cleanup);
 
 describe("Comparer JSON panel layout", () => {
+  it("selects unordered array comparison by default", () => {
+    render(<Comparer />);
+
+    expect(screen.getByRole("radio", { name: "Unordered arrays" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Ordered arrays" })).not.toBeChecked();
+  });
+
   it("shows the configured author in the application header", () => {
     render(<Comparer author="User1" />);
 

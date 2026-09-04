@@ -2,6 +2,7 @@
 @import "./components/ignore-path-selector.css";
 @import "./components/panel-actions.css";
 @import "./components/tree-actions.css";
+@import "./components/onboarding-tour.css";
 
 .hero {
   display: flex;
@@ -78,7 +79,6 @@
   gap: 10px;
   flex-wrap: wrap;
 }
-
 .workspace,
 .results {
   border: 1px solid var(--border);

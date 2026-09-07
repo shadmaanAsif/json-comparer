@@ -1,4 +1,4 @@
-import { displayPath } from "@/domain/comparison/path";
+import { displayPath, toJsonPointer } from "@/domain/comparison/path";
 import type { ComparisonResult, Finding, StructureFinding } from "@/domain/comparison/types";
 
 export interface ComparisonResultFilters {
@@ -42,6 +42,10 @@ export function formatComparisonOutcome(
 }
 
 function matchesPath(path: Array<string | number>, query: string): boolean {
+  if (query.startsWith("/")) {
+    const pointer = toJsonPointer(path);
+    return pointer === query || pointer.startsWith(query + "/");
+  }
   return !query || displayPath(path).toLowerCase().includes(query.trim().toLowerCase());
 }
 

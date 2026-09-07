@@ -51,6 +51,33 @@ const filters: ComparisonResultFilters = {
 };
 
 describe("projectComparisonResult", () => {
+  it("uses canonical pointer boundaries and case for panel path filters", () => {
+    const nested: Finding = {
+      ...finding("changed", "a"),
+      path: ["a", "child"],
+      pointer: "/a/child"
+    };
+    const scoped = {
+      ...result,
+      findings: [
+        finding("changed", "a"),
+        nested,
+        finding("changed", "ab"),
+        finding("changed", "A"),
+        { ...finding("changed", "a/b"), pointer: "/a~1b" }
+      ]
+    };
+    expect(
+      projectComparisonResult(scoped, { ...filters, path: "/a" }).differences.map(
+        (item) => item.pointer
+      )
+    ).toEqual(["/a", "/a/child"]);
+    expect(projectComparisonResult(scoped, { ...filters, path: "/a~1b" }).differences).toHaveLength(
+      1
+    );
+    expect(projectComparisonResult(scoped, { ...filters, path: "a" }).differences).toHaveLength(5);
+  });
+
   it("computes every visible-versus-total count from the filtered section findings", () => {
     const projection = projectComparisonResult(result, filters);
 

@@ -1,0 +1,296 @@
+.panel-line-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.panel-line-toolbar button {
+  flex-shrink: 0;
+}
+.editor-with-gutter.has-line-actions {
+  grid-template-columns: 76px minmax(0, 1fr) 16px;
+}
+.has-line-actions .line-gutter button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+}
+.line-action-icon {
+  display: grid;
+  place-items: center;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  background: var(--surface-2);
+  font:
+    700 17px/1 ui-sans-serif,
+    sans-serif;
+}
+.line-gutter .line-action-trigger:hover,
+.line-gutter .line-action-trigger.is-hovered,
+.line-gutter .line-action-trigger:focus-visible {
+  background: var(--accent-dark);
+}
+.line-action-trigger:hover .line-action-icon,
+.line-action-trigger.is-hovered .line-action-icon,
+.line-action-trigger.is-active .line-action-icon,
+.line-action-trigger:focus-visible .line-action-icon {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.line-gutter .line-action-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.full-line-highlight.line-action-hover {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  z-index: 1;
+}
+.full-line-highlight.line-context {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-block: 1px solid var(--accent);
+  z-index: 1;
+}
+.panel-actions-dialog {
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  width: min(370px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 65px #0006;
+}
+.panel-actions-dialog::backdrop {
+  background: #0003;
+}
+.panel-actions-content {
+  padding: 16px;
+}
+.panel-actions-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.panel-actions-heading h2 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+.panel-actions-heading code {
+  display: block;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  max-height: 70px;
+  overflow: auto;
+}
+.panel-actions-heading small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.panel-copy-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.panel-copy-actions button {
+  flex: 1;
+}
+.panel-action {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.83rem;
+}
+.panel-action:hover:not(:disabled) {
+  background: var(--accent-dark);
+  border-color: var(--accent);
+}
+.panel-action-group,
+.panel-action-more {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.panel-action-help {
+  font-size: 0.73rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 4px 10px 8px;
+  overflow-wrap: anywhere;
+}
+.panel-action-help:empty {
+  display: none;
+}
+.panel-difference-context {
+  position: relative;
+  margin-bottom: 14px;
+  padding: 10px;
+  border-left: 3px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+}
+.panel-difference-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.panel-difference-heading h3 {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.panel-difference-info {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: help;
+}
+.panel-difference-info span {
+  width: 16px;
+  height: 16px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font:
+    700 12px/15px ui-serif,
+    serif;
+}
+.panel-difference-info:hover,
+.panel-difference-info:focus-visible {
+  color: var(--accent);
+}
+.panel-difference-tooltip {
+  position: absolute;
+  top: 36px;
+  inset-inline: 0;
+  z-index: 3;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 24px #0005;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  max-height: min(230px, 40dvh);
+  overflow: auto;
+}
+.panel-difference-tooltip p {
+  margin: 0;
+}
+.panel-difference-tooltip p + p {
+  margin-top: 8px;
+}
+.panel-difference-summary {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.panel-actions-section-title {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.panel-finding-choice {
+  margin-top: 6px;
+  font-size: 0.75rem;
+}
+.panel-difference-context .panel-finding-choice,
+.panel-copy-fallback textarea {
+  width: 100%;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--text);
+  font-family: inherit;
+}
+.panel-copy-fallback textarea {
+  font-size: inherit;
+  min-height: 80px;
+  resize: vertical;
+}
+.panel-action-more summary {
+  padding: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.panel-actions-dialog .note-editor {
+  padding: 8px 0;
+  min-width: 0;
+}
+.panel-actions-dialog .review-status-options {
+  flex-wrap: wrap;
+}
+.panel-actions-dialog :focus-visible,
+.results tr:focus-visible,
+.json-tree summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.results tr:focus {
+  background: var(--accent-dark);
+}
+.finding-review-controls {
+  display: grid;
+  gap: 8px;
+}
+.finding-review-controls > label {
+  font-size: 0.75rem;
+}
+.path-filter-block {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+}
+.path-filter-block .path-filter {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 520px) {
+  .panel-line-toolbar {
+    align-items: flex-start;
+  }
+  .panel-actions-content {
+    padding: 12px;
+  }
+}

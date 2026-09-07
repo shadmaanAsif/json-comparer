@@ -1,5 +1,7 @@
 @import "./components/author-byline.css";
 @import "./components/ignore-path-selector.css";
+@import "./components/panel-actions.css";
+@import "./components/tree-actions.css";
 
 .hero {
   display: flex;

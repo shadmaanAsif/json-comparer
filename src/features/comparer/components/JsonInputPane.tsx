@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MAX_DOCUMENT_BYTES } from "../constants";
+import { usePanelEditorActions } from "../hooks/usePanelEditorActions";
+import type { PanelActionRequest, PanelNavigation } from "../hooks/usePanelInteractions";
+import type { PanelIndex } from "../utils/panel-context";
 import type { HighlightCategory, ResponseSide } from "../types";
 import {
   DEFAULT_EDITOR_VIEWPORT_METRICS,
@@ -13,6 +16,7 @@ import {
 import { getJsonSyntaxIssue } from "../utils/json-validation";
 import { CategoryDots, FindingStepper } from "./FindingNavigation";
 import { JsonTree } from "./JsonTree";
+import { JsonLineGutter } from "./JsonLineGutter";
 
 export interface JsonInputPaneProps {
   side: ResponseSide;
@@ -30,6 +34,9 @@ export interface JsonInputPaneProps {
   lineHighlights: Record<number, HighlightCategory>;
   registerEditor: (side: ResponseSide, editor: HTMLTextAreaElement | null) => void;
   synchronizeScroll: (side: ResponseSide, editor: HTMLTextAreaElement) => void;
+  panelIndex?: PanelIndex | null;
+  panelNavigation?: PanelNavigation;
+  onOpenActions?: (request: PanelActionRequest) => void;
 }
 
 export function JsonInputPane({
@@ -47,10 +54,14 @@ export function JsonInputPane({
   isFetching,
   lineHighlights,
   registerEditor,
-  synchronizeScroll
+  synchronizeScroll,
+  panelIndex,
+  panelNavigation,
+  onOpenActions
 }: JsonInputPaneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const paneRef = useRef<HTMLElement>(null);
   const [activeView, setActiveView] = useState<"json" | "tree">("json");
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [findText, setFindText] = useState("");
@@ -60,6 +71,20 @@ export function JsonInputPane({
   const [editorMetrics, setEditorMetrics] = useState<EditorViewportMetrics>(
     DEFAULT_EDITOR_VIEWPORT_METRICS
   );
+  const panelActions = usePanelEditorActions({
+    side,
+    value,
+    index: panelIndex,
+    navigation: panelNavigation,
+    editorRef,
+    paneRef,
+    metrics: editorMetrics,
+    activeView,
+    setActiveView,
+    setScrollTop,
+    synchronizeScroll,
+    onOpenActions
+  });
   const jsonIssue = useMemo(() => getJsonSyntaxIssue(value), [value]);
   const jsonError = jsonIssue?.message ?? null;
   const showsJsonError = jsonIssue !== null && activeView === "json";
@@ -212,6 +237,7 @@ export function JsonInputPane({
 
   return (
     <section
+      ref={paneRef}
       className={`input-panel${showsJsonError ? " has-json-error" : ""}`}
       data-side={side}
       data-json-state={jsonError ? "invalid" : value.trim() ? "valid" : "empty"}
@@ -287,6 +313,30 @@ export function JsonInputPane({
         </button>
       </div>
 
+      <div className="panel-line-toolbar">
+        <span id={"panel-actions-help-" + side}>
+          {panelIndex
+            ? activeView === "json"
+              ? "Click ⋯ beside a line for actions · or Shift+F10"
+              : "Click ⋯ beside a field for actions · or Shift+F10"
+            : `Compare to enable ${activeView === "tree" ? "field" : "line"} actions`}
+        </span>
+        <button
+          type="button"
+          className="text-button"
+          disabled={!panelIndex}
+          aria-label={(activeView === "tree" ? "Field" : "Line") + " actions for Response " + side}
+          aria-haspopup="dialog"
+          onClick={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            panelActions.openSelected({ x: rect.left, y: rect.bottom });
+          }}
+        >
+          <span aria-hidden="true">⋯ </span>
+          {activeView === "tree" ? "Field" : "Line"} actions
+        </button>
+      </div>
+
       {isFindOpen && activeView === "json" && (
         <div className="find-bar">
           <label>
@@ -334,29 +384,48 @@ export function JsonInputPane({
         JSON for Response {side}
       </label>
       {activeView === "json" ? (
-        <div className="editor-with-gutter">
-          <div className="line-gutter" aria-hidden="true">
-            <div style={{ transform: `translateY(-${scrollTop}px)` }}>
-              {lines.map((_, index) => {
-                const line = index + 1;
-                return (
-                  <button
-                    tabIndex={-1}
-                    type="button"
-                    key={line}
-                    className={`${
-                      effectiveLineHighlights[line] ? `line-${effectiveLineHighlights[line]}` : ""
-                    }${selectedNavigationLine === line ? " is-active" : ""}`}
-                    onClick={() => jumpToLine(line, "upper")}
-                  >
-                    {line}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <div
+          className={"editor-with-gutter" + (panelIndex ? " has-line-actions" : "")}
+          onMouseLeave={() => panelActions.hoverLine(null)}
+        >
+          <JsonLineGutter
+            side={side}
+            totalLines={totalLines}
+            scrollTop={scrollTop}
+            highlights={effectiveLineHighlights}
+            activeLine={panelActions.selectedLine ?? selectedNavigationLine}
+            hoveredLine={panelActions.hoveredLine}
+            panelIndex={panelIndex}
+            onHoverLine={panelActions.hoverLine}
+            onNavigate={(line) => jumpToLine(line, "upper")}
+            onOpenLine={panelActions.openLine}
+          />
           <div className="editor-main">
             <div className="line-highlight-layer" aria-hidden="true">
+              {panelActions.hoveredLine !== null && (
+                <span
+                  className="full-line-highlight line-action-hover"
+                  style={{
+                    top:
+                      editorMetrics.paddingTop +
+                      (panelActions.hoveredLine - 1) * editorMetrics.lineHeight -
+                      scrollTop,
+                    height: editorMetrics.lineHeight
+                  }}
+                />
+              )}
+              {panelActions.selectedLine !== null && (
+                <span
+                  className="full-line-highlight line-context"
+                  style={{
+                    top:
+                      editorMetrics.paddingTop +
+                      (panelActions.selectedLine - 1) * editorMetrics.lineHeight -
+                      scrollTop,
+                    height: editorMetrics.lineHeight
+                  }}
+                />
+              )}
               {highlightedLines.map((line) => (
                 <span
                   key={line}
@@ -375,6 +444,35 @@ export function JsonInputPane({
               id={`response-${side}`}
               value={value}
               onChange={(event) => onChange(event.target.value)}
+              onSelect={(event) =>
+                panelActions.selectLine(panelActions.caretLine(event.currentTarget))
+              }
+              onMouseMove={(event) => {
+                if (panelIndex)
+                  panelActions.hoverLine(
+                    panelActions.lineAtPointer(event.currentTarget, event.clientY)
+                  );
+              }}
+              onContextMenu={(event) => {
+                if (!panelIndex) return;
+                const line = panelActions.lineAtPointer(event.currentTarget, event.clientY);
+                if (!panelIndex.byLine.has(line)) return;
+                event.preventDefault();
+                panelActions.openLine(line, { x: event.clientX, y: event.clientY });
+              }}
+              onKeyDown={(event) => {
+                if (
+                  !panelIndex ||
+                  !(event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))
+                )
+                  return;
+                event.preventDefault();
+                const rect = event.currentTarget.getBoundingClientRect();
+                panelActions.openLine(panelActions.caretLine(event.currentTarget), {
+                  x: rect.left + 48,
+                  y: rect.top + 48
+                });
+              }}
               onPaste={(event) => {
                 event.preventDefault();
                 const start = event.currentTarget.selectionStart;
@@ -386,10 +484,13 @@ export function JsonInputPane({
                 side === "A" ? '{"status":"ok","amount":100}' : '{"status":"ok","amount":150}'
               }
               aria-invalid={jsonError ? "true" : "false"}
-              aria-describedby={jsonError ? `response-${side}-json-error` : undefined}
+              aria-describedby={
+                jsonError ? `response-${side}-json-error` : "panel-actions-help-" + side
+              }
               spellCheck={false}
               wrap="off"
               onScroll={(event) => {
+                panelActions.hoverLine(null);
                 setScrollTop(event.currentTarget.scrollTop);
                 synchronizeScroll(side, event.currentTarget);
               }}
@@ -436,7 +537,21 @@ export function JsonInputPane({
           </aside>
         </div>
       ) : (
-        <JsonTree raw={value} lineHighlights={effectiveLineHighlights} />
+        <JsonTree
+          side={side}
+          raw={value}
+          lineHighlights={effectiveLineHighlights}
+          collapsedPointers={panelActions.collapsed}
+          onExpandedChange={panelActions.onTreeToggle}
+          parentRequest={panelActions.treeRequest}
+          navigation={panelActions.treeNavigation}
+          actions={{
+            index: panelIndex,
+            selectedPointer: panelActions.selectedPointer,
+            onSelect: panelActions.selectPointer,
+            onOpen: panelActions.openPointer
+          }}
+        />
       )}
 
       <div className="input-meta">

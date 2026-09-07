@@ -54,7 +54,7 @@ function renderSingleValue(
   const prefix = " ".repeat(indentation);
   return serialized.split("\n").map((text, index) => ({
     text: `${prefix}${text}`,
-    ...(pathsByLine.get(index + 1) ? { path: pathsByLine.get(index + 1)! } : {})
+    ...(pathsByLine.has(index + 1) ? { path: pathsByLine.get(index + 1)! } : {})
   }));
 }
 

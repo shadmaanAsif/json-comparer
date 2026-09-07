@@ -49,7 +49,13 @@ The browser never sends comparison payloads to the server for local operations. 
 - `ComparisonControls`: array mode, ignore rules, highlight visibility, and primary actions.
 - `ComparisonResults`: summary, filters, missing/structure/difference sections, selection, and review notes.
 - `ExportPreview`: report preview actions and content surface.
-- `ValueCell` and `JsonTree`: focused comparer-specific presentation components.
+- `ValueCell`, `JsonTree`, and `JsonTreeNode`: focused comparer-specific presentation components; Tree nodes keep action buttons separate from native disclosure summaries.
+- `PanelActions`, `PanelDifferenceContext`, and `FindingReview`: shared line/field contextual dialog, descriptive context with an accessible tooltip, and finding-review controls. `usePanelInteractions` resolves related findings and safe counterpart requests; `usePanelEditorActions` coordinates exact pointer/caret selection, view-preserving navigation, and branch/parent disclosure.
+- `useAnchoredPanelDialog` follows live field geometry from the `panel-anchor` browser adapter, including virtual textarea lines and rendered Tree rows. Captured scroll/resize events update viewport-safe placement; hidden or offscreen anchors dismiss the dialog without clearing review state. Popup-internal scrolling is excluded, and listeners/observers are cleaned up on close.
+
+Panel context is indexed from worker-validated formatted text and the worker's actual/placeholder line maps; it does not parse editable input or redefine comparisons. Copy ranges retain complete container values. Context is invalidated with its comparison index, and unordered-array descendants never imply identity correspondence. Review state is keyed by stable finding ID, retained on ignore-only reruns, and reset when documents or array mode change. Selected Markdown reports support value and structure findings while excluding ignored annotations.
+
+Tree actions resolve directly through the same canonical-pointer index, including unchanged fields, and remain disabled without a current comparison. Tree navigation registers actual rendered nodes, opens ancestors and focuses the destination without switching tabs. A placeholder request produces an explicit absent-field status and focuses its nearest existing parent, not a fabricated node. Tree parsing is memoized per input text; UI selection does not reparse the document. The finding stepper sits outside the scrolling tree to avoid obscuring row actions.
 
 ### State management strategy
 

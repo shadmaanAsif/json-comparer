@@ -91,6 +91,20 @@ Priority: P0 = required for MVP; P1 = production follow-up; P2 = optional expans
 
 ## 5. User flows
 
+### Accepted panel enhancement (2026-09-04)
+
+The contextual-line workflow extends FR-003, FR-006–010: after a completed comparison, mouse and keyboard users can copy a canonical pointer/value, ignore or safely restore a path, reveal a related result, navigate to a safe counterpart or absent-field gap, fold the parent in Tree, annotate a related finding, filter beneath a pointer, and select a finding for reporting. Review and selected-report support extends beyond missing fields to modified and structure findings.
+
+Discovery must not depend on knowing a hidden gesture: actionable line numbers display a visible ellipsis button, an editor hint explains it, and hover/focus feedback identifies the row. Gutter actions use one tab stop per panel with arrow-key navigation; clicking editable JSON text retains normal cursor behavior.
+
+JSON and Tree action popups remain anchored to their selected field during page/panel scrolling and viewport resizing. Placement uses available space above or below the field and keeps long menus internally scrollable. If the field is hidden or leaves the visible panel/viewport, the popup closes without clearing the current comparison's review state. Scrolling within the popup must not detach it or interrupt note editing.
+
+Line actions identify differences using plain-language labels in a non-action context block, separate from the labeled Actions section and its outlined buttons. When multiple differences are linked to one line, a “Difference to act on” choice controls opening results, review, notes and report selection. Only this context block has an info icon: its explanation appears as an overlay on hover, focus or activation without moving action rows; Escape dismisses the explanation before the popup. A containing change is identified explicitly in the explanation; “Show difference in results” opens the chosen result.
+
+Actions must use the completed display maps, distinguish missing values from null, retain escaped-key identity, avoid pairing unordered-array records, and never remove inherited/wildcard rules implicitly. Input or array-mode changes invalidate line actions and clear review state; ignore-only reruns retain it. Ignored annotations are excluded from exports. Notes remain session-only. Subtree-only comparison, persistence, and collaboration remain outside this accepted increment.
+
+The accepted Tree extension provides a visible, right-aligned field-action button independently of native branch expansion. Field selection and the toolbar use the selected Tree path rather than a previous JSON caret. The shared dialog uses field terminology and the same review/export state. Non-empty containers can expand/collapse themselves; leaves can fold their parent. Counterpart navigation preserves the destination tab, reveals collapsed Tree ancestors, and focuses unchanged as well as changed fields. Absent Tree fields are named in a status message and navigate to the nearest existing parent without inventing a counterpart. Keyboard activation, context-menu keys, focus restoration and stale-comparison invalidation apply to Tree too. The Tree finding navigator must not obscure field-action buttons.
+
 ### Primary local comparison
 
 Open app → populate A/B → parse feedback → choose array mode/ignore rules → Compare → summary → filter/navigate findings → annotate/select → export or save locally.

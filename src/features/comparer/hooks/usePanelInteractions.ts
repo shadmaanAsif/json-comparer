@@ -74,6 +74,13 @@ export function usePanelInteractions({
     }
     return map;
   }, [result]);
+  const reverseArrayMatches = useMemo(() => {
+    const reverse: Record<string, string> = {};
+    for (const [pointerA, pointerB] of Object.entries(result?.arrayMatches ?? {})) {
+      reverse[pointerB] = pointerA;
+    }
+    return reverse;
+  }, [result]);
   let related: ReviewFinding[] = [];
   if (selection) {
     let pointer = selection.field.pointer;
@@ -96,7 +103,13 @@ export function usePanelInteractions({
   const otherSide: ResponseSide = selection?.side === "A" ? "B" : "A";
   const counterpart =
     selection && indexes
-      ? getCounterpart(selection.field, indexes[otherSide], indexes[selection.side], arrayMode)
+      ? getCounterpart(
+          selection.field,
+          indexes[otherSide],
+          indexes[selection.side],
+          arrayMode,
+          selection.side === "A" ? (result?.arrayMatches ?? {}) : reverseArrayMatches
+        )
       : undefined;
   const parent =
     selection && selection.field.parentPointer !== null

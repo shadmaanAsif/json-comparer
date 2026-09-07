@@ -67,7 +67,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - **Show difference in results** opens and focuses the linked result row. Plain-language labels identify the difference; when several apply, **Difference to act on** explains that the choice also controls review, notes and report selection. You can also filter results beneath the selected path. Pointer filters are case-sensitive, exact-or-descendant matches; ordinary readable-path search is unchanged.
 - Difference context sits above a separate **Actions** section with outlined buttons. One info icon beside the context title contains the explanation, including parent-change scope. Hover, focus or tap to read it without shifting the popup layout; Escape dismisses the tooltip first. Other actions do not have info icons.
 - JSON and Tree action popups follow their field during page/panel scrolling and resizing. They open above or below the field as space allows, with internal scrolling for longer menus. When the field leaves view, the popup closes without discarding the current comparison's notes.
-- Jump to and highlight the corresponding field, or its absent-field gap. Unordered array records are deliberately not paired by index.
+- Jump to and highlight the corresponding field, or its absent-field gap. Unordered array items are not paired by index, but items the engine matched by exact value still resolve a safe counterpart; items left genuinely unmatched do not.
 - Collapse/expand the parent in the existing Tree view without modifying the JSON.
 - Mark a related finding as Needed or add a note using the existing review statuses. If a child belongs to a containing finding, the menu identifies that parent. Lines without a finding cannot be annotated or selected for reporting.
 - **More actions** keeps Filter results to this path and Select for report out of the primary action list.
@@ -79,7 +79,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - After comparison, visible Tree fields and containers have a right-aligned **⋯** button. Expansion remains a separate native disclosure control; opening actions never toggles a branch. Row selection, right-click, Shift+F10, and keyboard activation use the exact field path, including escaped keys, array items, empty containers and the root.
 - **Field actions** reuses the contextual dialog, with a separate difference-for-this-field summary and one info tooltip. Copy, ignore/restore, related results, review, notes, filters and report selection share the same state as JSON line actions; switching tabs does not duplicate or discard annotations.
 - A non-empty container offers **Expand/collapse this branch**. A leaf or empty container offers the parent action when a parent exists. Neither action modifies the JSON.
-- Counterpart jumps respect the destination panel's current tab. Tree jumps open the needed ancestors and focus the corresponding field, including unchanged fields. For an absent field, a visible status names the missing path and the nearest existing parent is shown; no synthetic value or guessed counterpart is created. JSON destinations continue to highlight their exact field or alignment gap. Unordered array descendants remain unavailable for counterpart jumps.
+- Counterpart jumps respect the destination panel's current tab. Tree jumps open the needed ancestors and focus the corresponding field, including unchanged fields. For an absent field, a visible status names the missing path and the nearest existing parent is shown; no synthetic value or guessed counterpart is created. JSON destinations continue to highlight their exact field or alignment gap. Unordered array descendants resolve a counterpart only when their enclosing item was matched by exact value; genuinely unmatched items remain unavailable for counterpart jumps.
 - Field actions are invalidated when comparison inputs or array mode change, just like line actions. Escape closes the popup and restores its triggering control; folding transfers focus to the affected branch.
 
 ## Add Data and secure cURL import
@@ -98,9 +98,9 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 ## Comparison behavior
 
 - Explicit Ordered and Unordered array modes.
-- Unordered arrays are selected by default and use canonical multiset equality; duplicates remain
-  significant.
-- Ordered arrays compare items by index and can be selected when item positions are meaningful.
+- Ordered arrays are selected by default and compare items by index.
+- Unordered arrays use canonical multiset equality and can be selected when item positions are not
+  meaningful; duplicates remain significant.
 - Findings distinguish fields added in B, removed from B, value changes, and type changes.
 - Object key order does not affect comparison results.
 - Internal path identity uses RFC 6901 JSON Pointer; readable paths are shown in the UI.
@@ -111,7 +111,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 
 - Structure results are separate from value differences.
 - Response A acts as the schema baseline.
-- Array objects are compared against the first Response A array item.
+- Structure comparison follows the selected array mode. In Ordered mode, array objects are compared against the first Response A array item by position, as before. In Unordered mode, each side's array items are compared as a union of observed fields, so a reordered array with the same set of item shapes reports no structural mismatch, and a field present anywhere in Response A is not misreported as extra-in-B just because it lands on a different item than the first.
 - Reports fields only in A, fields only in B, inconsistent objects within A, and the empty-A-array/non-empty-B case.
 - Structure findings support path filtering and Show Ignored.
 - Only in A (present in A, missing in B) and Only in B (present in B, missing in A) chips independently filter directional structure findings; internal Response A consistency findings remain visible because they are not directional missing-field results.

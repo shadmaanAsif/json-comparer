@@ -37,7 +37,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     .toUpperCase();
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
-  const [arrayMode, setArrayMode] = useState<ArrayMode>("unordered");
+  const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
   const [ignorePaths, setIgnorePaths] = useState<string[]>([]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [displayLineMaps, setDisplayLineMaps] = useState<DisplayLineMaps | null>(null);
@@ -619,7 +619,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           }}
           onManageIgnores={() => focusElement("ignore-paths-input")}
           onJump={() => {
-            if (panels.selection) panels.navigate(panels.otherSide, panels.selection.field.pointer);
+            if (panels.counterpart) panels.navigate(panels.otherSide, panels.counterpart.pointer);
             setStatus({
               tone: "success",
               message: panels.counterpart?.placeholder

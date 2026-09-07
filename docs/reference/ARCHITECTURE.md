@@ -96,7 +96,7 @@ flowchart TD
 
 Internal paths are `PathSegment[]` and serialize as RFC 6901 JSON Pointer, eliminating ambiguity from dot notation. A presentation adapter may show familiar dotted paths when lossless.
 
-For ordered arrays, recurse by index and report insert/delete/change. For unordered arrays, canonicalize once, compute a stable hash, bucket by hash, then verify canonical equality to handle collisions. Matching duplicates consumes bucket counts. Unmatched complex values are reported as add/remove unless an explicit identity-key strategy is configured; the artifact's arbitrary unmatched pairing should not be preserved as truth. Iterative traversal replaces unbounded recursion. Limits and cancellation checks occur throughout.
+For ordered arrays, recurse by index and report insert/delete/change. For unordered arrays, canonicalize each item to a string and bucket by that exact string; matching duplicates consumes bucket counts. Unmatched complex values are always reported as a whole-value add/remove pair — no identity-key or field-level matching strategy exists in the current implementation, so a single differing field inside an otherwise-corresponding array item cannot be shown as a targeted change. `docs/reference/SRS.md` FR-018 proposes an opt-in, user-declared identity-key matching capability for a future release; the artifact's arbitrary unmatched-item pairing (matching leftovers positionally) is rejected and should not be preserved as truth. Iterative traversal replaces unbounded recursion. Limits and cancellation checks occur throughout.
 
 The worker protocol is versioned:
 

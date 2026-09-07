@@ -20,8 +20,9 @@ describe("compareJson", () => {
     expect(result.counts.changed).toBe(2);
   });
 
-  it("uses unordered multiset comparison by default", () => {
-    expect(compareJson([1, 2, 1], [2, 1, 1]).findings).toHaveLength(0);
+  it("uses ordered index comparison by default", () => {
+    const result = compareJson([1, 2], [2, 1]);
+    expect(result.counts.changed).toBe(2);
   });
 
   it("matches unordered arrays as multisets including duplicates", () => {
@@ -30,11 +31,42 @@ describe("compareJson", () => {
     expect(result.counts.removed).toBe(1);
   });
 
+  it("flags a consistent, later-index occurrence as the surplus on either side", () => {
+    const bSurplus = compareJson([1], [1, 1, 1], { arrayMode: "unordered" });
+    expect(bSurplus.findings.every((finding) => finding.kind === "added")).toBe(true);
+    expect(bSurplus.findings.map((finding) => finding.pointer).sort()).toEqual(["/1", "/2"]);
+
+    const aSurplus = compareJson([1, 1, 1], [1], { arrayMode: "unordered" });
+    expect(aSurplus.findings.every((finding) => finding.kind === "removed")).toBe(true);
+    expect(aSurplus.findings.map((finding) => finding.pointer).sort()).toEqual(["/1", "/2"]);
+  });
+
   it("canonicalizes object keys when matching unordered object arrays", () => {
     const result = compareJson([{ id: 1, name: "A" }], [{ name: "A", id: 1 }], {
       arrayMode: "unordered"
     });
     expect(result.findings).toHaveLength(0);
+  });
+
+  it("exposes matched item pointers for unordered arrays, even when reordered", () => {
+    const result = compareJson(
+      { items: [{ id: 1 }, { id: 2 }] },
+      { items: [{ id: 2 }, { id: 1 }] },
+      { arrayMode: "unordered" }
+    );
+    expect(result.arrayMatches).toEqual({
+      "/items/0": "/items/1",
+      "/items/1": "/items/0"
+    });
+  });
+
+  it("omits unmatched items from arrayMatches", () => {
+    const result = compareJson(
+      { items: [{ id: 1 }, { id: 2 }] },
+      { items: [{ id: 1 }, { id: 3 }] },
+      { arrayMode: "unordered" }
+    );
+    expect(result.arrayMatches).toEqual({ "/items/0": "/items/0" });
   });
 
   it("uses unambiguous JSON Pointer paths and ignore patterns", () => {
@@ -89,6 +121,35 @@ describe("compareJson", () => {
         ["inconsistent-in-a", "/items/1/name"],
         ["extra-in-b", "/items/0/extra"],
         ["missing-in-b", "/items/1/name"]
+      ])
+    );
+  });
+
+  it("compares unordered array item schemas as unions instead of a fragile single baseline", () => {
+    const result = compareJson(
+      { items: [{ id: 2 }, { id: 1, extra: true }] },
+      { items: [{ id: 1, extra: true }, { id: 2 }] },
+      { arrayMode: "unordered" }
+    );
+    // "extra" exists somewhere on both sides; a single-item baseline would wrongly report
+    // it as extra-in-b just because it lands on a different item than Response A's first.
+    expect(result.structure.map((finding) => finding.kind)).not.toContain("extra-in-b");
+    expect(result.structure).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "inconsistent-in-a", pointer: "/items/1/extra" })
+      ])
+    );
+  });
+
+  it("still reports a field genuinely absent from every unordered B item", () => {
+    const result = compareJson(
+      { items: [{ id: 1, amount: 100 }] },
+      { items: [{ id: 1 }] },
+      { arrayMode: "unordered" }
+    );
+    expect(result.structure).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "missing-in-b", pointer: "/items/0/amount" })
       ])
     );
   });

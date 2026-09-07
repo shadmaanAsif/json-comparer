@@ -82,18 +82,38 @@ export function buildPanelIndex(
   return { byLine, byPointer };
 }
 
+/**
+ * Resolve `pointer` through the engine's matched-item pointer map (own array-item pointer ->
+ * corresponding other-side array-item pointer) by finding the longest matched-item ancestor
+ * and substituting it. Returns undefined when `pointer` isn't nested under a matched item.
+ */
+function resolveMatchedPointer(
+  pointer: string,
+  matchedPointers: Record<string, string>
+): string | undefined {
+  let best: string | undefined;
+  for (const key of Object.keys(matchedPointers)) {
+    if (pointer !== key && !pointer.startsWith(`${key}/`)) continue;
+    if (!best || key.length > best.length) best = key;
+  }
+  return best === undefined ? undefined : matchedPointers[best] + pointer.slice(best.length);
+}
+
 export function getCounterpart(
   field: PanelField,
   other: PanelIndex,
   own: PanelIndex,
-  arrayMode: ArrayMode
+  arrayMode: ArrayMode,
+  matchedPointers: Record<string, string> = {}
 ): PanelField | undefined {
   const counterpart = other.byPointer.get(field.pointer);
   if (
     arrayMode === "unordered" &&
     (own.byPointer.get(field.pointer)?.withinArray || counterpart?.withinArray)
-  )
-    return undefined;
+  ) {
+    const matched = resolveMatchedPointer(field.pointer, matchedPointers);
+    return matched === undefined ? undefined : other.byPointer.get(matched);
+  }
   return counterpart;
 }
 

@@ -1,5 +1,11 @@
 import { isIgnored, toJsonPointer } from "./path";
-import type { JsonValue, PathSegment, StructureFinding, StructureFindingKind } from "./types";
+import type {
+  ArrayMode,
+  JsonValue,
+  PathSegment,
+  StructureFinding,
+  StructureFindingKind
+} from "./types";
 
 type StructureJob = {
   valueA: JsonValue;
@@ -21,6 +27,7 @@ function isJsonObject(value: JsonValue): value is Record<string, JsonValue> {
 export function compareStructure(
   valueA: JsonValue,
   valueB: JsonValue,
+  arrayMode: ArrayMode = "ordered",
   ignorePatterns: string[] = [],
   maxDepth = 256,
   maxFindings = 100_000
@@ -54,6 +61,12 @@ export function compareStructure(
           job.path,
           "Response A has no first item to use as the schema baseline."
         );
+      }
+      if (arrayMode === "unordered") {
+        if (job.valueA.length) {
+          compareArrayItemUnion(job.valueA, job.valueB, job.path, addFinding);
+        }
+        continue;
       }
       const baseline = job.valueA[0];
       if (baseline !== undefined) {
@@ -168,6 +181,63 @@ function compareObjectKeys(
         path: [...path, key],
         depth: depth + 1
       });
+    }
+  }
+}
+
+// Unordered arrays have no meaningful per-index correspondence between A and B (Article
+// II.3: matching must not invent pairing between items). Schema shape is instead inferred
+// as the union of keys observed anywhere in each side's items, so findings never depend on
+// item order. Each key is anchored at the first item observed to carry it, purely as an
+// illustrative example location — not a claim that item corresponds to anything on the
+// other side. Nested structure under a shared key is not recursed into for unordered
+// arrays: picking one representative item per key would itself be an arbitrary choice.
+function collectUnionKeys(items: JsonValue[]): Map<string, number> {
+  const firstIndexByKey = new Map<string, number>();
+  items.forEach((item, index) => {
+    if (!isJsonObject(item)) return;
+    for (const key of Object.keys(item)) {
+      if (!firstIndexByKey.has(key)) firstIndexByKey.set(key, index);
+    }
+  });
+  return firstIndexByKey;
+}
+
+function compareArrayItemUnion(
+  itemsA: JsonValue[],
+  itemsB: JsonValue[],
+  path: PathSegment[],
+  addFinding: AddStructureFinding
+) {
+  const unionA = collectUnionKeys(itemsA);
+  const unionB = collectUnionKeys(itemsB);
+
+  for (const [key, index] of unionA) {
+    const presentOnEveryItem = itemsA.every((item) => isJsonObject(item) && key in item);
+    if (!presentOnEveryItem) {
+      addFinding(
+        "inconsistent-in-a",
+        [...path, index, key],
+        "This field is not present on every Response A item."
+      );
+    }
+  }
+  for (const [key, index] of unionA) {
+    if (!unionB.has(key)) {
+      addFinding(
+        "missing-in-b",
+        [...path, index, key],
+        "Field is only in A relative to the Response B schema."
+      );
+    }
+  }
+  for (const [key, index] of unionB) {
+    if (!unionA.has(key)) {
+      addFinding(
+        "extra-in-b",
+        [...path, index, key],
+        "Field is only in B relative to the Response A schema baseline."
+      );
     }
   }
 }

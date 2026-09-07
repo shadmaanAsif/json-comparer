@@ -195,7 +195,10 @@ export function PanelActions({
           </button>
           {!counterpart && (
             <p className="panel-action-help">
-              No safe counterpart mapping. Unordered array records are not paired by identity.
+              No safe counterpart mapping. Unordered mode matches array items by exact value, not
+              identity — if this item and a similar one on the other side differ by even one field,
+              they&apos;re unrelated to the engine and shown as a separate addition and removal
+              rather than one change.
             </p>
           )}
           {counterpart?.placeholder && (

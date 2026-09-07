@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const defaultOptions: ComparisonOptions = {
-  arrayMode: "unordered",
+  arrayMode: "ordered",
   ignorePatterns: [],
   maxDepth: 256,
   maxFindings: 100_000
@@ -45,6 +45,7 @@ export function compareJson(
 ): ComparisonResult {
   const options = { ...defaultOptions, ...partial };
   const findings: Finding[] = [];
+  const arrayMatches: Record<string, string> = {};
   let truncated = false;
 
   const add = (kind: FindingKind, path: PathSegment[], a?: JsonValue, b?: JsonValue) => {
@@ -131,8 +132,15 @@ export function compareJson(
         job.a.forEach((value, index) => {
           const key = canonical(value);
           const matches = buckets.get(key);
-          if (matches?.length) matches.pop();
-          else add("removed", [...job.path, index], value);
+          const consumed = matches?.length ? matches.shift() : undefined;
+          if (consumed) {
+            arrayMatches[toJsonPointer([...job.path, index])] = toJsonPointer([
+              ...job.path,
+              consumed.index
+            ]);
+          } else {
+            add("removed", [...job.path, index], value);
+          }
         });
         for (const matches of buckets.values()) {
           for (const match of matches)
@@ -191,6 +199,7 @@ export function compareJson(
   const structure = compareStructure(
     valueA,
     valueB,
+    options.arrayMode,
     options.ignorePatterns,
     options.maxDepth,
     options.maxFindings
@@ -200,6 +209,7 @@ export function compareJson(
     counts,
     ignoredCount,
     structure,
+    arrayMatches,
     truncated: truncated || structure.length >= options.maxFindings
   };
 }

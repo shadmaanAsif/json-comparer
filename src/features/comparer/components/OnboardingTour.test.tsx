@@ -53,10 +53,13 @@ describe("OnboardingTour", () => {
       '[data-tour="ignore-paths"]',
       '[data-tour="highlight-controls"]',
       '[data-tour="primary-actions"]',
+      '[data-tour="panel-actions"]',
       undefined
     ]);
     expect(config.steps?.[2]?.popover?.description).toContain("selected by default");
     expect(config.steps?.[2]?.data?.example).toContain("Default: Unordered");
+    expect(config.steps?.[6]?.popover?.description).toContain("Shift+F10");
+    expect(config.steps?.[6]?.data?.example).toContain("Copy value");
   });
 
   it("opens automatically once and remembers when the first tour is dismissed", async () => {

@@ -313,7 +313,7 @@ export function JsonInputPane({
         </button>
       </div>
 
-      <div className="panel-line-toolbar">
+      <div className="panel-line-toolbar" data-tour={side === "A" ? "panel-actions" : undefined}>
         <span id={"panel-actions-help-" + side}>
           {panelIndex
             ? activeView === "json"

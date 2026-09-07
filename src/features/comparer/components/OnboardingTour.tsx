@@ -107,6 +107,20 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       }
     },
     {
+      element: '[data-tour="panel-actions"]',
+      data: {
+        example:
+          "data.amount: 100 → 150\n⋯ → Copy value · Ignore path · Jump to field · Mark for review"
+      },
+      popover: {
+        title: "Act on any line, right where it lives",
+        description:
+          "Once you compare, every line gets a ⋯ button — or right-click it, or press Shift+F10. Copy its exact path or value, ignore or restore that field, jump to its match on the other side, or mark a finding for review and add a note.",
+        side: "bottom",
+        align: "start"
+      }
+    },
+    {
       element: hasResults ? '[data-tour="results"]' : undefined,
       data: {
         example: "data.currency → Only in B\nSelect → add review note → export .md"

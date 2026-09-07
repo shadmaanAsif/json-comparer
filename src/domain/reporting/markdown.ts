@@ -1,5 +1,5 @@
 import { displayPath } from "../comparison/path";
-import type { ArrayMode, Finding } from "../comparison/types";
+import type { ArrayMode, Finding, StructureFinding } from "../comparison/types";
 
 function printable(value: unknown): string {
   if (value === undefined) return "—";
@@ -7,7 +7,10 @@ function printable(value: unknown): string {
   return `\`${text.replaceAll("`", "\\`")}\``;
 }
 
-export function createMarkdownReport(findings: Finding[], arrayMode: ArrayMode): string {
+export function createMarkdownReport(
+  findings: (Finding | StructureFinding)[],
+  arrayMode: ArrayMode
+): string {
   const actionable = findings.filter((finding) => !finding.ignored);
   const lines = [
     "# JSON Comparison Report",
@@ -26,9 +29,13 @@ export function createMarkdownReport(findings: Finding[], arrayMode: ArrayMode):
       `## ${index + 1}. ${displayPath(finding.path)}`,
       "",
       `- Type: ${finding.kind}`,
-      `- JSON Pointer: \`${finding.pointer || "/"}\``,
-      `- Response A: ${printable(finding.valueA)}`,
-      `- Response B: ${printable(finding.valueB)}`,
+      `- JSON Pointer: ${finding.pointer ? printable(finding.pointer) : "(root — empty pointer)"}`,
+      ...("detail" in finding
+        ? [`- Detail: ${printable(finding.detail)}`]
+        : [
+            `- Response A: ${printable(finding.valueA)}`,
+            `- Response B: ${printable(finding.valueB)}`
+          ]),
       ""
     );
   });

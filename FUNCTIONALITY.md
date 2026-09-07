@@ -47,7 +47,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - Invalid syntax also highlights its JSON line, gutter, minimap marker, and navigation target; these overlays are not added to the Tree view.
 - JSON and collapsible Tree tabs preserve the same underlying document.
 - The Tree tab highlights matching nodes and leaves using the same Missing, Structure, and Changed categories already computed for the JSON view; category badges ensure color is not the only cue.
-- A floating Tree finding navigator shows the categories present as colored dots, the active/total finding count, and previous/next arrows. Navigation wraps, reopens collapsed ancestors, centers the selected node, and focuses it without shifting the page.
+- A Tree finding navigator below the tree shows the categories present as colored dots, the active/total finding count, and previous/next arrows without covering field-action buttons. Navigation wraps, reopens collapsed ancestors, centers the selected node, and focuses it without shifting the page.
 - Find supports case-insensitive matching, match counts, Enter/Shift+Enter navigation, and Escape to close.
 - Synchronized logical line-number gutters are displayed beside both JSON editors.
 - Editor row overlays, gutters, placeholder gaps, and viewport calculations share the textarea's measured 22.4-pixel line height and padding. The slightly roomier rows improve scanning while preventing cumulative drift across long or deeply nested documents.
@@ -58,6 +58,29 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - The active finding is emphasized in the full-row overlay, line gutter, and minimap in both compact and expanded modes.
 - Expanded mode uses up to 86% of the viewport height, capped at 980 pixels, so substantially more JSON remains visible.
 - Document byte limits protect the browser from unexpectedly large inputs.
+
+### Contextual line actions
+
+- After comparison, each actionable line number has a visible **⋯** button, with a short hint above the editor. Hovering a row emphasizes the matching button and JSON line; clicking the button opens its actions. Plain JSON clicks still position the editing cursor. The gutter has one keyboard tab stop per panel: Up/Down or Home/End navigate rows, and Enter/Space opens the menu. **Line actions**, right-click, and Shift+F10 remain available; Escape dismisses the dialog and restores focus.
+- Copy the exact JSON Pointer or JSON value, including complete container values. Absent alignment gaps have no value to copy; an unavailable clipboard offers selectable text.
+- Ignore a path and its descendants, or restore its exact ignore rule, with an immediate comparison refresh. Inherited/wildcard rules open the rule editor instead of silently removing broader exclusions. Paths that cannot safely become exact rules are disabled.
+- **Show difference in results** opens and focuses the linked result row. Plain-language labels identify the difference; when several apply, **Difference to act on** explains that the choice also controls review, notes and report selection. You can also filter results beneath the selected path. Pointer filters are case-sensitive, exact-or-descendant matches; ordinary readable-path search is unchanged.
+- Difference context sits above a separate **Actions** section with outlined buttons. One info icon beside the context title contains the explanation, including parent-change scope. Hover, focus or tap to read it without shifting the popup layout; Escape dismisses the tooltip first. Other actions do not have info icons.
+- JSON and Tree action popups follow their field during page/panel scrolling and resizing. They open above or below the field as space allows, with internal scrolling for longer menus. When the field leaves view, the popup closes without discarding the current comparison's notes.
+- Jump to and highlight the corresponding field, or its absent-field gap. Unordered array records are deliberately not paired by index.
+- Collapse/expand the parent in the existing Tree view without modifying the JSON.
+- Mark a related finding as Needed or add a note using the existing review statuses. If a child belongs to a containing finding, the menu identifies that parent. Lines without a finding cannot be annotated or selected for reporting.
+- **More actions** keeps Filter results to this path and Select for report out of the primary action list.
+- Line actions use only the latest completed comparison. Editing/importing/replacing documents or changing array mode cancels stale work and clears old review state; ignore-rule reruns preserve notes and selections. Reviews remain in memory only.
+- Subtree-only comparison is not included in this enhancement.
+
+### Tree field actions
+
+- After comparison, visible Tree fields and containers have a right-aligned **⋯** button. Expansion remains a separate native disclosure control; opening actions never toggles a branch. Row selection, right-click, Shift+F10, and keyboard activation use the exact field path, including escaped keys, array items, empty containers and the root.
+- **Field actions** reuses the contextual dialog, with a separate difference-for-this-field summary and one info tooltip. Copy, ignore/restore, related results, review, notes, filters and report selection share the same state as JSON line actions; switching tabs does not duplicate or discard annotations.
+- A non-empty container offers **Expand/collapse this branch**. A leaf or empty container offers the parent action when a parent exists. Neither action modifies the JSON.
+- Counterpart jumps respect the destination panel's current tab. Tree jumps open the needed ancestors and focus the corresponding field, including unchanged fields. For an absent field, a visible status names the missing path and the nearest existing parent is shown; no synthetic value or guessed counterpart is created. JSON destinations continue to highlight their exact field or alignment gap. Unordered array descendants remain unavailable for counterpart jumps.
+- Field actions are invalidated when comparison inputs or array mode change, just like line actions. Escape closes the popup and restores its triggering control; folding transfers focus to the affected branch.
 
 ## Add Data and secure cURL import
 
@@ -115,19 +138,20 @@ This file is the authoritative catalogue of functionality implemented in the JSO
   - Show Ignored.
 - A shared path search composes with the direction and ignored filters.
 - The comparison outcome uses `{visible} of {total} differences shown in {duration} ms`; visible is after display filters and total is before them, including ignored findings. Each Structure Schema Compare, Missing Fields, and Differences disclosure reports the same visible/total semantics and updates immediately with active filters.
-- Missing rows support persistent selection, a native three-option review-status radio group (Not reviewed, Reviewed, or Needed), and free-text notes.
+- Missing, modified, and structure findings support session-only selection, a native three-option review-status radio group (Not reviewed, Reviewed, or Needed), and free-text notes. Missing findings are reviewed in the Missing Fields table rather than duplicated in Differences.
 - Long values use an exact 70-character preview with Show more/Show less.
 - Differences has a dedicated value/type comparison table.
 - Summary chips report Only in A, Only in B, changed, structure, and ignored totals.
 
 ## Markdown export and preview
 
-- Export all Missing Fields or only selected rows.
-- Downloads use `missing-fields-report.md` and `missing-fields-selected-report.md`.
+- Export all Missing Fields or selected missing, modified, and structure findings.
+- Downloads use `missing-fields-report.md` and `selected-findings-report.md`.
 - Every export opens a read-only in-page Markdown preview.
 - Preview actions include Copy, Download again, and Close.
 - Review statuses and notes are included when configured.
 - Reports contain a privacy warning because compared values may be sensitive.
+- Ignored findings and their annotations are excluded from report content. A selection containing only ignored findings does not create an empty download.
 
 ## Workspace behavior
 

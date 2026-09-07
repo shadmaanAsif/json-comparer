@@ -25,6 +25,14 @@ Audit date: 2026-08-26. Authority: `docs/source/README.md` Functionality Checkli
 | F-017 Aligned JSON comparison | Implemented                                 | Response A shared-key baseline, one-sided placeholder blocks with exact path/line metadata, array-order preservation, synchronized aligned-line scrolling, automatic whole-value alignment, and highlighted gap navigation                                                         | Soft-wrapped physical-line measurement remains an enhancement                           |
 | F-018 Theme toggle            | Partial                                     | Accessible session light/dark toggle and complete token switch                                                                                                                                                                                                                     | System initialization and persistence                                                   |
 
+## Panel enhancement increment — 2026-09-04
+
+Implemented: contextual JSON line actions after comparison, exact copy/ignore/restore, related-result focus, safe counterpart/gap navigation, parent Tree folding, related-finding notes/status, pointer-subtree result filtering, and selected reports covering modified and structure findings. Mouse and keyboard entry points share the same dialog. Regression coverage includes escaped/root pointers, absent values, unordered-array safeguards, inherited ignores, clipboard fallback, stale-worker cancellation, review lifetime, and ignored-note export privacy.
+
+Existing comparison modes and algorithms are unchanged. Result-table source-line links, subtree-only comparison, local persistence, and collaborative review remain separate work. Full assistive-technology/browser-matrix review is still recommended.
+
+Tree extension: visible per-field actions, independent native branch disclosure, shared line/field review state, branch-versus-parent folding, and destination-view-preserving counterpart navigation. Missing Tree fields are explicitly named and reveal the nearest existing parent. The finding stepper is docked below Tree so it does not cover row controls. Added regression coverage covers Tree selection, escaped paths, keyboard entry, folding, hidden ancestors, missing destinations, cross-tab annotations, and unordered-array safeguards.
+
 ## Security verification scope
 
 The secure fetch implementation validates strict request shapes, methods and header policy; requires an administrator hostname allowlist; accepts HTTPS port 443 only; blocks private, loopback, link-local, multicast, reserved and metadata ranges for IPv4 and IPv6; validates every redirect; pins the validated address in the TLS connection; strips credentials by default; applies request-body, response-byte, redirect, timeout and per-client rate limits; disables response caching; and returns stable errors without logging request contents or secrets.

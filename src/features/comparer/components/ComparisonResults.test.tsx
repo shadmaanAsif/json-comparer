@@ -94,6 +94,25 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
 }
 
 describe("ComparisonResults disclosures", () => {
+  it("allows structure findings to be selected and reviewed without duplicating missing reviews", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      structureFindings: [structureOnlyInA],
+      onlyInA: [missingFinding],
+      differences: [missingFinding],
+      sections: { missing: true, structure: true, differences: true }
+    });
+    await user.click(screen.getByRole("checkbox", { name: "Select structure baselineOnly" }));
+    expect(props.onToggleSelected).toHaveBeenCalledWith(structureOnlyInA.id);
+    await user.click(
+      within(
+        screen.getByRole("group", { name: "Review status for structure baselineOnly" })
+      ).getByRole("radio", { name: "Needed" })
+    );
+    expect(props.onNoteChange).toHaveBeenCalledWith(structureOnlyInA.id, { status: "needed" });
+    expect(screen.getAllByRole("group", { name: "Review status for config.code" })).toHaveLength(1);
+  });
+
   it("uses Only in A and Only in B consistently across summaries, filters, groups, and rows", () => {
     const { container } = renderResults({
       result: {

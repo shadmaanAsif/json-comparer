@@ -2,7 +2,8 @@
 
 import { displayPath } from "@/domain/comparison/path";
 import type { ComparisonResult, Finding, StructureFinding } from "@/domain/comparison/types";
-import type { ReviewNote, ReviewNoteStatus } from "../types";
+import type { ReviewNote } from "../types";
+import { FindingReview } from "./FindingReview";
 import {
   formatComparisonOutcome,
   type ComparisonProjectionCounts
@@ -57,15 +58,6 @@ function structureLabel(kind: StructureFinding["kind"]) {
   return "A has no schema item";
 }
 
-const REVIEW_STATUS_OPTIONS: ReadonlyArray<{
-  value: ReviewNoteStatus;
-  label: string;
-}> = [
-  { value: "not-reviewed", label: "Not reviewed" },
-  { value: "reviewed", label: "Reviewed" },
-  { value: "needed", label: "Needed" }
-];
-
 export function ComparisonResults({
   result,
   counts,
@@ -86,6 +78,10 @@ export function ComparisonResults({
   onNoteChange
 }: ComparisonResultsProps) {
   const missingFindings = [...onlyInA, ...onlyInB];
+  const selectedMissingCount = result.findings.filter(
+    (finding) =>
+      (finding.kind === "added" || finding.kind === "removed") && selectedFindingIds.has(finding.id)
+  ).length;
   const allSectionsExpanded = Object.values(sections).every(Boolean);
 
   return (
@@ -150,15 +146,27 @@ export function ComparisonResults({
       </p>
 
       <div className="results-toolbar">
-        <label className="path-filter">
-          <span>Filter by path</span>
-          <input
-            type="search"
-            value={filters.path}
-            onChange={(event) => onFiltersChange({ path: event.target.value })}
-            placeholder="data.amount"
-          />
-        </label>
+        <div className="path-filter-block">
+          <label className="path-filter">
+            <span>Filter by path</span>
+            <input
+              id="results-path-filter"
+              type="search"
+              value={filters.path}
+              onChange={(event) => onFiltersChange({ path: event.target.value })}
+              placeholder="data.amount or /data/amount"
+            />
+          </label>
+          {filters.path && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => onFiltersChange({ path: "" })}
+            >
+              Clear path filter
+            </button>
+          )}
+        </div>
         <div className="filter-chip-row">
           <div className="filter-chip-group" role="group" aria-label="Result filters">
             <FilterChip
@@ -246,11 +254,17 @@ export function ComparisonResults({
                   <th scope="col">Field path</th>
                   <th scope="col">Issue</th>
                   <th scope="col">Detail</th>
+                  <th scope="col">Review</th>
                 </tr>
               </thead>
               <tbody>
                 {structureFindings.map((finding) => (
-                  <tr key={finding.id} className={finding.ignored ? "ignored-row" : ""}>
+                  <tr
+                    key={finding.id}
+                    id={"finding-structure-" + finding.id}
+                    tabIndex={-1}
+                    className={finding.ignored ? "ignored-row" : ""}
+                  >
                     <td>
                       <FindingPath finding={finding} />
                     </td>
@@ -258,6 +272,15 @@ export function ComparisonResults({
                       <span className="kind-pill type-changed">{structureLabel(finding.kind)}</span>
                     </td>
                     <td>{finding.detail}</td>
+                    <td>
+                      <FindingReviewControls
+                        finding={finding}
+                        selected={selectedFindingIds.has(finding.id)}
+                        note={notesByFindingId[finding.id]}
+                        onSelect={onToggleSelected}
+                        onNote={onNoteChange}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -280,7 +303,9 @@ export function ComparisonResults({
             Missing Fields
           </span>
           <small>
-            {counts.missing.visible} / {counts.missing.total} · {selectedFindingIds.size} selected
+            {counts.missing.visible} / {counts.missing.total}
+            {" · "}
+            {selectedMissingCount} selected
           </small>
         </summary>
         {missingFindings.length === 0 ? (
@@ -356,11 +381,17 @@ export function ComparisonResults({
                   <th scope="col">Change</th>
                   <th scope="col">Source A</th>
                   <th scope="col">Target B</th>
+                  <th scope="col">Review</th>
                 </tr>
               </thead>
               <tbody>
                 {differences.map((finding) => (
-                  <tr key={finding.id} className={finding.ignored ? "ignored-row" : ""}>
+                  <tr
+                    key={finding.id}
+                    id={"finding-differences-" + finding.id}
+                    tabIndex={-1}
+                    className={finding.ignored ? "ignored-row" : ""}
+                  >
                     <td>
                       <FindingPath finding={finding} />
                     </td>
@@ -372,6 +403,19 @@ export function ComparisonResults({
                     </td>
                     <td>
                       <ValueCell value={finding.valueB} />
+                    </td>
+                    <td>
+                      {finding.kind === "added" || finding.kind === "removed" ? (
+                        <small>Review in Missing Fields</small>
+                      ) : (
+                        <FindingReviewControls
+                          finding={finding}
+                          selected={selectedFindingIds.has(finding.id)}
+                          note={notesByFindingId[finding.id]}
+                          onSelect={onToggleSelected}
+                          onNote={onNoteChange}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -427,7 +471,7 @@ function FindingPath({ finding }: { finding: Finding | StructureFinding }) {
   return (
     <>
       <strong>{displayPath(finding.path)}</strong>
-      <code>{finding.pointer || "/"}</code>
+      <code>{finding.pointer || "(root — empty pointer)"}</code>
       {finding.ignored && <span className="ignored-pill">Ignored</span>}
     </>
   );
@@ -459,7 +503,12 @@ function MissingFindingGroup({
       {findings.map((finding) => {
         const note = notesByFindingId[finding.id] ?? { status: "not-reviewed", text: "" };
         return (
-          <tr key={finding.id} className={finding.ignored ? "ignored-row" : ""}>
+          <tr
+            key={finding.id}
+            id={"finding-missing-" + finding.id}
+            tabIndex={-1}
+            className={finding.ignored ? "ignored-row" : ""}
+          >
             <td>
               <input
                 type="checkbox"
@@ -479,45 +528,46 @@ function MissingFindingGroup({
               <ValueCell value={finding.valueB} />
             </td>
             <td>
-              <div className="note-editor">
-                <fieldset className="review-status-group">
-                  <legend className="visually-hidden">
-                    Review status for {displayPath(finding.path)}
-                  </legend>
-                  <div className="review-status-options">
-                    {REVIEW_STATUS_OPTIONS.map((option) => (
-                      <label className="review-status-option" key={option.value}>
-                        <input
-                          type="radio"
-                          name={`review-status-${finding.id}`}
-                          value={option.value}
-                          checked={note.status === option.value}
-                          onChange={() =>
-                            onNoteChange(finding.id, {
-                              status: option.value
-                            })
-                          }
-                        />
-                        <span>{option.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <label>
-                  <span className="visually-hidden">Note for {displayPath(finding.path)}</span>
-                  <input
-                    type="text"
-                    value={note.text}
-                    onChange={(event) => onNoteChange(finding.id, { text: event.target.value })}
-                    placeholder="Add note"
-                  />
-                </label>
-              </div>
+              <FindingReview
+                label={displayPath(finding.path)}
+                note={note}
+                onChange={(patch) => onNoteChange(finding.id, patch)}
+              />
             </td>
           </tr>
         );
       })}
     </>
+  );
+}
+
+function FindingReviewControls({
+  finding,
+  selected,
+  note,
+  onSelect,
+  onNote
+}: {
+  finding: Finding | StructureFinding;
+  selected: boolean;
+  note?: ReviewNote;
+  onSelect: (id: string) => void;
+  onNote: (id: string, patch: Partial<ReviewNote>) => void;
+}) {
+  const label = ("detail" in finding ? "structure " : "") + displayPath(finding.path);
+  return (
+    <div className="finding-review-controls">
+      <label>
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onSelect(finding.id)}
+          aria-label={"Select " + label}
+        />{" "}
+        Select for report
+      </label>
+      <FindingReview label={label} note={note} onChange={(patch) => onNote(finding.id, patch)} />
+    </div>
   );
 }
 

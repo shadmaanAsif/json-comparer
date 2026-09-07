@@ -1,104 +1,11 @@
 "use client";
 
 import { buildLineMap } from "@/domain/comparison/line-map";
-import { toJsonPointer } from "@/domain/comparison/path";
-import type { PathSegment } from "@/domain/comparison/types";
-import { useMemo, useRef, useState } from "react";
-import type { HighlightCategory } from "../types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { TreeNavigationRequest, TreeParentRequest } from "../hooks/usePanelEditorActions";
+import type { HighlightCategory, ResponseSide } from "../types";
 import { FindingStepper } from "./FindingNavigation";
-
-interface TreeNodeProps {
-  name?: string;
-  value: unknown;
-  path: PathSegment[];
-  highlights: Record<string, HighlightCategory>;
-  activePointer: string | null;
-  registerHighlight: (pointer: string, node: HTMLElement | null) => void;
-}
-
-const highlightLabels: Record<HighlightCategory, string> = {
-  missing: "Missing",
-  structure: "Structure",
-  differences: "Changed",
-  invalid: "Invalid"
-};
-
-function HighlightBadge({ category }: { category?: HighlightCategory }) {
-  if (!category) return null;
-  return <span className="tree-highlight-badge">{highlightLabels[category]}</span>;
-}
-
-function highlightClass(category?: HighlightCategory): string {
-  return category ? ` tree-highlight tree-highlight-${category}` : "";
-}
-
-function TreeNode({
-  name,
-  value,
-  path,
-  highlights,
-  activePointer,
-  registerHighlight
-}: TreeNodeProps) {
-  const pointer = toJsonPointer(path);
-  const category = highlights[pointer];
-  const activeClass = category && pointer === activePointer ? " is-active" : "";
-  const registerNode = category
-    ? (node: HTMLElement | null) => registerHighlight(pointer, node)
-    : undefined;
-  if (value !== null && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    const label = Array.isArray(value)
-      ? `[ ${entries.length} item${entries.length === 1 ? "" : "s"} ]`
-      : `{ ${entries.length} field${entries.length === 1 ? "" : "s"} }`;
-    if (!entries.length) {
-      return (
-        <div
-          ref={registerNode}
-          tabIndex={category ? -1 : undefined}
-          className={`tree-leaf${highlightClass(category)}${activeClass}`}
-        >
-          <span className="tree-key">{name}</span> <span>{Array.isArray(value) ? "[]" : "{}"}</span>
-          <HighlightBadge category={category} />
-        </div>
-      );
-    }
-    return (
-      <details className="tree-node" open>
-        <summary ref={registerNode} className={`${highlightClass(category).trim()}${activeClass}`}>
-          {name !== undefined && <span className="tree-key">{name}: </span>}
-          {label}
-          <HighlightBadge category={category} />
-        </summary>
-        <div>
-          {entries.map(([key, child]) => (
-            <TreeNode
-              key={key}
-              name={key}
-              value={child}
-              path={[...path, Array.isArray(value) ? Number(key) : key]}
-              highlights={highlights}
-              activePointer={activePointer}
-              registerHighlight={registerHighlight}
-            />
-          ))}
-        </div>
-      </details>
-    );
-  }
-  return (
-    <div
-      ref={registerNode}
-      tabIndex={category ? -1 : undefined}
-      className={`tree-leaf value-${value === null ? "null" : typeof value}${highlightClass(category)}${activeClass}`}
-    >
-      <span className="tree-key">{name}</span>
-      {name !== undefined && ": "}
-      <span>{typeof value === "string" ? JSON.stringify(value) : String(value)}</span>
-      <HighlightBadge category={category} />
-    </div>
-  );
-}
+import { JsonTreeNode, type TreeFieldActions } from "./JsonTreeNode";
 
 function treeHighlights(
   raw: string,
@@ -113,14 +20,61 @@ function treeHighlights(
 }
 
 export function JsonTree({
+  side,
   raw,
-  lineHighlights = {}
+  lineHighlights = {},
+  collapsedPointers,
+  onExpandedChange,
+  parentRequest,
+  navigation,
+  actions
 }: {
+  side: ResponseSide;
   raw: string;
   lineHighlights?: Record<number, HighlightCategory>;
+  collapsedPointers?: ReadonlySet<string>;
+  onExpandedChange?: (pointer: string, expanded: boolean) => void;
+  parentRequest?: TreeParentRequest;
+  navigation?: TreeNavigationRequest;
+  actions: TreeFieldActions;
 }) {
   const treeRef = useRef<HTMLDivElement>(null);
-  const highlightedNodeRefs = useRef(new Map<string, HTMLElement>());
+  const nodeRefs = useRef(new Map<string, HTMLElement>());
+  const lastNavigation = useRef<TreeNavigationRequest | undefined>(undefined);
+  useEffect(() => {
+    if (!parentRequest || !treeRef.current) return;
+    const target = [
+      ...treeRef.current.querySelectorAll<HTMLDetailsElement>("[data-tree-pointer]")
+    ].find((node) => node.dataset.treePointer === parentRequest.pointer);
+    if (!target) return;
+    let ancestor = target.parentElement?.closest("details");
+    while (ancestor) {
+      ancestor.open = true;
+      ancestor = ancestor.parentElement?.closest("details");
+    }
+    target.open = parentRequest.expanded;
+    const summary = target.querySelector("summary");
+    summary?.focus({ preventScroll: true });
+    summary?.scrollIntoView?.({ block: "nearest" });
+  }, [parentRequest]);
+  useEffect(() => {
+    if (!navigation || lastNavigation.current === navigation) return;
+    let pointer = navigation.pointer;
+    let target = nodeRefs.current.get(pointer);
+    while (!target && pointer) {
+      pointer = pointer.slice(0, pointer.lastIndexOf("/"));
+      target = nodeRefs.current.get(pointer);
+    }
+    if (!target) return;
+    lastNavigation.current = navigation;
+    let ancestor = target.parentElement?.closest("details");
+    while (ancestor && treeRef.current?.contains(ancestor)) {
+      ancestor.open = true;
+      ancestor = ancestor.parentElement?.closest("details");
+    }
+    target.focus({ preventScroll: true });
+    target.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [navigation]);
   const [activePointer, setActivePointer] = useState<string | null>(null);
   const highlights = useMemo(() => treeHighlights(raw, lineHighlights), [lineHighlights, raw]);
   const highlightedPointers = Object.keys(highlights);
@@ -130,8 +84,8 @@ export function JsonTree({
   );
 
   const registerHighlight = (pointer: string, node: HTMLElement | null) => {
-    if (node) highlightedNodeRefs.current.set(pointer, node);
-    else highlightedNodeRefs.current.delete(pointer);
+    if (node) nodeRefs.current.set(pointer, node);
+    else nodeRefs.current.delete(pointer);
   };
 
   const navigateFinding = (direction: 1 | -1) => {
@@ -143,7 +97,7 @@ export function JsonTree({
           : highlightedPointers.length - 1
         : (activeIndex + direction + highlightedPointers.length) % highlightedPointers.length;
     const pointer = highlightedPointers[nextIndex]!;
-    const target = highlightedNodeRefs.current.get(pointer);
+    const target = nodeRefs.current.get(pointer);
     const tree = treeRef.current;
     if (!target || !tree) return;
 
@@ -161,29 +115,39 @@ export function JsonTree({
     target.focus({ preventScroll: true });
   };
 
+  const parsedDocument = useMemo(() => {
+    if (!raw.trim()) return { value: null, error: "" };
+    try {
+      return { value: JSON.parse(raw) as unknown, error: "" };
+    } catch (error) {
+      return { value: null, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [raw]);
   if (!raw.trim())
     return (
       <div className="empty-state">
         Nothing to show yet — paste or load JSON on the JSON tab first.
       </div>
     );
-  let parsed: unknown;
-  let parseError = "";
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch (error) {
-    parseError = error instanceof Error ? error.message : String(error);
-  }
-  if (parseError) return <div className="empty-state error">{parseError}</div>;
+  if (parsedDocument.error) return <div className="empty-state error">{parsedDocument.error}</div>;
   return (
     <div className="tree-with-navigation">
+      {navigation?.placeholder && (
+        <p className="tree-navigation-status" role="status">
+          Not present in Response {side}: {navigation.pointer || "(root)"}. Showing the nearest
+          existing parent.
+        </p>
+      )}
       <div ref={treeRef} className="json-tree">
-        <TreeNode
-          value={parsed}
+        <JsonTreeNode
+          value={parsedDocument.value}
           path={[]}
           highlights={highlights}
           activePointer={activePointer}
-          registerHighlight={registerHighlight}
+          registerNode={registerHighlight}
+          collapsedPointers={collapsedPointers}
+          onExpandedChange={onExpandedChange}
+          actions={actions}
         />
       </div>
       <FindingStepper

@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DisplayLineMaps } from "@/domain/comparison/display-format";
 import { displayPath } from "@/domain/comparison/path";
 import type { ArrayMode, ComparisonOptions, ComparisonResult } from "@/domain/comparison/types";
-import { createMarkdownReport } from "@/domain/reporting/markdown";
+import { createReviewReport } from "./utils/review-report";
+import { PanelActions } from "./components/PanelActions";
+import { usePanelInteractions, type ReviewFinding } from "./hooks/usePanelInteractions";
 import type { WorkerRequest, WorkerResponse } from "@/workers/comparison.worker";
 import { AddDataModal } from "./components/AddDataModal";
 import { ComparisonControls } from "./components/ComparisonControls";
@@ -72,7 +74,22 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   });
   const workerRef = useRef<Worker | null>(null);
   const activeJobRef = useRef<string | null>(null);
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate();
+      activeJobRef.current = null;
+    },
+    []
+  );
   const { registerEditor, synchronizeScroll } = useSynchronizedEditors();
+  const panels = usePanelInteractions({
+    textA,
+    textB,
+    lineMaps: displayLineMaps,
+    result,
+    arrayMode,
+    enabled: !busy
+  });
   const allResultsExpanded = Object.values(expandedSections).every(Boolean);
   const toggleAllResultSections = () => {
     const next = !allResultsExpanded;
@@ -103,17 +120,13 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     const aligned = alignValidInputText(nextA, nextB);
     setTextA(aligned?.textA ?? nextA);
     setTextB(aligned?.textB ?? nextB);
-    setResult(null);
-    setDisplayLineMaps(null);
-    setComparisonDurationMs(null);
+    invalidateComparison();
   };
 
   const updateTypedInput = (side: ResponseSide, raw: string) => {
     if (side === "A") setTextA(raw);
     else setTextB(raw);
-    setResult(null);
-    setDisplayLineMaps(null);
-    setComparisonDurationMs(null);
+    invalidateComparison();
   };
 
   const resultProjection = useMemo(
@@ -171,13 +184,26 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setBusy(false);
   };
 
+  const invalidateComparison = () => {
+    stopWorker();
+    setResult(null);
+    setDisplayLineMaps(null);
+    setComparisonDurationMs(null);
+    setSelected(new Set());
+    setNotes({});
+    setExportPreview(null);
+    panels.closeActions();
+    setStatus({ tone: "idle", message: "Inputs changed. Compare again to enable line actions." });
+  };
+
   const runComparison = (overrideIgnorePaths?: string[]) => {
     stopWorker();
     const jobId = crypto.randomUUID();
     activeJobRef.current = jobId;
     setBusy(true);
     setStatus({ tone: "idle", message: "Comparing responses…" });
-    setSelected(new Set());
+    setExportPreview(null);
+    panels.closeActions();
     const worker = new Worker(new URL("../../workers/comparison.worker.ts", import.meta.url));
     workerRef.current = worker;
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
@@ -200,6 +226,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       setStatus({ tone: "success", source: "comparison", message: "Comparison complete." });
     };
     worker.onerror = () => {
+      if (activeJobRef.current !== jobId) return;
       stopWorker();
       setResult(null);
       setDisplayLineMaps(null);
@@ -223,14 +250,9 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   };
 
   const clearWorkspace = () => {
-    stopWorker();
+    invalidateComparison();
     setTextA("");
     setTextB("");
-    setResult(null);
-    setDisplayLineMaps(null);
-    setComparisonDurationMs(null);
-    setSelected(new Set());
-    setNotes({});
     setCurlA(null);
     setCurlB(null);
     setStatus({ tone: "idle", message: "Workspace cleared." });
@@ -305,32 +327,19 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     const missing = result.findings.filter(
       (finding) => finding.kind === "added" || finding.kind === "removed"
     );
-    const findings = selectedOnly ? missing.filter((finding) => selected.has(finding.id)) : missing;
-    if (selectedOnly && findings.length === 0) {
+    const findings = selectedOnly
+      ? [...result.findings, ...result.structure].filter((finding) => selected.has(finding.id))
+      : missing;
+    if (selectedOnly && !findings.some((finding) => !finding.ignored)) {
       setStatus({
         tone: "error",
         message:
-          "No fields selected — check the boxes next to the fields you want to export, then click this again."
+          "No actionable findings selected. Select a finding for the report; ignored findings are excluded."
       });
       return;
     }
-    const filename = selectedOnly
-      ? "missing-fields-selected-report.md"
-      : "missing-fields-report.md";
-    const base = createMarkdownReport(findings, arrayMode);
-    const noteLines = findings.flatMap((finding) => {
-      const note = notes[finding.id];
-      return note
-        ? [
-            `### Review — ${displayPath(finding.path)}`,
-            "",
-            `- Status: ${note.status}`,
-            `- Note: ${note.text || "None"}`,
-            ""
-          ]
-        : [];
-    });
-    const content = `${base}${noteLines.length ? `\n## Review Notes\n\n${noteLines.join("\n")}` : ""}`;
+    const filename = selectedOnly ? "selected-findings-report.md" : "missing-fields-report.md";
+    const content = createReviewReport(findings, arrayMode, notes);
     downloadMarkdown(filename, content);
     setExportPreview({ filename, content });
     setStatus({
@@ -350,12 +359,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     }));
 
   const loadSample = () => {
+    invalidateComparison();
     const aligned = alignValidInputText(SAMPLE_A, SAMPLE_B);
     setTextA(aligned?.textA ?? SAMPLE_A);
     setTextB(aligned?.textB ?? SAMPLE_B);
-    setResult(null);
-    setDisplayLineMaps(null);
-    setComparisonDurationMs(null);
     setStatus({
       tone: "idle",
       message: "Sample loaded and aligned. Choose an array mode and compare."
@@ -379,6 +386,39 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             "Clipboard access was blocked — select the preview text and press Ctrl/Cmd+C to copy."
         })
       );
+  };
+
+  const focusElement = (id: string) =>
+    requestAnimationFrame(() => {
+      const element = document.getElementById(id);
+      element?.focus({ preventScroll: true });
+      element?.scrollIntoView({ block: "center" });
+    });
+  const revealFinding = (finding: ReviewFinding) => {
+    const section =
+      "detail" in finding
+        ? "structure"
+        : finding.kind === "added" || finding.kind === "removed"
+          ? "missing"
+          : "differences";
+    setPathFilter("");
+    setShowOnlyInA(true);
+    setShowOnlyInB(true);
+    setShowStructureOnlyInA(true);
+    setShowStructureOnlyInB(true);
+    if (finding.ignored) setShowIgnored(true);
+    setExpandedSections((current) => ({ ...current, [section]: true }));
+    focusElement("finding-" + section + "-" + finding.id);
+  };
+  const filterPanelPath = () => {
+    if (!panels.selection) return;
+    setPathFilter(panels.selection.field.pointer);
+    setShowOnlyInA(true);
+    setShowOnlyInB(true);
+    setShowStructureOnlyInA(true);
+    setShowStructureOnlyInB(true);
+    setExpandedSections({ missing: true, structure: true, differences: true });
+    focusElement("results-path-filter");
   };
 
   return (
@@ -458,6 +498,9 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             lineHighlights={lineHighlights.a}
             registerEditor={registerEditor}
             synchronizeScroll={synchronizeScroll}
+            panelIndex={panels.indexes?.A}
+            panelNavigation={panels.navigation.A}
+            onOpenActions={(request) => panels.openActions("A", request)}
           />
           <JsonInputPane
             side="B"
@@ -475,6 +518,9 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             lineHighlights={lineHighlights.b}
             registerEditor={registerEditor}
             synchronizeScroll={synchronizeScroll}
+            panelIndex={panels.indexes?.B}
+            panelNavigation={panels.navigation.B}
+            onOpenActions={(request) => panels.openActions("B", request)}
           />
         </div>
 
@@ -485,7 +531,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           highlightVisibility={highlightToggles}
           isComparing={busy}
           status={displayedStatus}
-          onArrayModeChange={setArrayMode}
+          onArrayModeChange={(mode) => {
+            setArrayMode(mode);
+            invalidateComparison();
+          }}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={(paths) => runComparison(paths)}
           onHighlightVisibilityChange={setHighlightToggles}
@@ -540,6 +589,45 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           onCopy={copyExportPreview}
           onDownload={() => downloadMarkdown(exportPreview.filename, exportPreview.content)}
           onClose={() => setExportPreview(null)}
+        />
+      )}
+
+      {panels.selection && (
+        <PanelActions
+          request={panels.selection}
+          valueText={
+            panels.selection.field.placeholder
+              ? null
+              : (panels.selection.side === "A" ? textA : textB).slice(
+                  panels.selection.field.valueStart,
+                  panels.selection.field.valueEnd
+                )
+          }
+          counterpart={panels.counterpart}
+          parent={panels.parent}
+          findings={panels.related}
+          ignorePaths={ignorePaths}
+          selected={selected}
+          notes={notes}
+          onClose={panels.closeActions}
+          onIgnore={(paths) => {
+            setIgnorePaths(paths);
+            runComparison(paths);
+          }}
+          onManageIgnores={() => focusElement("ignore-paths-input")}
+          onJump={() => {
+            if (panels.selection) panels.navigate(panels.otherSide, panels.selection.field.pointer);
+            setStatus({
+              tone: "success",
+              message: panels.counterpart?.placeholder
+                ? `Not present in Response ${panels.otherSide}. Showing its missing-field location.`
+                : "Highlighted the corresponding field."
+            });
+          }}
+          onReveal={revealFinding}
+          onFilter={filterPanelPath}
+          onSelect={toggleSelected}
+          onNote={updateNote}
         />
       )}
 

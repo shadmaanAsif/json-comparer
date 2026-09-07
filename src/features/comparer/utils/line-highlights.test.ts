@@ -28,7 +28,7 @@ describe("createLineHighlights", () => {
     const phoneLine = aligned.lineMapB["/data/config/countries/0/phone"]!;
 
     const highlights = createLineHighlights(
-      project(compareJson(a, b)),
+      project(compareJson(a, b, { arrayMode: "ordered" })),
       aligned.textA,
       aligned.textB,
       { ...toggles, structure: false }

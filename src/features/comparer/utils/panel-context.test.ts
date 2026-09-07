@@ -61,6 +61,20 @@ describe("panel field context", () => {
     expect(getCounterpart(field, b, a, "ordered")?.pointer).toBe("/items/0/id");
   });
 
+  it("resolves a counterpart for canonically matched unordered array items, even reordered", () => {
+    const display = formatAlignedForDisplay(
+      { items: [{ id: 1 }, { id: 2 }] },
+      { items: [{ id: 2 }, { id: 1 }] }
+    );
+    const a = buildPanelIndex(display.textA, display.lineMapA, display.placeholderLineMapA);
+    const b = buildPanelIndex(display.textB, display.lineMapB, display.placeholderLineMapB);
+    const matchedPointers = { "/items/0": "/items/1", "/items/1": "/items/0" };
+    const field = a.byPointer.get("/items/0/id")!;
+    expect(getCounterpart(field, b, a, "unordered", matchedPointers)?.pointer).toBe("/items/1/id");
+    // An item outside the matched map (genuinely unmatched) still gets no counterpart.
+    expect(getCounterpart(field, b, a, "unordered", {})).toBeUndefined();
+  });
+
   it("restores only its own exact rule and never removes inherited or wildcard rules", () => {
     expect(getIgnoreAction(["config", "token"], "/config/token", []).kind).toBe("ignore");
     expect(getIgnoreAction(["config", "token"], "/config/token", ["/config/token"]).kind).toBe(

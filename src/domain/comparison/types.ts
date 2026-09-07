@@ -38,6 +38,12 @@ export interface ComparisonResult {
   ignoredCount: number;
   structure: StructureFinding[];
   truncated: boolean;
+  /**
+   * For unordered arrays, the JSON Pointer of each Response A item that matched a Response B
+   * item by exact canonical equality, mapped to that B item's own JSON Pointer. Absent for
+   * items the engine did not match (those remain genuinely ambiguous — see Article II.3).
+   */
+  arrayMatches: Record<string, string>;
 }
 
 export interface ParsedDocument {

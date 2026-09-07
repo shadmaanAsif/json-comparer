@@ -43,6 +43,15 @@ describe("ComparisonControls", () => {
     ).toBeVisible();
   });
 
+  it("warns that ignore rules don't help unordered array items match, only in that mode", () => {
+    renderControls({ arrayMode: "ordered" });
+    expect(screen.queryByText(/don't help two array items match/)).not.toBeInTheDocument();
+
+    cleanup();
+    renderControls({ arrayMode: "unordered" });
+    expect(screen.getByText(/don't help two array items match/)).toBeVisible();
+  });
+
   it("searches detected paths and maintains unique removable chips", async () => {
     const user = userEvent.setup();
     const onApplyIgnorePaths = vi.fn();

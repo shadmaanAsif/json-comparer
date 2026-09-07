@@ -38,6 +38,7 @@ const result: ComparisonResult = {
     structureFinding("inconsistent-in-a", "internalShape"),
     structureFinding("extra-in-b", "ignoredShape", true)
   ],
+  arrayMatches: {},
   truncated: false
 };
 

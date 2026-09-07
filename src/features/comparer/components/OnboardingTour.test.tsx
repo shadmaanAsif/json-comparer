@@ -57,7 +57,7 @@ describe("OnboardingTour", () => {
       undefined
     ]);
     expect(config.steps?.[2]?.popover?.description).toContain("selected by default");
-    expect(config.steps?.[2]?.data?.example).toContain("Default: Unordered");
+    expect(config.steps?.[2]?.data?.example).toContain("Default: Ordered");
     expect(config.steps?.[6]?.popover?.description).toContain("Shift+F10");
     expect(config.steps?.[6]?.data?.example).toContain("Copy value");
   });

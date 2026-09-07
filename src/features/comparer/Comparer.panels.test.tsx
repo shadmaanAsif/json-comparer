@@ -201,8 +201,29 @@ describe("Comparer panel actions", () => {
       within(dialog).getByRole("button", { name: "Jump to corresponding field" })
     ).toBeDisabled();
     expect(
-      within(dialog).getByText(/Unordered array records are not paired by identity/)
+      within(dialog).getByText(/Unordered mode matches array items by exact value/)
     ).toBeInTheDocument();
+  });
+
+  it("resolves a counterpart for a canonically matched, reordered unordered array item", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response A" }), {
+      target: { value: '{"items":[{"id":1},{"id":2}]}' }
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response B" }), {
+      target: { value: '{"items":[{"id":2},{"id":1}]}' }
+    });
+    await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
+    await compare(user);
+    const source = screen.getByRole("region", { name: "Baseline" });
+    const target = screen.getByRole("region", { name: "Candidate" });
+    await user.click(within(source).getByRole("tab", { name: "Tree" }));
+    await user.click(within(target).getByRole("tab", { name: "Tree" }));
+    await user.click(within(source).getByRole("button", { name: "Actions for field /items/0/id" }));
+    const dialog = screen.getByRole("dialog", { name: "Field actions · Response A" });
+    await user.click(within(dialog).getByRole("button", { name: "Jump to corresponding field" }));
+    await waitFor(() => expect(within(target).getByText("1").closest(".tree-leaf")).toHaveFocus());
   });
 
   it("reviews and selects a changed field, reveals its result, and exports the annotation", async () => {

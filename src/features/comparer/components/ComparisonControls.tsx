@@ -95,6 +95,13 @@ export function ComparisonControls({
             onChange={onIgnorePathsChange}
             onApply={onApplyIgnorePaths}
           />
+          {arrayMode === "unordered" && (
+            <p className="ignore-field-note">
+              In Unordered mode, ignore rules don&apos;t help two array items match — items are
+              compared by their full value first, so a field you ignore can still make an
+              otherwise-identical item show up as unmatched.
+            </p>
+          )}
         </div>
       </section>
 

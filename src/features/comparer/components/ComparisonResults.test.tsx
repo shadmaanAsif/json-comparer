@@ -12,6 +12,7 @@ const emptyResult: ComparisonResult = {
   counts: { added: 0, removed: 0, changed: 0, "type-changed": 0 },
   ignoredCount: 0,
   structure: [],
+  arrayMatches: {},
   truncated: false
 };
 

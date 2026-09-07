@@ -7,7 +7,7 @@ interface OnboardingTourProps {
   hasResults: boolean;
 }
 
-const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen:v1";
+const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen:v2";
 const AUTO_START_DELAY_MS = 1_500;
 
 function hasSeenTour() {
@@ -57,12 +57,12 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
     {
       element: '[data-tour="array-mode"]',
       data: {
-        example: 'Default: Unordered\nA: ["api", "stable"]\nB: ["stable", "api"] → match'
+        example: 'Default: Ordered\nA: ["api", "stable"]\nB: ["stable", "api"] → mismatch'
       },
       popover: {
         title: "Choose how arrays should match",
         description:
-          "Unordered is selected by default: order does not matter, but duplicate items still count. Switch to Ordered when item positions are part of the API contract.",
+          "Ordered is selected by default: item positions must match. Switch to Unordered when duplicates should still count but position does not matter.",
         side: "bottom",
         align: "start"
       }

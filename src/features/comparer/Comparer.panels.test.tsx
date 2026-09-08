@@ -94,6 +94,20 @@ function openPrice() {
 }
 
 describe("Comparer panel actions", () => {
+  it("expands Structure Schema Compare and Missing Fields by default, but not Differences", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await compare(user);
+    const detailsFor = (title: string) =>
+      [...document.querySelectorAll(".result-section-title")]
+        .find((el) => el.textContent?.trim() === title)
+        ?.closest("details");
+    expect(detailsFor("Structure Schema Compare")).toHaveAttribute("open");
+    expect(detailsFor("Missing Fields")).toHaveAttribute("open");
+    expect(detailsFor("Differences")).not.toHaveAttribute("open");
+  });
+
   it("shares Tree review, report selection and ignore/restore with the JSON panel", async () => {
     const user = userEvent.setup();
     render(<Comparer />);

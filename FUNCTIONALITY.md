@@ -132,7 +132,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 
 ## Result sections and filters
 
-- Structure Schema Compare is displayed before Missing Fields and Differences. Missing Fields opens by default, and every section remains independently collapsible. Each native disclosure header includes a visible right/down arrow that communicates its collapsed or expanded state.
+- Structure Schema Compare is displayed before Missing Fields and Differences. Structure Schema Compare and Missing Fields open by default; Differences starts collapsed. Every section remains independently collapsible. Each native disclosure header includes a visible right/down arrow that communicates its collapsed or expanded state.
 - Missing Fields direction filters:
   - Only in A — present in A, missing in B.
   - Only in B — present in B, missing in A.

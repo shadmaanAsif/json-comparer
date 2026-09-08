@@ -13,12 +13,13 @@ describe("Comparer JSON panel layout", () => {
     expect(screen.getByRole("radio", { name: "Unordered arrays" })).not.toBeChecked();
   });
 
-  it("shows the configured author in the application header", () => {
-    render(<Comparer author="User1" />);
-
-    expect(screen.getByText("Crafted by")).toBeVisible();
-    expect(screen.getByText("User1")).toBeVisible();
-  });
+  // Author byline is commented out on this branch (hideAuthor); see Comparer.tsx.
+  // it("shows the configured author in the application header", () => {
+  //   render(<Comparer author="User1" />);
+  //
+  //   expect(screen.getByText("Crafted by")).toBeVisible();
+  //   expect(screen.getByText("User1")).toBeVisible();
+  // });
 
   it("switches the document theme and keeps the toggle label in sync", async () => {
     const user = userEvent.setup();

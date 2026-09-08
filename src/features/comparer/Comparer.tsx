@@ -28,13 +28,13 @@ interface ComparerProps {
 }
 
 export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
-  const displayAuthor = author.trim();
-  const authorInitials = displayAuthor
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((name) => name.charAt(0))
-    .join("")
-    .toUpperCase();
+  // const displayAuthor = author.trim();
+  // const authorInitials = displayAuthor
+  //   .split(/\s+/)
+  //   .slice(0, 2)
+  //   .map((name) => name.charAt(0))
+  //   .join("")
+  //   .toUpperCase();
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
   const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
@@ -70,7 +70,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   });
   const [expandedSections, setExpandedSections] = useState({
     missing: true,
-    structure: false,
+    structure: true,
     differences: false
   });
   const workerRef = useRef<Worker | null>(null);
@@ -430,7 +430,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           <p className="eyebrow">Developer utility</p>
           <div className="hero-title-row">
             <h1>JSON Comparer</h1>
-            {displayAuthor && (
+            {/* {displayAuthor && (
               <div className="author-byline">
                 <span className="author-avatar" aria-hidden="true">
                   {authorInitials}
@@ -443,7 +443,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
                   ✦
                 </span>
               </div>
-            )}
+            )} */}
           </div>
           <p>
             Inspect contract drift without uploading your payloads. Compare fields, values, and

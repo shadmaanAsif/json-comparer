@@ -2,7 +2,7 @@
 
 import { displayPath } from "@/domain/comparison/path";
 import type { ComparisonResult, Finding, StructureFinding } from "@/domain/comparison/types";
-import { RESULT_SECTION_LABELS } from "../constants";
+import { ONLY_IN_LABELS, RESULT_SECTION_LABELS, SIDE_LABELS } from "../constants";
 import type { ReviewNote } from "../types";
 import { FindingReview } from "./FindingReview";
 import {
@@ -56,16 +56,16 @@ export interface ComparisonResultsProps {
 }
 
 function findingLabel(finding: Finding) {
-  if (finding.kind === "added") return "Only in B";
-  if (finding.kind === "removed") return "Only in A";
+  if (finding.kind === "added") return ONLY_IN_LABELS.B;
+  if (finding.kind === "removed") return ONLY_IN_LABELS.A;
   return "Modified";
 }
 
 function structureLabel(kind: StructureFinding["kind"]) {
-  if (kind === "extra-in-b") return "Only in B";
-  if (kind === "missing-in-b") return "Only in A";
-  if (kind === "inconsistent-in-a") return "Inconsistent in A";
-  return "A has no schema item";
+  if (kind === "extra-in-b") return ONLY_IN_LABELS.B;
+  if (kind === "missing-in-b") return ONLY_IN_LABELS.A;
+  if (kind === "inconsistent-in-a") return "Inconsistent in Baseline";
+  return "Baseline has no schema item";
 }
 
 export function ComparisonResults({
@@ -148,13 +148,13 @@ export function ComparisonResults({
           <span>
             {counts.onlyInA.visible} / {counts.onlyInA.total}
           </span>{" "}
-          Only in A
+          {ONLY_IN_LABELS.A}
         </span>
         <span className="summary-chip added">
           <span>
             {counts.onlyInB.visible} / {counts.onlyInB.total}
           </span>{" "}
-          Only in B
+          {ONLY_IN_LABELS.B}
         </span>
         <span className="summary-chip changed">
           <span>
@@ -208,14 +208,14 @@ export function ComparisonResults({
               pressed={filters.showOnlyInA}
               onClick={() => onFiltersChange({ showOnlyInA: !filters.showOnlyInA })}
             >
-              Only in A
+              {ONLY_IN_LABELS.A}
             </FilterChip>
             <FilterChip
               className="only-b-chip"
               pressed={filters.showOnlyInB}
               onClick={() => onFiltersChange({ showOnlyInB: !filters.showOnlyInB })}
             >
-              Only in B
+              {ONLY_IN_LABELS.B}
             </FilterChip>
             <FilterChip
               className="ignored-chip"
@@ -266,7 +266,7 @@ export function ComparisonResults({
                 })
               }
             >
-              Only in A
+              {ONLY_IN_LABELS.A}
             </FilterChip>
             <FilterChip
               className="structure-only-b-chip"
@@ -277,7 +277,7 @@ export function ComparisonResults({
                 })
               }
             >
-              Only in B
+              {ONLY_IN_LABELS.B}
             </FilterChip>
           </div>
         </div>
@@ -366,14 +366,14 @@ export function ComparisonResults({
                 <tr>
                   <th scope="col">Select</th>
                   <th scope="col">Field path</th>
-                  <th scope="col">Source A</th>
-                  <th scope="col">Target B</th>
+                  <th scope="col">{SIDE_LABELS.A}</th>
+                  <th scope="col">{SIDE_LABELS.B}</th>
                   <th scope="col">Notes</th>
                 </tr>
               </thead>
               <tbody>
                 <MissingFindingGroup
-                  label="Only in A"
+                  label={ONLY_IN_LABELS.A}
                   findings={onlyInA}
                   selectedFindingIds={selectedFindingIds}
                   notesByFindingId={notesByFindingId}
@@ -381,7 +381,7 @@ export function ComparisonResults({
                   onNoteChange={onNoteChange}
                 />
                 <MissingFindingGroup
-                  label="Only in B"
+                  label={ONLY_IN_LABELS.B}
                   findings={onlyInB}
                   selectedFindingIds={selectedFindingIds}
                   notesByFindingId={notesByFindingId}
@@ -437,8 +437,8 @@ export function ComparisonResults({
                 <tr>
                   <th scope="col">Exact changed path</th>
                   <th scope="col">Change</th>
-                  <th scope="col">Source A</th>
-                  <th scope="col">Target B</th>
+                  <th scope="col">{SIDE_LABELS.A}</th>
+                  <th scope="col">{SIDE_LABELS.B}</th>
                   <th scope="col">Review</th>
                 </tr>
               </thead>

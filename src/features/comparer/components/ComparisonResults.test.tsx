@@ -139,13 +139,17 @@ describe("ComparisonResults disclosures", () => {
       sections: { missing: true, structure: false, differences: true }
     });
 
-    expect(container.querySelector(".summary-chip.removed")).toHaveTextContent("1 / 1 Only in A");
-    expect(container.querySelector(".summary-chip.added")).toHaveTextContent("1 / 1 Only in B");
+    expect(container.querySelector(".summary-chip.removed")).toHaveTextContent(
+      "1 / 1 Only in Baseline"
+    );
+    expect(container.querySelector(".summary-chip.added")).toHaveTextContent(
+      "1 / 1 Only in Candidate"
+    );
     const resultFilters = screen.getByRole("group", { name: "Result filters" });
-    expect(within(resultFilters).getByRole("button", { name: "Only in A" })).toBeVisible();
-    expect(within(resultFilters).getByRole("button", { name: "Only in B" })).toBeVisible();
-    expect(screen.getByRole("rowheader", { name: "Only in A 1" })).toBeVisible();
-    expect(screen.getByRole("rowheader", { name: "Only in B 1" })).toBeVisible();
+    expect(within(resultFilters).getByRole("button", { name: "Only in Baseline" })).toBeVisible();
+    expect(within(resultFilters).getByRole("button", { name: "Only in Candidate" })).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "Only in Baseline 1" })).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "Only in Candidate 1" })).toBeVisible();
   });
 
   it("shows displayed-versus-total counts and comparison duration", () => {
@@ -194,8 +198,8 @@ describe("ComparisonResults disclosures", () => {
       sections: { missing: false, structure: true, differences: false }
     });
     const filters = screen.getByRole("group", { name: "Structure schema filters" });
-    const onlyInA = within(filters).getByRole("button", { name: "Only in A" });
-    const onlyInB = within(filters).getByRole("button", { name: "Only in B" });
+    const onlyInA = within(filters).getByRole("button", { name: "Only in Baseline" });
+    const onlyInB = within(filters).getByRole("button", { name: "Only in Candidate" });
 
     expect(onlyInA).toHaveAttribute("aria-pressed", "true");
     expect(onlyInB).toHaveAttribute("aria-pressed", "true");

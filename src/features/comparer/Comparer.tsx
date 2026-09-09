@@ -13,7 +13,7 @@ import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
 import { JsonInputPane } from "./components/JsonInputPane";
 import { OnboardingTour } from "./components/OnboardingTour";
-import { APP_AUTHOR, MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B } from "./constants";
+import { APP_AUTHOR, MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B, SIDE_LABELS } from "./constants";
 import { fetchRemoteResponse } from "./services/remote-fetch";
 import { useReportExports } from "./hooks/useReportExports";
 import { useSynchronizedEditors } from "./hooks/useSynchronizedEditors";
@@ -271,11 +271,11 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     try {
       const formatted = JSON.stringify(JSON.parse(raw), null, 2);
       updateImportedInput(side, formatted);
-      setStatus({ tone: "success", message: `Response ${side} prettified.` });
+      setStatus({ tone: "success", message: `${SIDE_LABELS[side]} prettified.` });
     } catch (error) {
       setStatus({
         tone: "error",
-        message: `Response ${side}: ${error instanceof Error ? error.message : String(error)}`
+        message: `${SIDE_LABELS[side]}: ${error instanceof Error ? error.message : String(error)}`
       });
     }
   };
@@ -290,14 +290,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     updateImportedInput(side, raw);
     setStatus({
       tone: "success",
-      message: `Loaded ${file.name} into Response ${side}.`
+      message: `Loaded ${file.name} into ${SIDE_LABELS[side]}.`
     });
     setModalSide(null);
   };
 
   const runRemote = async (side: ResponseSide, command: string): Promise<boolean> => {
     setFetchingSide(side);
-    setStatus({ tone: "idle", message: `Fetching into Response ${side}…` });
+    setStatus({ tone: "idle", message: `Fetching into ${SIDE_LABELS[side]}…` });
     try {
       const { formattedBody, response } = await fetchRemoteResponse(command);
       updateImportedInput(side, formattedBody);
@@ -307,8 +307,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
         tone: response.status >= 200 && response.status < 300 ? "success" : "error",
         message:
           response.status >= 200 && response.status < 300
-            ? `Fetched ${response.status} ${response.statusText} into Response ${side}.`
-            : `Server responded ${response.status} ${response.statusText} — body loaded into Response ${side} anyway.`
+            ? `Fetched ${response.status} ${response.statusText} into ${SIDE_LABELS[side]}.`
+            : `Server responded ${response.status} ${response.statusText} — body loaded into ${SIDE_LABELS[side]} anyway.`
       });
       return true;
     } catch (error) {
@@ -613,7 +613,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             setStatus({
               tone: "success",
               message: panels.counterpart?.placeholder
-                ? `Not present in Response ${panels.otherSide}. Showing its missing-field location.`
+                ? `Not present in ${SIDE_LABELS[panels.otherSide]}. Showing its missing-field location.`
                 : "Highlighted the corresponding field."
             });
           }}

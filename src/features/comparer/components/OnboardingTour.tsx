@@ -44,12 +44,12 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
     {
       element: '[data-tour="json-inputs"]',
       data: {
-        example: 'A (baseline): {"status":"pending"}\nB (candidate): {"status":"paid"}'
+        example: 'Baseline: {"status":"pending"}\nCandidate: {"status":"paid"}'
       },
       popover: {
         title: "Add a baseline and candidate",
         description:
-          "Put the expected response in A and the response you are checking in B. Paste JSON directly, use Add for a file or URL/cURL import, or use Quick upload. Prettify, Find, and Tree help you inspect each side.",
+          "Put the expected response in Baseline and the response you are checking in Candidate. Paste JSON directly, use Add for a file or URL/cURL import, or use Quick upload. Prettify, Find, and Tree help you inspect each side.",
         side: "bottom",
         align: "center"
       }
@@ -123,7 +123,7 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
     {
       element: hasResults ? '[data-tour="results"]' : undefined,
       data: {
-        example: "data.currency → Only in B\nSelect → add review note → export .md"
+        example: "data.currency → Only in Candidate\nSelect → add review note → export .md"
       },
       popover: {
         title: "Review and export the findings",

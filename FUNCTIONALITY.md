@@ -9,16 +9,16 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 
 ## Comparison terminology
 
-- **Response A / Baseline:** the first JSON document and the structure-schema baseline.
-- **Response B / Candidate:** the second JSON document being compared with the baseline.
-- **Only in A:** the path exists in Response A and is missing from Response B.
-- **Only in B:** the path exists in Response B and is missing from Response A.
+- **Baseline:** the first JSON document and the structure-schema reference. `A` remains its internal identifier in code, worker messages, and finding kinds.
+- **Candidate:** the second JSON document being compared with the baseline. `B` remains its internal identifier.
+- **Only in Baseline:** the path exists in the baseline and is missing from the candidate.
+- **Only in Candidate:** the path exists in the candidate and is missing from the baseline.
 - **Modified:** the path exists in both responses, but its value or JSON type differs.
 - **Ignored:** the finding still exists in the comparison model but is excluded from visible counts, highlights, and result rows unless Show Ignored is active; category totals continue to represent all underlying findings.
 
 ## Aligned JSON display
 
-- Response A is the display-order baseline for object keys shared by both responses.
+- The baseline is the display-order reference for object keys shared by both responses.
 - Keys found on only one side retain their original positions, and array elements are never reordered.
 - One-sided fields and nested values are mirrored by JSON-safe blank line blocks in the opposite panel, keeping the next corresponding field on the same horizontal row.
 - Placeholder blocks carry path metadata so missing-field highlighting and navigation work on both the real value and its opposite-side gap.
@@ -31,15 +31,15 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - Structurally aligned JSON editors synchronize vertical scrolling by the same aligned line offset; temporarily unaligned manual input falls back to proportional scrolling.
 - Programmatic partner scrolling is guarded so it cannot create feedback loops or visible jitter.
 - Ordered comparisons recursively expand added or removed objects and arrays to the smallest meaningful leaf paths; empty containers remain meaningful findings at their own paths.
-- The Differences section includes exact Only in A, Only in B, and Modified rows with only the relevant Source A and Target B values.
-- Missing Fields rows are grouped under Only in A and Only in B.
+- The Differences section includes exact Only in Baseline, Only in Candidate, and Modified rows with only the relevant Baseline and Candidate values.
+- Missing Fields rows are grouped under Only in Baseline and Only in Candidate.
 - Nested paths such as `data.config.countries[0].phone` retain their exact JSON Pointer identity for findings, structure/schema output, filtering, full-width editor-row highlighting, line-number highlighting, minimap markers, and navigation.
 - Result and JSON-highlight filters use independently selectable chips with explicit pressed states, side-specific colors, and keyboard operation.
 - Expand All and Collapse All control the Structure Schema, Missing Fields, and Differences sections together while each section remains independently expandable.
 
 ## JSON input and navigation
 
-- Independent Response A (baseline) and Response B (candidate) editors.
+- Independent Baseline and Candidate editors.
 - A shared Expand Panels control increases both JSON editors and Tree views together; Collapse Panels restores the compact height.
 - Paste, type, quick-upload, or use the shared Add Data dialog.
 - Prettify validates and formats JSON without changing invalid input.
@@ -101,7 +101,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - Ordered arrays are selected by default and compare items by index.
 - Unordered arrays use canonical multiset equality and can be selected when item positions are not
   meaningful; duplicates remain significant.
-- Findings distinguish fields added in B, removed from B, value changes, and type changes.
+- Findings distinguish fields added in the candidate, removed from the candidate, value changes, and type changes.
 - Object key order does not affect comparison results.
 - Internal path identity uses RFC 6901 JSON Pointer; readable paths are shown in the UI.
 - Comparison runs in a cancellable Web Worker with depth and finding-count limits.
@@ -110,16 +110,16 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 ## Structure Schema Compare
 
 - Structure results are separate from value differences.
-- Response A acts as the schema baseline.
-- Structure comparison follows the selected array mode. In Ordered mode, array objects are compared against the first Response A array item by position, as before. In Unordered mode, each side's array items are compared as a union of observed fields, so a reordered array with the same set of item shapes reports no structural mismatch, and a field present anywhere in Response A is not misreported as extra-in-B just because it lands on a different item than the first.
-- Reports fields only in A, fields only in B, inconsistent objects within A, and the empty-A-array/non-empty-B case.
+- The baseline acts as the schema reference.
+- Structure comparison follows the selected array mode. In Ordered mode, array objects are compared against the first baseline array item by position, as before. In Unordered mode, each side's array items are compared as a union of observed fields, so a reordered array with the same set of item shapes reports no structural mismatch, and a field present anywhere in the baseline is not misreported as extra-in-candidate just because it lands on a different item than the first.
+- Reports fields only in the baseline, fields only in the candidate, inconsistent objects within the baseline, and the empty-baseline-array/non-empty-candidate case.
 - Structure findings support path filtering and Show Ignored.
-- Only in A (present in A, missing in B) and Only in B (present in B, missing in A) chips independently filter directional structure findings; internal Response A consistency findings remain visible because they are not directional missing-field results.
+- Only in Baseline and Only in Candidate chips independently filter directional structure findings; internal baseline-consistency findings remain visible because they are not directional missing-field results.
 
 ## Highlights and ignore rules
 
 - Independent highlight chips control Missing Fields, Structure Schema, and Differences.
-- Missing fields use direction-aware colors: red for values present only in A and green for values present only in B.
+- Missing fields use direction-aware colors: red for values present only in the baseline and green for values present only in the candidate.
 - Structure findings use purple; value/type differences use amber.
 - When a one-sided path is both a Missing Fields finding and a Structure Schema finding, purple Structure Schema highlighting takes visual priority while that category is enabled; disabling Structure Schema falls back to the direction-aware Missing Fields color.
 - Highlight markers appear in the JSON line-number gutters and right-side minimaps and jump to their source lines.
@@ -134,8 +134,8 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 
 - Structure Schema Compare is displayed before Missing Fields and Differences. Structure Schema Compare and Missing Fields open by default; Differences starts collapsed. Every section remains independently collapsible. Each native disclosure header includes a visible right/down arrow that communicates its collapsed or expanded state.
 - Missing Fields direction filters:
-  - Only in A — present in A, missing in B.
-  - Only in B — present in B, missing in A.
+  - Only in Baseline — present in the baseline, missing from the candidate.
+  - Only in Candidate — present in the candidate, missing from the baseline.
   - Show Ignored.
 - A shared path search composes with the direction and ignored filters.
 - The comparison outcome uses `{visible} of {total} differences shown in {duration} ms`; visible is after display filters and total is before them, including ignored findings. Each Structure Schema Compare, Missing Fields, and Differences disclosure reports the same visible/total semantics and updates immediately with active filters.
@@ -147,7 +147,7 @@ This file is the authoritative catalogue of functionality implemented in the JSO
 - Missing, modified, and structure findings support session-only selection, a native three-option review-status radio group (Not reviewed, Reviewed, or Needed), and free-text notes. Missing findings are reviewed in the Missing Fields table rather than duplicated in Differences.
 - Long values use an exact 70-character preview with Show more/Show less.
 - Differences has a dedicated value/type comparison table.
-- Summary chips report Only in A, Only in B, changed, structure, and ignored totals.
+- Summary chips report Only in Baseline, Only in Candidate, changed, structure, and ignored totals.
 
 ## Markdown export and preview
 

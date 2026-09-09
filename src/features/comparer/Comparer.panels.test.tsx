@@ -72,10 +72,10 @@ afterEach(() => {
 });
 
 function fillInputs() {
-  fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response A" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
     target: { value: '{"config":{"price":10},"old":true}' }
   });
-  fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response B" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "JSON for Candidate" }), {
     target: { value: '{"config":{"price":12},"new":null}' }
   });
 }
@@ -85,12 +85,12 @@ async function compare(user: ReturnType<typeof userEvent.setup>) {
 }
 function openPrice() {
   const editor = screen.getByRole("textbox", {
-    name: "JSON for Response A"
+    name: "JSON for Baseline"
   }) as HTMLTextAreaElement;
   editor.focus();
   editor.setSelectionRange(editor.value.indexOf('"price"'), editor.value.indexOf('"price"'));
   fireEvent.keyDown(editor, { key: "F10", shiftKey: true });
-  return screen.getByRole("dialog", { name: "Line actions · Response A" });
+  return screen.getByRole("dialog", { name: "Line actions · Baseline" });
 }
 
 describe("Comparer panel actions", () => {
@@ -119,7 +119,7 @@ describe("Comparer panel actions", () => {
       await user.click(
         within(source).getByRole("button", { name: "Actions for field /config/price" })
       );
-      return screen.getByRole("dialog", { name: "Field actions · Response A" });
+      return screen.getByRole("dialog", { name: "Field actions · Baseline" });
     };
     let dialog = await openField();
     expect(
@@ -189,19 +189,17 @@ describe("Comparer panel actions", () => {
       })
     );
     await waitFor(() =>
-      expect(within(target).getByRole("status")).toHaveTextContent(
-        "Not present in Response B: /old"
-      )
+      expect(within(target).getByRole("status")).toHaveTextContent("Not present in Candidate: /old")
     );
   });
 
   it("does not offer an unsafe counterpart for unordered Tree array items", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
-    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response A" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
       target: { value: '{"items":[{"id":"a"}]}' }
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response B" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Candidate" }), {
       target: { value: '{"items":[{"id":"b"}]}' }
     });
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
@@ -210,7 +208,7 @@ describe("Comparer panel actions", () => {
       within(screen.getByRole("region", { name: "Baseline" })).getByRole("tab", { name: "Tree" })
     );
     await user.click(screen.getByRole("button", { name: "Actions for field /items/0/id" }));
-    const dialog = screen.getByRole("dialog", { name: "Field actions · Response A" });
+    const dialog = screen.getByRole("dialog", { name: "Field actions · Baseline" });
     expect(
       within(dialog).getByRole("button", { name: "Jump to corresponding field" })
     ).toBeDisabled();
@@ -222,10 +220,10 @@ describe("Comparer panel actions", () => {
   it("resolves a counterpart for a canonically matched, reordered unordered array item", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
-    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response A" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
       target: { value: '{"items":[{"id":1},{"id":2}]}' }
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response B" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Candidate" }), {
       target: { value: '{"items":[{"id":2},{"id":1}]}' }
     });
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
@@ -235,7 +233,7 @@ describe("Comparer panel actions", () => {
     await user.click(within(source).getByRole("tab", { name: "Tree" }));
     await user.click(within(target).getByRole("tab", { name: "Tree" }));
     await user.click(within(source).getByRole("button", { name: "Actions for field /items/0/id" }));
-    const dialog = screen.getByRole("dialog", { name: "Field actions · Response A" });
+    const dialog = screen.getByRole("dialog", { name: "Field actions · Baseline" });
     await user.click(within(dialog).getByRole("button", { name: "Jump to corresponding field" }));
     await waitFor(() => expect(within(target).getByText("1").closest(".tree-leaf")).toHaveFocus());
   });
@@ -243,7 +241,7 @@ describe("Comparer panel actions", () => {
   it("reviews and selects a changed field, reveals its result, and exports the annotation", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
-    expect(screen.getByRole("button", { name: "Line actions for Response A" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
     fillInputs();
     await compare(user);
     const dialog = openPrice();
@@ -296,7 +294,7 @@ describe("Comparer panel actions", () => {
     expect(TestWorker.instances.at(-1)?.request?.options.ignorePatterns).toEqual([]);
     act(() => TestWorker.instances.at(-1)!.complete());
     fillInputs();
-    expect(screen.getByRole("button", { name: "Line actions for Response A" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
     await compare(user);
     dialog = openPrice();
     await user.click(within(dialog).getByRole("button", { name: "Add a note" }));
@@ -324,12 +322,12 @@ describe("Comparer panel actions", () => {
     fillInputs();
     await user.click(screen.getByRole("button", { name: "Compare responses" }));
     const first = TestWorker.instances.at(-1)!;
-    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Response A" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
       target: { value: '{"newInput":1}' }
     });
     expect(first.terminate).toHaveBeenCalled();
     act(() => first.complete());
-    expect(screen.getByRole("textbox", { name: "JSON for Response A" })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: "JSON for Baseline" })).toHaveValue(
       '{"newInput":1}'
     );
     expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
@@ -337,7 +335,7 @@ describe("Comparer panel actions", () => {
     act(() => first.onerror?.());
     expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
-    expect(screen.getByRole("button", { name: "Line actions for Response A" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
     expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
   });
 });

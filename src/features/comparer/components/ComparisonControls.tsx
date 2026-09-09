@@ -2,6 +2,7 @@
 
 import type { ArrayMode } from "@/domain/comparison/types";
 import type { WorkspaceStatus } from "../types";
+import { ONLY_IN_LABELS } from "../constants";
 import { IgnorePathSelector } from "./IgnorePathSelector";
 
 export interface HighlightVisibility {
@@ -115,8 +116,8 @@ export function ComparisonControls({
         >
           <span className="legend-pair">
             <i className="legend-a" />
-            Only in A <i className="legend-b" />
-            Only in B
+            {ONLY_IN_LABELS.A} <i className="legend-b" />
+            {ONLY_IN_LABELS.B}
           </span>{" "}
           Missing fields
         </button>

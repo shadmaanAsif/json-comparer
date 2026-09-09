@@ -229,7 +229,7 @@ describe("PanelActions", () => {
     expect(choice).toHaveAccessibleDescription(
       "This line has multiple differences. Choose which one to open in results, mark for review, add notes to, or select for your report."
     );
-    await user.selectOptions(choice, "Structure: field missing from Response B · price");
+    await user.selectOptions(choice, "Structure: field missing from Candidate · price");
     await user.click(screen.getByRole("button", { name: "Mark for review" }));
     expect(props.onNote).toHaveBeenCalledWith("structure:/price", { status: "needed" });
     fireEvent.change(screen.getByRole("textbox", { name: "Note for panel price" }), {

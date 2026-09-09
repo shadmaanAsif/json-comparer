@@ -20,6 +20,21 @@ export const MAX_DOCUMENT_BYTES = Number(
 
 export const APP_AUTHOR = (process.env.NEXT_PUBLIC_APP_AUTHOR ?? "").trim();
 
+/**
+ * Display names for the two comparison roles. `A`/`B` remain the internal
+ * identity for sides, editors, and finding kinds; only presentation uses these.
+ */
+export const SIDE_LABELS = {
+  A: "Baseline",
+  B: "Candidate"
+} as const;
+
+/** Directional finding labels, phrased with the role names users see. */
+export const ONLY_IN_LABELS = {
+  A: "Only in Baseline",
+  B: "Only in Candidate"
+} as const;
+
 /** Display names for the result disclosures, shared by section headings and status copy. */
 export const RESULT_SECTION_LABELS = {
   structure: "Structure Schema Compare",

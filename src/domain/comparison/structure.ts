@@ -59,7 +59,7 @@ export function compareStructure(
         addFinding(
           "a-empty-array",
           job.path,
-          "Response A has no first item to use as the schema baseline."
+          "Baseline has no first item to use as the schema reference."
         );
       }
       if (arrayMode === "unordered") {
@@ -156,8 +156,8 @@ function compareObjectKeys(
     if (!keysB.has(key)) {
       const detail =
         missingKind === "inconsistent-in-a"
-          ? "This Response A item differs from the first A item."
-          : "Field is only in A relative to the Response B schema.";
+          ? "This Baseline item differs from the first Baseline item."
+          : "Field is only in Baseline relative to the Candidate schema.";
       addStructureLeaves(valueA[key]!, [...path, key], missingKind, detail, addFinding);
     }
   }
@@ -167,8 +167,8 @@ function compareObjectKeys(
         const kind = missingKind === "inconsistent-in-a" ? missingKind : "extra-in-b";
         const detail =
           missingKind === "inconsistent-in-a"
-            ? "This Response A item differs from the first A item."
-            : "Field is only in B relative to the Response A schema baseline.";
+            ? "This Baseline item differs from the first Baseline item."
+            : "Field is only in Candidate relative to the Baseline schema.";
         addStructureLeaves(valueB[key]!, [...path, key], kind, detail, addFinding);
       }
     }
@@ -218,7 +218,7 @@ function compareArrayItemUnion(
       addFinding(
         "inconsistent-in-a",
         [...path, index, key],
-        "This field is not present on every Response A item."
+        "This field is not present on every Baseline item."
       );
     }
   }
@@ -227,7 +227,7 @@ function compareArrayItemUnion(
       addFinding(
         "missing-in-b",
         [...path, index, key],
-        "Field is only in A relative to the Response B schema."
+        "Field is only in Baseline relative to the Candidate schema."
       );
     }
   }
@@ -236,7 +236,7 @@ function compareArrayItemUnion(
       addFinding(
         "extra-in-b",
         [...path, index, key],
-        "Field is only in B relative to the Response A schema baseline."
+        "Field is only in Candidate relative to the Baseline schema."
       );
     }
   }

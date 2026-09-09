@@ -139,6 +139,11 @@ This file is the authoritative catalogue of functionality implemented in the JSO
   - Show Ignored.
 - A shared path search composes with the direction and ignored filters.
 - The comparison outcome uses `{visible} of {total} differences shown in {duration} ms`; visible is after display filters and total is before them, including ignored findings. Each Structure Schema Compare, Missing Fields, and Differences disclosure reports the same visible/total semantics and updates immediately with active filters.
+- Each section header carries a `⋯` actions menu, matching the per-line `⋯` affordance in the JSON editors. It opens without expanding or collapsing its own section, closes on Escape or an outside click, and moves focus through its items with the arrow keys, Home, and End. Every action applies only to that section's currently visible rows:
+  - Copy visible paths — copies the visible JSON Pointers as a newline-separated list, and reports when clipboard access is blocked.
+  - Export this section (.md) — downloads a Markdown report for that section alone and opens the same read-only preview as the other exports. Disabled when every visible row is ignored, because reports exclude ignored findings.
+  - Select all for report / Clear selection — bulk selection limited to rows that own a report checkbox, so Differences rows that delegate their review to Missing Fields are left alone.
+  - Ignore visible paths — adds the visible paths that can be expressed as exact ignore rules, then reruns the comparison. It never adds a rule the per-line panel would refuse, and becomes Restore ignored paths once every visible row in the section is already covered by its own exact rule.
 - Missing, modified, and structure findings support session-only selection, a native three-option review-status radio group (Not reviewed, Reviewed, or Needed), and free-text notes. Missing findings are reviewed in the Missing Fields table rather than duplicated in Differences.
 - Long values use an exact 70-character preview with Show more/Show less.
 - Differences has a dedicated value/type comparison table.

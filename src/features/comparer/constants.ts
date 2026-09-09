@@ -19,3 +19,17 @@ export const MAX_DOCUMENT_BYTES = Number(
 );
 
 export const APP_AUTHOR = (process.env.NEXT_PUBLIC_APP_AUTHOR ?? "").trim();
+
+/** Display names for the result disclosures, shared by section headings and status copy. */
+export const RESULT_SECTION_LABELS = {
+  structure: "Structure Schema Compare",
+  missing: "Missing Fields",
+  differences: "Differences"
+} as const;
+
+/** Filename stems for per-section Markdown exports. */
+export const RESULT_SECTION_REPORT_NAMES = {
+  structure: "section-structure-schema-report.md",
+  missing: "section-missing-fields-report.md",
+  differences: "section-differences-report.md"
+} as const;

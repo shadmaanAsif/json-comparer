@@ -82,11 +82,16 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
       showStructureOnlyInB: true
     },
     sections: { missing: false, structure: false, differences: false },
+    ignorePaths: [],
     onFiltersChange: vi.fn(),
     onSectionsChange: vi.fn(),
     onToggleAllSections: vi.fn(),
     onExport: vi.fn(),
+    onExportSection: vi.fn(),
     onToggleSelected: vi.fn(),
+    onSelectFindings: vi.fn(),
+    onCopyPaths: vi.fn(),
+    onIgnorePaths: vi.fn(),
     onNoteChange: vi.fn(),
     ...overrides
   };
@@ -232,6 +237,143 @@ describe("ComparisonResults disclosures", () => {
     ).map((element) => element.textContent?.trim());
 
     expect(sectionTitles).toEqual(["Structure Schema Compare", "Missing Fields", "Differences"]);
+  });
+
+  it("opens a section action menu without toggling the disclosure", async () => {
+    const user = userEvent.setup();
+    renderResults({
+      onlyInA: [missingFinding],
+      counts: { ...emptyCounts, missing: { visible: 1, total: 1 } }
+    });
+    const trigger = screen.getByRole("button", { name: "Missing Fields actions" });
+    const section = trigger.closest("details")!;
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(section).not.toHaveAttribute("open");
+
+    await user.click(trigger);
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    // A control inside <summary> must not open the section it lives in.
+    expect(section).not.toHaveAttribute("open");
+    expect(screen.getByRole("menu", { name: "Missing Fields actions" })).toBeVisible();
+  });
+
+  it("copies, exports, bulk-selects, and ignores the visible findings of one section", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      onlyInA: [missingFinding],
+      onlyInB: [onlyInBFinding],
+      counts: { ...emptyCounts, missing: { visible: 2, total: 2 } }
+    });
+    const openMenu = async () => {
+      await user.click(screen.getByRole("button", { name: "Missing Fields actions" }));
+      return screen.getByRole("menu", { name: "Missing Fields actions" });
+    };
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: /Copy visible paths/ })
+    );
+    expect(props.onCopyPaths).toHaveBeenCalledWith(
+      [missingFinding.pointer, onlyInBFinding.pointer],
+      "Missing Fields"
+    );
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: "Export this section (.md)" })
+    );
+    expect(props.onExportSection).toHaveBeenCalledWith("missing");
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: /Select all for report/ })
+    );
+    expect(props.onSelectFindings).toHaveBeenCalledWith(
+      [missingFinding.id, onlyInBFinding.id],
+      true
+    );
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: /Ignore visible paths/ })
+    );
+    expect(props.onIgnorePaths).toHaveBeenCalledWith([
+      missingFinding.pointer,
+      onlyInBFinding.pointer
+    ]);
+  });
+
+  it("offers restoring once every visible path in the section is already ignored", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      onlyInA: [missingFinding],
+      ignorePaths: [missingFinding.pointer, "/unrelated"],
+      counts: { ...emptyCounts, missing: { visible: 1, total: 1 } }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Missing Fields actions" }));
+    const menu = screen.getByRole("menu", { name: "Missing Fields actions" });
+
+    expect(within(menu).queryByRole("menuitem", { name: /Ignore visible paths/ })).toBeNull();
+    await user.click(within(menu).getByRole("menuitem", { name: "Restore ignored paths (1)" }));
+
+    expect(props.onIgnorePaths).toHaveBeenCalledWith(["/unrelated"]);
+  });
+
+  it("disables section actions that have nothing to act on", async () => {
+    const user = userEvent.setup();
+    renderResults();
+
+    await user.click(screen.getByRole("button", { name: "Differences actions" }));
+    const menu = screen.getByRole("menu", { name: "Differences actions" });
+
+    expect(within(menu).getByRole("menuitem", { name: "Copy visible paths (0)" })).toBeDisabled();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Export this section (.md)" })
+    ).toBeDisabled();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Select all for report (0)" })
+    ).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Ignore visible paths (0)" })).toBeDisabled();
+  });
+
+  it("keeps Differences bulk selection to rows that own a report checkbox", async () => {
+    const user = userEvent.setup();
+    const modified: Finding = {
+      id: "changed:/config/amount",
+      kind: "changed",
+      path: ["config", "amount"],
+      pointer: "/config/amount",
+      valueA: 1,
+      valueB: 2,
+      ignored: false
+    };
+    const { props } = renderResults({
+      // missingFinding is "removed", so Differences delegates its review elsewhere.
+      differences: [missingFinding, modified],
+      counts: { ...emptyCounts, differences: { visible: 2, total: 2 } }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Differences actions" }));
+    await user.click(
+      within(screen.getByRole("menu", { name: "Differences actions" })).getByRole("menuitem", {
+        name: "Select all for report (1)"
+      })
+    );
+
+    expect(props.onSelectFindings).toHaveBeenCalledWith([modified.id], true);
+  });
+
+  it("closes the section menu on Escape and returns focus to its trigger", async () => {
+    const user = userEvent.setup();
+    renderResults();
+    const trigger = screen.getByRole("button", { name: "Structure Schema Compare actions" });
+
+    await user.click(trigger);
+    expect(screen.getByRole("menu")).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(trigger).toHaveFocus();
   });
 
   it("edits review status through a three-option radio group", async () => {

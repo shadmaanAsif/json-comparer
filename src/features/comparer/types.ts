@@ -8,6 +8,8 @@ export type WorkspaceStatus = {
 export type ReviewNoteStatus = "not-reviewed" | "reviewed" | "needed";
 export type ReviewNote = { status: ReviewNoteStatus; text: string };
 export type ExportPreviewData = { filename: string; content: string };
+/** The three result disclosures, in the order they are presented. */
+export type ResultSectionKey = "structure" | "missing" | "differences";
 
 /** @deprecated Use WorkspaceStatus. */
 export type Status = WorkspaceStatus;

@@ -1,5 +1,5 @@
 import { matchesIgnorePattern } from "@/domain/comparison/path";
-import type { ArrayMode } from "@/domain/comparison/types";
+import type { ArrayMode, PathSegment } from "@/domain/comparison/types";
 
 export interface PanelField {
   pointer: string;
@@ -117,7 +117,7 @@ export function getCounterpart(
   return counterpart;
 }
 
-export function getIgnoreAction(segments: string[], pointer: string, patterns: string[]) {
+export function getIgnoreAction(segments: PathSegment[], pointer: string, patterns: string[]) {
   const matching = patterns.filter((pattern) => matchesIgnorePattern(segments, pattern));
   const hasLiteralWildcard = segments.some((segment) => segment === "*" || segment === "**");
   if (matching.some((pattern) => pattern !== pointer) || (matching.length && hasLiteralWildcard))

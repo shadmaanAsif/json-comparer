@@ -2,12 +2,15 @@
 
 import { displayPath } from "@/domain/comparison/path";
 import type { ComparisonResult, Finding, StructureFinding } from "@/domain/comparison/types";
+import { RESULT_SECTION_LABELS } from "../constants";
 import type { ReviewNote } from "../types";
 import { FindingReview } from "./FindingReview";
 import {
   formatComparisonOutcome,
   type ComparisonProjectionCounts
 } from "../utils/result-projections";
+import { buildSectionActions, type SectionFinding } from "../utils/section-actions";
+import { ResultSectionMenu } from "./ResultSectionMenu";
 import { ValueCell } from "./ValueCell";
 
 export interface ResultFilters {
@@ -25,6 +28,8 @@ export interface ResultSectionState {
   differences: boolean;
 }
 
+export type ResultSectionKey = keyof ResultSectionState;
+
 export interface ComparisonResultsProps {
   result: ComparisonResult;
   counts: ComparisonProjectionCounts;
@@ -37,11 +42,16 @@ export interface ComparisonResultsProps {
   notesByFindingId: Record<string, ReviewNote>;
   filters: ResultFilters;
   sections: ResultSectionState;
+  ignorePaths: string[];
   onFiltersChange: (patch: Partial<ResultFilters>) => void;
   onSectionsChange: (patch: Partial<ResultSectionState>) => void;
   onToggleAllSections: () => void;
   onExport: (selectedOnly: boolean) => void;
+  onExportSection: (section: ResultSectionKey) => void;
   onToggleSelected: (findingId: string) => void;
+  onSelectFindings: (findingIds: string[], selected: boolean) => void;
+  onCopyPaths: (pointers: string[], sectionLabel: string) => void;
+  onIgnorePaths: (paths: string[]) => void;
   onNoteChange: (findingId: string, patch: Partial<ReviewNote>) => void;
 }
 
@@ -70,11 +80,16 @@ export function ComparisonResults({
   notesByFindingId,
   filters,
   sections,
+  ignorePaths,
   onFiltersChange,
   onSectionsChange,
   onToggleAllSections,
   onExport,
+  onExportSection,
   onToggleSelected,
+  onSelectFindings,
+  onCopyPaths,
+  onIgnorePaths,
   onNoteChange
 }: ComparisonResultsProps) {
   const missingFindings = [...onlyInA, ...onlyInB];
@@ -83,6 +98,25 @@ export function ComparisonResults({
       (finding.kind === "added" || finding.kind === "removed") && selectedFindingIds.has(finding.id)
   ).length;
   const allSectionsExpanded = Object.values(sections).every(Boolean);
+
+  const sectionActions = (
+    section: ResultSectionKey,
+    findings: SectionFinding[],
+    isSelectable?: (finding: SectionFinding) => boolean
+  ) =>
+    buildSectionActions({
+      sectionLabel: RESULT_SECTION_LABELS[section],
+      findings,
+      selectedFindingIds,
+      ignorePaths,
+      isSelectable,
+      handlers: {
+        onCopyPaths,
+        onExportSection: () => onExportSection(section),
+        onSelectFindings,
+        onIgnorePaths
+      }
+    });
 
   return (
     <section className="results" aria-labelledby="results-heading" data-tour="results">
@@ -208,11 +242,17 @@ export function ComparisonResults({
         <summary>
           <span className="result-section-title">
             <ResultSectionArrow />
-            Structure Schema Compare
+            {RESULT_SECTION_LABELS.structure}
           </span>
-          <small>
-            {counts.structure.visible} / {counts.structure.total}
-          </small>
+          <span className="result-section-meta">
+            <small>
+              {counts.structure.visible} / {counts.structure.total}
+            </small>
+            <ResultSectionMenu
+              sectionLabel={RESULT_SECTION_LABELS.structure}
+              actions={sectionActions("structure", structureFindings)}
+            />
+          </span>
         </summary>
         <div className="structure-filter-bar">
           <span>Show schema differences</span>
@@ -300,13 +340,19 @@ export function ComparisonResults({
         <summary>
           <span className="result-section-title">
             <ResultSectionArrow />
-            Missing Fields
+            {RESULT_SECTION_LABELS.missing}
           </span>
-          <small>
-            {counts.missing.visible} / {counts.missing.total}
-            {" · "}
-            {selectedMissingCount} selected
-          </small>
+          <span className="result-section-meta">
+            <small>
+              {counts.missing.visible} / {counts.missing.total}
+              {" · "}
+              {selectedMissingCount} selected
+            </small>
+            <ResultSectionMenu
+              sectionLabel={RESULT_SECTION_LABELS.missing}
+              actions={sectionActions("missing", missingFindings)}
+            />
+          </span>
         </summary>
         {missingFindings.length === 0 ? (
           <EmptyResult title="No missing fields">
@@ -359,11 +405,23 @@ export function ComparisonResults({
         <summary>
           <span className="result-section-title">
             <ResultSectionArrow />
-            Differences
+            {RESULT_SECTION_LABELS.differences}
           </span>
-          <small>
-            {counts.differences.visible} / {counts.differences.total}
-          </small>
+          <span className="result-section-meta">
+            <small>
+              {counts.differences.visible} / {counts.differences.total}
+            </small>
+            <ResultSectionMenu
+              sectionLabel={RESULT_SECTION_LABELS.differences}
+              actions={sectionActions(
+                "differences",
+                differences,
+                // Added/removed rows delegate review to Missing Fields, so they
+                // expose no report checkbox here.
+                (finding) => finding.kind !== "added" && finding.kind !== "removed"
+              )}
+            />
+          </span>
         </summary>
         {differences.length === 0 ? (
           <EmptyResult title="No differences">

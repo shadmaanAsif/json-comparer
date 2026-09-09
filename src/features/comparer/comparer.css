@@ -1,6 +1,7 @@
 @import "./components/author-byline.css";
 @import "./components/ignore-path-selector.css";
 @import "./components/panel-actions.css";
+@import "./components/result-section-menu.css";
 @import "./components/tree-actions.css";
 @import "./components/onboarding-tour.css";
 
@@ -1156,6 +1157,12 @@ td pre {
 .result-section > summary small {
   color: var(--muted);
   font-weight: 600;
+}
+.result-section-meta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
 }
 .result-section .table-scroll {
   border: 0;

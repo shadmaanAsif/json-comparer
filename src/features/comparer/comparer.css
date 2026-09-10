@@ -1222,6 +1222,9 @@ td pre {
 .ignored-row {
   opacity: 0.55;
 }
+.selected-row {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
 .empty-state {
   padding: 50px 20px;
   border: 1px dashed var(--border);

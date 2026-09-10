@@ -53,6 +53,26 @@ export function ComparisonControls({
 
   return (
     <>
+      <div className="primary-actions" data-tour="primary-actions">
+        <button className="primary-button" type="button" disabled={isComparing} onClick={onCompare}>
+          {isComparing ? "Comparing…" : "Compare responses"}
+        </button>
+        {isComparing && (
+          <button className="secondary-button" type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+        <button className="secondary-button" type="button" onClick={onLoadSample}>
+          Load sample
+        </button>
+        <button className="secondary-button" type="button" onClick={onClear}>
+          Clear all
+        </button>
+        <p className={`status ${status.tone}`} role="status" aria-live="polite">
+          {status.message}
+        </p>
+      </div>
+
       <section className="options-bar" aria-labelledby="options-heading">
         <div data-tour="array-mode">
           <p className="eyebrow" id="options-heading">
@@ -140,26 +160,6 @@ export function ComparisonControls({
           Differences
         </button>
       </fieldset>
-
-      <div className="primary-actions" data-tour="primary-actions">
-        <button className="primary-button" type="button" disabled={isComparing} onClick={onCompare}>
-          {isComparing ? "Comparing…" : "Compare responses"}
-        </button>
-        {isComparing && (
-          <button className="secondary-button" type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        )}
-        <button className="secondary-button" type="button" onClick={onLoadSample}>
-          Load sample
-        </button>
-        <button className="secondary-button" type="button" onClick={onClear}>
-          Clear all
-        </button>
-        <p className={`status ${status.tone}`} role="status" aria-live="polite">
-          {status.message}
-        </p>
-      </div>
     </>
   );
 }

@@ -72,6 +72,18 @@ function structureLabel(kind: StructureFinding["kind"]) {
   return "Baseline has no schema item";
 }
 
+function rowClassName(
+  finding: Finding | StructureFinding,
+  selectedFindingIds: ReadonlySet<string>
+) {
+  return [
+    finding.ignored ? "ignored-row" : "",
+    selectedFindingIds.has(finding.id) ? "selected-row" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function ComparisonResults({
   result,
   counts,
@@ -297,13 +309,16 @@ export function ComparisonResults({
               <caption className="visually-hidden">Structure schema findings</caption>
               <thead>
                 <tr>
+                  <th scope="col" className="select-column">
+                    Select
+                  </th>
                   <th scope="col" className="row-actions-column">
                     Actions
                   </th>
                   <th scope="col">Field path</th>
                   <th scope="col">Issue</th>
                   <th scope="col">Detail</th>
-                  <th scope="col">Review</th>
+                  <th scope="col">Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -312,8 +327,14 @@ export function ComparisonResults({
                     key={finding.id}
                     id={"finding-structure-" + finding.id}
                     tabIndex={-1}
-                    className={finding.ignored ? "ignored-row" : ""}
+                    className={rowClassName(finding, selectedFindingIds)}
                   >
+                    <SelectFindingCell
+                      findingId={finding.id}
+                      label={`structure ${displayPath(finding.path)}`}
+                      selected={selectedFindingIds.has(finding.id)}
+                      onSelect={onToggleSelected}
+                    />
                     <td className="row-actions-cell">
                       <RowActionMenu
                         label={`Row actions for ${displayPath(finding.path)}`}
@@ -334,12 +355,10 @@ export function ComparisonResults({
                     </td>
                     <td>{finding.detail}</td>
                     <td>
-                      <FindingReviewControls
-                        finding={finding}
-                        selected={selectedFindingIds.has(finding.id)}
+                      <FindingReview
+                        label={`structure ${displayPath(finding.path)}`}
                         note={notesByFindingId[finding.id]}
-                        onSelect={onToggleSelected}
-                        onNote={onNoteChange}
+                        onChange={(patch) => onNoteChange(finding.id, patch)}
                       />
                     </td>
                   </tr>
@@ -385,10 +404,12 @@ export function ComparisonResults({
               <caption className="visually-hidden">Missing fields grouped by response</caption>
               <thead>
                 <tr>
+                  <th scope="col" className="select-column">
+                    Select
+                  </th>
                   <th scope="col" className="row-actions-column">
                     Actions
                   </th>
-                  <th scope="col">Select</th>
                   <th scope="col">Field path</th>
                   <th scope="col">{SIDE_LABELS.A}</th>
                   <th scope="col">{SIDE_LABELS.B}</th>
@@ -467,48 +488,77 @@ export function ComparisonResults({
               </caption>
               <thead>
                 <tr>
+                  <th scope="col" className="select-column">
+                    Select
+                  </th>
+                  <th scope="col" className="row-actions-column">
+                    Actions
+                  </th>
                   <th scope="col">Exact changed path</th>
                   <th scope="col">Change</th>
                   <th scope="col">{SIDE_LABELS.A}</th>
                   <th scope="col">{SIDE_LABELS.B}</th>
-                  <th scope="col">Review</th>
+                  <th scope="col">Notes</th>
                 </tr>
               </thead>
               <tbody>
-                {differences.map((finding) => (
-                  <tr
-                    key={finding.id}
-                    id={"finding-differences-" + finding.id}
-                    tabIndex={-1}
-                    className={finding.ignored ? "ignored-row" : ""}
-                  >
-                    <td>
-                      <FindingPath finding={finding} />
-                    </td>
-                    <td>
-                      <span className={`kind-pill ${finding.kind}`}>{findingLabel(finding)}</span>
-                    </td>
-                    <td>
-                      <ValueCell value={finding.valueA} />
-                    </td>
-                    <td>
-                      <ValueCell value={finding.valueB} />
-                    </td>
-                    <td>
-                      {finding.kind === "added" || finding.kind === "removed" ? (
-                        <small>Review in Missing Fields</small>
-                      ) : (
-                        <FindingReviewControls
-                          finding={finding}
+                {differences.map((finding) => {
+                  const reviewable = finding.kind !== "added" && finding.kind !== "removed";
+                  return (
+                    <tr
+                      key={finding.id}
+                      id={"finding-differences-" + finding.id}
+                      tabIndex={-1}
+                      className={rowClassName(finding, selectedFindingIds)}
+                    >
+                      {reviewable ? (
+                        <SelectFindingCell
+                          findingId={finding.id}
+                          label={displayPath(finding.path)}
                           selected={selectedFindingIds.has(finding.id)}
-                          note={notesByFindingId[finding.id]}
                           onSelect={onToggleSelected}
-                          onNote={onNoteChange}
                         />
+                      ) : (
+                        <td className="select-cell" />
                       )}
-                    </td>
-                  </tr>
-                ))}
+                      <td className="row-actions-cell">
+                        <RowActionMenu
+                          label={`Row actions for ${displayPath(finding.path)}`}
+                          actions={buildRowActions({
+                            finding,
+                            ignorePaths,
+                            onIgnorePaths,
+                            onManageIgnores,
+                            onScrollToPanel
+                          })}
+                        />
+                      </td>
+                      <td>
+                        <FindingPath finding={finding} />
+                      </td>
+                      <td>
+                        <span className={`kind-pill ${finding.kind}`}>{findingLabel(finding)}</span>
+                      </td>
+                      <td>
+                        <ValueCell value={finding.valueA} />
+                      </td>
+                      <td>
+                        <ValueCell value={finding.valueB} />
+                      </td>
+                      <td>
+                        {reviewable ? (
+                          <FindingReview
+                            label={displayPath(finding.path)}
+                            note={notesByFindingId[finding.id]}
+                            onChange={(patch) => onNoteChange(finding.id, patch)}
+                          />
+                        ) : (
+                          <small>Review in Missing Fields</small>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -605,8 +655,14 @@ function MissingFindingGroup({
             key={finding.id}
             id={"finding-missing-" + finding.id}
             tabIndex={-1}
-            className={finding.ignored ? "ignored-row" : ""}
+            className={rowClassName(finding, selectedFindingIds)}
           >
+            <SelectFindingCell
+              findingId={finding.id}
+              label={displayPath(finding.path)}
+              selected={selectedFindingIds.has(finding.id)}
+              onSelect={onToggleSelected}
+            />
             <td className="row-actions-cell">
               <RowActionMenu
                 label={`Row actions for ${displayPath(finding.path)} (${label})`}
@@ -617,14 +673,6 @@ function MissingFindingGroup({
                   onManageIgnores,
                   onScrollToPanel
                 })}
-              />
-            </td>
-            <td>
-              <input
-                type="checkbox"
-                aria-label={`Select ${displayPath(finding.path)}`}
-                checked={selectedFindingIds.has(finding.id)}
-                onChange={() => onToggleSelected(finding.id)}
               />
             </td>
             <td>
@@ -651,33 +699,26 @@ function MissingFindingGroup({
   );
 }
 
-function FindingReviewControls({
-  finding,
+function SelectFindingCell({
+  findingId,
+  label,
   selected,
-  note,
-  onSelect,
-  onNote
+  onSelect
 }: {
-  finding: Finding | StructureFinding;
+  findingId: string;
+  label: string;
   selected: boolean;
-  note?: ReviewNote;
   onSelect: (id: string) => void;
-  onNote: (id: string, patch: Partial<ReviewNote>) => void;
 }) {
-  const label = ("detail" in finding ? "structure " : "") + displayPath(finding.path);
   return (
-    <div className="finding-review-controls">
-      <label>
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => onSelect(finding.id)}
-          aria-label={"Select " + label}
-        />{" "}
-        Select for report
-      </label>
-      <FindingReview label={label} note={note} onChange={(patch) => onNote(finding.id, patch)} />
-    </div>
+    <td className="select-cell">
+      <input
+        type="checkbox"
+        aria-label={`Select ${label}`}
+        checked={selected}
+        onChange={() => onSelect(findingId)}
+      />
+    </td>
   );
 }
 

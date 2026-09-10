@@ -470,4 +470,71 @@ describe("ComparisonResults disclosures", () => {
     expect(screen.queryByRole("menu")).toBeNull();
     expect(trigger).toHaveFocus();
   });
+
+  it("puts Select before Actions as the first two columns in every section", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      onlyInA: [missingFinding],
+      differences: [missingFinding],
+      sections: { missing: true, structure: true, differences: true }
+    });
+
+    for (const table of screen.getAllByRole("table")) {
+      const headers = within(table).getAllByRole("columnheader");
+      expect(headers[0]).toHaveTextContent("Select");
+      expect(headers[1]).toHaveTextContent("Actions");
+    }
+
+    const checkbox = screen.getByRole("checkbox", { name: "Select config.code" });
+    expect(checkbox.closest("td")).toHaveClass("select-cell");
+    expect(checkbox.closest("td")).not.toHaveClass("row-actions-cell");
+  });
+
+  it("gives added/removed Differences rows an empty Select cell but a working Actions menu", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      differences: [missingFinding],
+      sections: { missing: false, structure: false, differences: true }
+    });
+
+    const row = document.getElementById("finding-differences-" + missingFinding.id)!;
+    expect(within(row).queryByRole("checkbox")).toBeNull();
+
+    await user.click(within(row).getByRole("button", { name: /^Row actions for/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Add to ignore path" }));
+
+    expect(props.onIgnorePaths).toHaveBeenCalledWith([missingFinding.pointer]);
+  });
+
+  it("highlights a row's background once it is selected for the report", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      onlyInA: [missingFinding],
+      differences: [missingFinding],
+      selectedFindingIds: new Set([structureOnlyInA.id, missingFinding.id]),
+      sections: { missing: true, structure: true, differences: true }
+    });
+
+    expect(document.getElementById("finding-structure-" + structureOnlyInA.id)).toHaveClass(
+      "selected-row"
+    );
+    expect(document.getElementById("finding-missing-" + missingFinding.id)).toHaveClass(
+      "selected-row"
+    );
+    expect(document.getElementById("finding-differences-" + missingFinding.id)).toHaveClass(
+      "selected-row"
+    );
+  });
+
+  it("leaves an unselected row's background unchanged", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      selectedFindingIds: new Set(),
+      sections: { missing: false, structure: true, differences: false }
+    });
+
+    expect(document.getElementById("finding-structure-" + structureOnlyInA.id)).not.toHaveClass(
+      "selected-row"
+    );
+  });
 });

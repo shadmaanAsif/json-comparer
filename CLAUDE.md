@@ -103,5 +103,6 @@ Keep these boundaries unless a measured responsibility change justifies moving t
 3. Make the smallest coherent change and update affected imports/docs.
 4. Formatting, lint, the standards audit, and tests may run by default. Type checking, the build, and a manual browser check are opt-in — run them only when explicitly asked. See [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for the exact split and command list.
 5. Report exactly what changed, then stop. Document any gate that could not run and its exact blocker.
+6. When asked to commit or open a PR, keep the commit message and PR description concise — see [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for the exact guidance.
 
 For periodic architecture and naming reviews, use `.agents/skills/audit-project-standards/SKILL.md`. Its script provides deterministic checks; the skill also requires a manual ownership and duplication review.

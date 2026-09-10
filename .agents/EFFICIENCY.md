@@ -58,6 +58,18 @@ write the tests a behavior change calls for.
 A narrower ask ("run the tests for this file") means running only that. If a gate can't
 run, say so with the exact blocker. Never claim a gate passed without running it.
 
+## Commits and PR descriptions
+
+Keep both concise by default:
+
+- Commit messages: a short summary line stating what changed and why. Add a body only
+  when the reasoning genuinely isn't obvious from the diff — skip multi-paragraph
+  walkthroughs of every file touched.
+- PR descriptions: a few bullets covering what changed and why, not an exhaustive
+  section-by-section narration. Point at the diff for detail instead of restating it.
+
+Expand only when the user asks for more detail.
+
 ## Token and Execution Optimization
 
 Scope rules for reading and verification. These refine the tiers above — they decide *how

@@ -117,6 +117,23 @@ export function getCounterpart(
   return counterpart;
 }
 
+/**
+ * Resolve `pointer` to its own field, or the nearest ancestor pointer that exists in `index`
+ * (actual or placeholder), by stripping trailing segments. A schema-only finding's exact
+ * pointer (e.g. a field one side never had at that array index at all) often has no line of
+ * its own on a given side, even though its enclosing object/array does — this lets navigation
+ * fall back to "nearest existing Tree parent" instead of finding nothing and doing nothing.
+ */
+export function resolveNearestField(index: PanelIndex, pointer: string): PanelField | undefined {
+  let candidate = pointer;
+  while (true) {
+    const field = index.byPointer.get(candidate);
+    if (field) return field;
+    if (candidate === "") return undefined;
+    candidate = candidate.slice(0, candidate.lastIndexOf("/"));
+  }
+}
+
 export function getIgnoreAction(segments: PathSegment[], pointer: string, patterns: string[]) {
   const matching = patterns.filter((pattern) => matchesIgnorePattern(segments, pattern));
   const hasLiteralWildcard = segments.some((segment) => segment === "*" || segment === "**");

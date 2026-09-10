@@ -13,6 +13,7 @@ import type { PanelAnchorRect } from "../utils/panel-anchor";
 import {
   buildPanelIndex,
   getCounterpart,
+  resolveNearestField,
   type PanelField,
   type PanelIndex
 } from "../utils/panel-context";
@@ -117,7 +118,7 @@ export function usePanelInteractions({
       : undefined;
   const navigate = (side: ResponseSide, pointer: string) => {
     const index = indexes?.[side];
-    const field = index?.byPointer.get(pointer);
+    const field = index && resolveNearestField(index, pointer);
     if (!index || !field) return;
     setNavigation((current) => ({
       ...current,
@@ -134,7 +135,7 @@ export function usePanelInteractions({
     if (!indexes) return undefined;
     const homeIndex = indexes[homeSide];
     const otherSide: ResponseSide = homeSide === "A" ? "B" : "A";
-    const field = homeIndex.byPointer.get(pointer);
+    const field = resolveNearestField(homeIndex, pointer);
     if (!field) return undefined;
     const matches = homeSide === "A" ? (result?.arrayMatches ?? {}) : reverseArrayMatches;
     return getCounterpart(field, indexes[otherSide], homeIndex, arrayMode, matches)?.pointer;

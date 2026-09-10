@@ -129,13 +129,52 @@ describe("buildRowActions", () => {
     expect(options.onScrollToPanel).toHaveBeenCalledWith(added.pointer, "B", true);
   });
 
-  it("scrolls a Baseline-only structure finding to side B and resolves a Candidate counterpart", () => {
+  it("scrolls a Candidate-only structure finding to side B and resolves a Baseline counterpart", () => {
     const options = buildOptions({ finding: structureExtraInB });
     const [, scrollAction] = buildRowActions(options);
 
     scrollAction!.onSelect();
 
     expect(options.onScrollToPanel).toHaveBeenCalledWith(structureExtraInB.pointer, "B", true);
+  });
+
+  it("scrolls a missing-in-b structure finding to side B, not Baseline's canonical item", () => {
+    // The array index in a missing-in-b pointer is Candidate's own (job.valueB's loop), never
+    // Baseline's — Baseline is only ever compared via its single canonical item 0, which may not
+    // exist at all at this index. Side B is the only side guaranteed to resolve.
+    const structureMissingInB: StructureFinding = {
+      id: "structure:missing-in-b:/items/2/amount",
+      kind: "missing-in-b",
+      path: ["items", 2, "amount"],
+      pointer: "/items/2/amount",
+      detail: "Only in A",
+      ignored: false
+    };
+    const options = buildOptions({ finding: structureMissingInB });
+    const [, scrollAction] = buildRowActions(options);
+
+    scrollAction!.onSelect();
+
+    expect(options.onScrollToPanel).toHaveBeenCalledWith(structureMissingInB.pointer, "B", true);
+  });
+
+  it("resolves a Candidate counterpart for a changed value present on both sides", () => {
+    const options = buildOptions({ finding: withinArray });
+    const [, scrollAction] = buildRowActions(options);
+
+    scrollAction!.onSelect();
+
+    expect(options.onScrollToPanel).toHaveBeenCalledWith(withinArray.pointer, "A", true);
+  });
+
+  it("resolves a Candidate counterpart for a type-changed value present on both sides", () => {
+    const typeChanged: Finding = { ...withinArray, kind: "type-changed" };
+    const options = buildOptions({ finding: typeChanged });
+    const [, scrollAction] = buildRowActions(options);
+
+    scrollAction!.onSelect();
+
+    expect(options.onScrollToPanel).toHaveBeenCalledWith(typeChanged.pointer, "A", true);
   });
 
   it("does not resolve a Candidate counterpart for a Baseline-only structure consistency finding", () => {

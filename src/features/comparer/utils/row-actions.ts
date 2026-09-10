@@ -11,17 +11,32 @@ export interface RowActionOptions {
 }
 
 /**
- * The side a finding's pointer is actually populated on, and whether the opposite side has a
- * well-defined counterpart worth resolving. Structure findings scoped entirely to Baseline
- * ("inconsistent-in-a", "a-empty-array") describe no relationship to Candidate's content, so
- * scrolling only highlights the home side rather than guessing at an unrelated Candidate field.
+ * The side a finding's pointer is reliably resolvable on, and whether the opposite side has a
+ * well-defined counterpart worth resolving.
+ *
+ * Value-level findings (added/removed/changed/type-changed) come from the engine's own
+ * per-index or matched-item array alignment, so their pointer is always real on the side named
+ * below. Structure findings are different: "extra-in-b" and "missing-in-b" both come from
+ * comparing Baseline's single canonical schema item (index 0) against *every* Candidate item by
+ * Candidate's own index — that index is only guaranteed to exist on Candidate (job.valueB's own
+ * length), never on Baseline, which may be shorter, longer, or simply different at that same
+ * index. Baseline-only structure findings ("inconsistent-in-a", "a-empty-array") are the mirror
+ * case: their index comes from Baseline's own array, so Baseline is reliable and there is no
+ * defined Candidate relationship to resolve at all.
  */
 function homeSideFor(finding: SectionFinding): { side: ResponseSide; resolveCounterpart: boolean } {
-  if (finding.kind === "added" || finding.kind === "extra-in-b")
-    return { side: "B", resolveCounterpart: true };
-  if (finding.kind === "removed" || finding.kind === "missing-in-b")
-    return { side: "A", resolveCounterpart: true };
-  return { side: "A", resolveCounterpart: false };
+  switch (finding.kind) {
+    case "added":
+    case "extra-in-b":
+    case "missing-in-b":
+      return { side: "B", resolveCounterpart: true };
+    case "removed":
+    case "changed":
+    case "type-changed":
+      return { side: "A", resolveCounterpart: true };
+    default:
+      return { side: "A", resolveCounterpart: false };
+  }
 }
 
 /**

@@ -5,21 +5,20 @@ This file applies to the entire repository.
 Before changing the project:
 
 1. Read [`.agents/CONSTITUTION.md`](.agents/CONSTITUTION.md).
-2. Use the repository-local `maintain-json-comparer` skill at [`.agents/skills/maintain-json-comparer/SKILL.md`](.agents/skills/maintain-json-comparer/SKILL.md).
-3. Read only the relevant documents under [`docs/reference/`](docs/reference/): requirements in `SRS.md`, boundaries in `ARCHITECTURE.md`, dependencies in `TECH_STACK.md`, and sequencing in `IMPLEMENTATION_PLAN.md`.
+2. Read [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) — what to read for a given question, and when to run which verification commands. It exists so you don't have to read everything below every time.
+3. Use the repository-local `maintain-json-comparer` skill at [`.agents/skills/maintain-json-comparer/SKILL.md`](.agents/skills/maintain-json-comparer/SKILL.md).
+4. Read only the relevant documents under [`docs/reference/`](docs/reference/): requirements in `SRS.md`, boundaries in `ARCHITECTURE.md`, dependencies in `TECH_STACK.md`, and sequencing in `IMPLEMENTATION_PLAN.md`. Do not read `docs/archive/` unless you're specifically tracing a historical decision — see `docs/archive/README.md`.
 
-## Non-negotiable commands
+## Verification is split into default and opt-in
 
-For a code change, run:
+Fast local checks — `test`, `lint`, `format:check`, `standards:check` — may run by default
+after a change, for every agent, interactive or autonomous. `typecheck`, `build`, and a
+manual browser/preview check are opt-in: run only when the user explicitly asks. Either
+way, report exactly what changed. See [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for
+the exact command list and rationale.
 
-```bash
-pnpm test
-pnpm typecheck
-pnpm lint
-pnpm build
-```
-
-If a command cannot run, report the exact blocker. Do not claim verification that did not occur.
+If asked to verify and a command cannot run, report the exact blocker. Do not claim
+verification that did not occur.
 
 ## Scope rules
 

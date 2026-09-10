@@ -1,6 +1,6 @@
 # JSON Comparer Development Guide
 
-This repository is a privacy-first Next.js application. Read `AGENTS.md` and `.agents/CONSTITUTION.md` before changing behavior or architecture. Those files are authoritative when this guide is incomplete.
+This repository is a privacy-first Next.js application. Read `AGENTS.md` and `.agents/CONSTITUTION.md` before changing behavior or architecture. Those files are authoritative when this guide is incomplete. Read `.agents/EFFICIENCY.md` too — it covers what to read for a given question and when to run which verification commands, so this file doesn't have to repeat that guidance.
 
 ## Architecture and dependency direction
 
@@ -101,19 +101,7 @@ Keep these boundaries unless a measured responsibility change justifies moving t
 1. Inspect existing ownership and nearby tests before editing.
 2. Add a regression test for behavior changes at the lowest responsible boundary.
 3. Make the smallest coherent change and update affected imports/docs.
-4. Run the existing formatting/lint tooling; do not introduce a second formatter.
-5. Run the project-standards audit. Investigate every finding; thresholds are prompts for review.
-6. Run all release gates from the project root:
-
-```bash
-pnpm format:check
-pnpm standards:check
-pnpm test
-pnpm typecheck
-pnpm lint
-pnpm build
-```
-
-Document any gate that could not run and its exact blocker.
+4. Formatting, lint, the standards audit, and tests may run by default. Type checking, the build, and a manual browser check are opt-in — run them only when explicitly asked. See [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for the exact split and command list.
+5. Report exactly what changed, then stop. Document any gate that could not run and its exact blocker.
 
 For periodic architecture and naming reviews, use `.agents/skills/audit-project-standards/SKILL.md`. Its script provides deterministic checks; the skill also requires a manual ownership and duplication review.

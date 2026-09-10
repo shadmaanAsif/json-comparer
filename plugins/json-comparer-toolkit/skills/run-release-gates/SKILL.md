@@ -1,6 +1,6 @@
 ---
 name: run-release-gates
-description: Run the JSON Comparer release gates (format check, standards audit, tests, typecheck, lint, build) from the repository root and report a clear pass/fail/blocked summary. Use after finishing a code change in this repository, before calling a change complete, or when asked to check, verify, or validate the build.
+description: Run the JSON Comparer release gates (format check, standards audit, tests, typecheck, lint, build) from the repository root and report a clear pass/fail/blocked summary. Verification is opt-in in this repository (`.agents/CONSTITUTION.md` Article VII.4) — use only when explicitly asked to check, verify, or validate the build, not automatically after a change.
 allowed-tools: Bash
 ---
 
@@ -10,7 +10,7 @@ Run this repository's non-negotiable release gates and report their real outcome
 
 ## When this runs
 
-Invoke after finishing any code change in this repository, before telling the user a change is complete, or whenever asked to "check", "verify", "validate", or "run the gates".
+Verification is opt-in by default in this repository — do not invoke this automatically after a code change or before calling a change complete. Invoke only when explicitly asked to "check", "verify", "validate", or "run the gates".
 
 ## Steps
 

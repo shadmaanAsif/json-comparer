@@ -119,8 +119,62 @@ describe("compareJson", () => {
     expect(result.structure.map((finding) => [finding.kind, finding.pointer])).toEqual(
       expect.arrayContaining([
         ["inconsistent-in-a", "/items/1/name"],
-        ["extra-in-b", "/items/0/extra"],
-        ["missing-in-b", "/items/1/name"]
+        ["extra-in-b", "/items/0/extra"]
+      ])
+    );
+    // Candidate's own item 0 carries "name" too, so item 1 lacking it matches Baseline's own
+    // item 1 lacking it — not a genuine Candidate schema gap.
+    expect(result.structure.map((finding) => finding.kind)).not.toContain("missing-in-b");
+  });
+
+  it("names the concrete item indexes in an inconsistent-in-a detail message", () => {
+    const result = compareJson(
+      { items: [{ id: 1 }, { id: 2, extra: true }] },
+      {
+        items: [{ id: 1 }, { id: 2, extra: true }]
+      }
+    );
+    expect(result.structure).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "inconsistent-in-a",
+          pointer: "/items/1/extra",
+          detail: "Baseline item 1 has a field Baseline item 0 does not have."
+        })
+      ])
+    );
+  });
+
+  it("compares ordered array item schemas against every Baseline item, not just the first", () => {
+    const result = compareJson(
+      { items: [{ id: 1 }, { id: 2, extra: true }] },
+      { items: [{ id: 1 }, { id: 2, extra: true }] },
+      { arrayMode: "ordered" }
+    );
+    // "extra" exists on Baseline's own second item; a first-item-only baseline would wrongly
+    // report it as extra-in-b just because item 0 doesn't carry it, even though A and B match.
+    expect(result.structure.map((finding) => finding.kind)).not.toContain("extra-in-b");
+    expect(result.structure).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "inconsistent-in-a", pointer: "/items/1/extra" })
+      ])
+    );
+  });
+
+  it("does not report missing-in-b for a field Candidate carries on a different item", () => {
+    const result = compareJson(
+      { items: [{ id: 1, phone: "A" }, { id: 2 }] },
+      { items: [{ id: 1 }, { id: 2, phone: "B" }] },
+      { arrayMode: "ordered" }
+    );
+    // "phone" exists on Candidate's own second item; comparing only against Baseline's item 0
+    // per Candidate index would wrongly report it missing from Candidate's first item, even
+    // though Candidate's schema clearly supports the field.
+    expect(result.structure.map((finding) => finding.kind)).not.toContain("missing-in-b");
+    expect(result.structure.map((finding) => finding.kind)).not.toContain("extra-in-b");
+    expect(result.structure).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "inconsistent-in-a", pointer: "/items/1/phone" })
       ])
     );
   });

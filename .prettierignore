@@ -2,5 +2,5 @@ node_modules
 .next
 coverage
 .agents
-docs/source
+docs/archive/source
 pnpm-lock.yaml

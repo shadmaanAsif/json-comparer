@@ -33,12 +33,12 @@ function renderControls(overrides: Partial<ComparisonControlsProps> = {}) {
 }
 
 describe("ComparisonControls", () => {
-  it("labels missing-field highlight directions as Only in A and Only in B", () => {
+  it("labels missing-field highlight directions as Only in Baseline and Only in Candidate", () => {
     renderControls();
 
     expect(
       screen.getByRole("button", {
-        name: "Only in A Only in B Missing fields"
+        name: "Only in Baseline Only in Candidate Missing fields"
       })
     ).toBeVisible();
   });

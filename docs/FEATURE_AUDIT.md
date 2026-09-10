@@ -1,6 +1,6 @@
 # Feature Audit
 
-Audit date: 2026-08-26. Authority: `docs/source/README.md` Functionality Checklist. The canonical description of currently implemented behavior is the root `FUNCTIONALITY.md` file.
+Audit date: 2026-08-26. Authority: `docs/archive/source/README.md` Functionality Checklist (historical artifact spec). The canonical description of currently implemented behavior is the root `FUNCTIONALITY.md` file.
 
 `Implemented` means the primary behavior is present and automated coverage exists where practical. `Partial` means a usable subset exists but one or more normative checklist behaviors remain absent. This audit deliberately does not claim that a feature is complete merely because a similarly named control exists.
 

@@ -82,11 +82,18 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
       showStructureOnlyInB: true
     },
     sections: { missing: false, structure: false, differences: false },
+    ignorePaths: [],
     onFiltersChange: vi.fn(),
     onSectionsChange: vi.fn(),
     onToggleAllSections: vi.fn(),
     onExport: vi.fn(),
+    onExportSection: vi.fn(),
     onToggleSelected: vi.fn(),
+    onSelectFindings: vi.fn(),
+    onCopyPaths: vi.fn(),
+    onIgnorePaths: vi.fn(),
+    onManageIgnores: vi.fn(),
+    onScrollToPanel: vi.fn(),
     onNoteChange: vi.fn(),
     ...overrides
   };
@@ -134,13 +141,17 @@ describe("ComparisonResults disclosures", () => {
       sections: { missing: true, structure: false, differences: true }
     });
 
-    expect(container.querySelector(".summary-chip.removed")).toHaveTextContent("1 / 1 Only in A");
-    expect(container.querySelector(".summary-chip.added")).toHaveTextContent("1 / 1 Only in B");
+    expect(container.querySelector(".summary-chip.removed")).toHaveTextContent(
+      "1 / 1 Only in Baseline"
+    );
+    expect(container.querySelector(".summary-chip.added")).toHaveTextContent(
+      "1 / 1 Only in Candidate"
+    );
     const resultFilters = screen.getByRole("group", { name: "Result filters" });
-    expect(within(resultFilters).getByRole("button", { name: "Only in A" })).toBeVisible();
-    expect(within(resultFilters).getByRole("button", { name: "Only in B" })).toBeVisible();
-    expect(screen.getByRole("rowheader", { name: "Only in A 1" })).toBeVisible();
-    expect(screen.getByRole("rowheader", { name: "Only in B 1" })).toBeVisible();
+    expect(within(resultFilters).getByRole("button", { name: "Only in Baseline" })).toBeVisible();
+    expect(within(resultFilters).getByRole("button", { name: "Only in Candidate" })).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "Only in Baseline 1" })).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "Only in Candidate 1" })).toBeVisible();
   });
 
   it("shows displayed-versus-total counts and comparison duration", () => {
@@ -189,8 +200,8 @@ describe("ComparisonResults disclosures", () => {
       sections: { missing: false, structure: true, differences: false }
     });
     const filters = screen.getByRole("group", { name: "Structure schema filters" });
-    const onlyInA = within(filters).getByRole("button", { name: "Only in A" });
-    const onlyInB = within(filters).getByRole("button", { name: "Only in B" });
+    const onlyInA = within(filters).getByRole("button", { name: "Only in Baseline" });
+    const onlyInB = within(filters).getByRole("button", { name: "Only in Candidate" });
 
     expect(onlyInA).toHaveAttribute("aria-pressed", "true");
     expect(onlyInB).toHaveAttribute("aria-pressed", "true");
@@ -234,6 +245,143 @@ describe("ComparisonResults disclosures", () => {
     expect(sectionTitles).toEqual(["Structure Schema Compare", "Missing Fields", "Differences"]);
   });
 
+  it("opens a section action menu without toggling the disclosure", async () => {
+    const user = userEvent.setup();
+    renderResults({
+      onlyInA: [missingFinding],
+      counts: { ...emptyCounts, missing: { visible: 1, total: 1 } }
+    });
+    const trigger = screen.getByRole("button", { name: "Missing Fields actions" });
+    const section = trigger.closest("details")!;
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(section).not.toHaveAttribute("open");
+
+    await user.click(trigger);
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    // A control inside <summary> must not open the section it lives in.
+    expect(section).not.toHaveAttribute("open");
+    expect(screen.getByRole("menu", { name: "Missing Fields actions" })).toBeVisible();
+  });
+
+  it("copies, exports, bulk-selects, and ignores the visible findings of one section", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      onlyInA: [missingFinding],
+      onlyInB: [onlyInBFinding],
+      counts: { ...emptyCounts, missing: { visible: 2, total: 2 } }
+    });
+    const openMenu = async () => {
+      await user.click(screen.getByRole("button", { name: "Missing Fields actions" }));
+      return screen.getByRole("menu", { name: "Missing Fields actions" });
+    };
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: /Copy visible paths/ })
+    );
+    expect(props.onCopyPaths).toHaveBeenCalledWith(
+      [missingFinding.pointer, onlyInBFinding.pointer],
+      "Missing Fields"
+    );
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: "Export this section (.md)" })
+    );
+    expect(props.onExportSection).toHaveBeenCalledWith("missing");
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: /Select all for report/ })
+    );
+    expect(props.onSelectFindings).toHaveBeenCalledWith(
+      [missingFinding.id, onlyInBFinding.id],
+      true
+    );
+
+    await user.click(
+      within(await openMenu()).getByRole("menuitem", { name: /Ignore visible paths/ })
+    );
+    expect(props.onIgnorePaths).toHaveBeenCalledWith([
+      missingFinding.pointer,
+      onlyInBFinding.pointer
+    ]);
+  });
+
+  it("offers restoring once every visible path in the section is already ignored", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      onlyInA: [missingFinding],
+      ignorePaths: [missingFinding.pointer, "/unrelated"],
+      counts: { ...emptyCounts, missing: { visible: 1, total: 1 } }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Missing Fields actions" }));
+    const menu = screen.getByRole("menu", { name: "Missing Fields actions" });
+
+    expect(within(menu).queryByRole("menuitem", { name: /Ignore visible paths/ })).toBeNull();
+    await user.click(within(menu).getByRole("menuitem", { name: "Restore ignored paths (1)" }));
+
+    expect(props.onIgnorePaths).toHaveBeenCalledWith(["/unrelated"]);
+  });
+
+  it("disables section actions that have nothing to act on", async () => {
+    const user = userEvent.setup();
+    renderResults();
+
+    await user.click(screen.getByRole("button", { name: "Differences actions" }));
+    const menu = screen.getByRole("menu", { name: "Differences actions" });
+
+    expect(within(menu).getByRole("menuitem", { name: "Copy visible paths (0)" })).toBeDisabled();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Export this section (.md)" })
+    ).toBeDisabled();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Select all for report (0)" })
+    ).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Ignore visible paths (0)" })).toBeDisabled();
+  });
+
+  it("keeps Differences bulk selection to rows that own a report checkbox", async () => {
+    const user = userEvent.setup();
+    const modified: Finding = {
+      id: "changed:/config/amount",
+      kind: "changed",
+      path: ["config", "amount"],
+      pointer: "/config/amount",
+      valueA: 1,
+      valueB: 2,
+      ignored: false
+    };
+    const { props } = renderResults({
+      // missingFinding is "removed", so Differences delegates its review elsewhere.
+      differences: [missingFinding, modified],
+      counts: { ...emptyCounts, differences: { visible: 2, total: 2 } }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Differences actions" }));
+    await user.click(
+      within(screen.getByRole("menu", { name: "Differences actions" })).getByRole("menuitem", {
+        name: "Select all for report (1)"
+      })
+    );
+
+    expect(props.onSelectFindings).toHaveBeenCalledWith([modified.id], true);
+  });
+
+  it("closes the section menu on Escape and returns focus to its trigger", async () => {
+    const user = userEvent.setup();
+    renderResults();
+    const trigger = screen.getByRole("button", { name: "Structure Schema Compare actions" });
+
+    await user.click(trigger);
+    expect(screen.getByRole("menu")).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
   it("edits review status through a three-option radio group", async () => {
     const user = userEvent.setup();
     const { props } = renderResults({
@@ -255,5 +403,138 @@ describe("ComparisonResults disclosures", () => {
     await user.click(within(statusGroup).getByRole("radio", { name: "Needed" }));
 
     expect(props.onNoteChange).toHaveBeenCalledWith(missingFinding.id, { status: "needed" });
+  });
+
+  it("renders a row action menu trigger for a structure row and a missing-fields row", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      onlyInA: [missingFinding],
+      sections: { missing: true, structure: true, differences: false }
+    });
+
+    expect(screen.getByRole("button", { name: "Row actions for baselineOnly" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Row actions for config.code (Only in Baseline)" })
+    ).toBeVisible();
+  });
+
+  it("adds a structure row's pointer to the ignore list from its action menu", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      structureFindings: [structureOnlyInA],
+      sections: { missing: false, structure: true, differences: false }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Row actions for baselineOnly" }));
+    await user.click(
+      within(screen.getByRole("menu", { name: "Row actions for baselineOnly" })).getByRole(
+        "menuitem",
+        { name: "Add to ignore path" }
+      )
+    );
+
+    expect(props.onIgnorePaths).toHaveBeenCalledWith([structureOnlyInA.pointer]);
+  });
+
+  it("scrolls to the panel from a missing-fields row's action menu", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      onlyInA: [missingFinding],
+      sections: { missing: true, structure: false, differences: false }
+    });
+    const rowLabel = "Row actions for config.code (Only in Baseline)";
+
+    await user.click(screen.getByRole("button", { name: rowLabel }));
+    await user.click(
+      within(screen.getByRole("menu", { name: rowLabel })).getByRole("menuitem", {
+        name: "Scroll to panel"
+      })
+    );
+
+    expect(props.onScrollToPanel).toHaveBeenCalledWith(missingFinding.pointer, "A", true);
+  });
+
+  it("closes an open row action menu on Escape and returns focus to its trigger", async () => {
+    const user = userEvent.setup();
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      sections: { missing: false, structure: true, differences: false }
+    });
+    const trigger = screen.getByRole("button", { name: "Row actions for baselineOnly" });
+
+    await user.click(trigger);
+    expect(screen.getByRole("menu")).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("puts Select before Actions as the first two columns in every section", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      onlyInA: [missingFinding],
+      differences: [missingFinding],
+      sections: { missing: true, structure: true, differences: true }
+    });
+
+    for (const table of screen.getAllByRole("table")) {
+      const headers = within(table).getAllByRole("columnheader");
+      expect(headers[0]).toHaveTextContent("Select");
+      expect(headers[1]).toHaveTextContent("Actions");
+    }
+
+    const checkbox = screen.getByRole("checkbox", { name: "Select config.code" });
+    expect(checkbox.closest("td")).toHaveClass("select-cell");
+    expect(checkbox.closest("td")).not.toHaveClass("row-actions-cell");
+  });
+
+  it("gives added/removed Differences rows an empty Select cell but a working Actions menu", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      differences: [missingFinding],
+      sections: { missing: false, structure: false, differences: true }
+    });
+
+    const row = document.getElementById("finding-differences-" + missingFinding.id)!;
+    expect(within(row).queryByRole("checkbox")).toBeNull();
+
+    await user.click(within(row).getByRole("button", { name: /^Row actions for/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Add to ignore path" }));
+
+    expect(props.onIgnorePaths).toHaveBeenCalledWith([missingFinding.pointer]);
+  });
+
+  it("highlights a row's background once it is selected for the report", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      onlyInA: [missingFinding],
+      differences: [missingFinding],
+      selectedFindingIds: new Set([structureOnlyInA.id, missingFinding.id]),
+      sections: { missing: true, structure: true, differences: true }
+    });
+
+    expect(document.getElementById("finding-structure-" + structureOnlyInA.id)).toHaveClass(
+      "selected-row"
+    );
+    expect(document.getElementById("finding-missing-" + missingFinding.id)).toHaveClass(
+      "selected-row"
+    );
+    expect(document.getElementById("finding-differences-" + missingFinding.id)).toHaveClass(
+      "selected-row"
+    );
+  });
+
+  it("leaves an unselected row's background unchanged", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      selectedFindingIds: new Set(),
+      sections: { missing: false, structure: true, differences: false }
+    });
+
+    expect(document.getElementById("finding-structure-" + structureOnlyInA.id)).not.toHaveClass(
+      "selected-row"
+    );
   });
 });

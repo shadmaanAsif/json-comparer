@@ -5,14 +5,14 @@ import { displayPath } from "@/domain/comparison/path";
 import type { ReviewFinding } from "../hooks/usePanelInteractions";
 
 const differenceLabels: Record<ReviewFinding["kind"], string> = {
-  added: "Added in Response B",
-  removed: "Removed from Response B",
+  added: "Added in Candidate",
+  removed: "Removed from Candidate",
   changed: "Value changed",
   "type-changed": "Value type changed",
-  "missing-in-b": "Structure: field missing from Response B",
-  "extra-in-b": "Structure: extra field in Response B",
-  "inconsistent-in-a": "Structure: inconsistent in Response A",
-  "a-empty-array": "Structure: empty reference array in Response A"
+  "missing-in-b": "Structure: field missing from Candidate",
+  "extra-in-b": "Structure: extra field in Candidate",
+  "inconsistent-in-a": "Structure: inconsistent in Baseline",
+  "a-empty-array": "Structure: empty reference array in Baseline"
 };
 
 interface PanelDifferenceContextProps {

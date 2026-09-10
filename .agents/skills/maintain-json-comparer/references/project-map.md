@@ -21,5 +21,6 @@
 | Standards audit | `.agents/skills/audit-project-standards/` | Periodic naming and architecture verification |
 | Normative rules | `.agents/CONSTITUTION.md` | Privacy, correctness, security, boundaries, governance |
 | Detailed references | `docs/reference/` | SRS, architecture, stack, implementation sequencing |
+| Historical archive | `docs/archive/` | Superseded pre-implementation spec; do not read by default — see `docs/archive/README.md` |
 
 Use `rg` and `rg --files` to inspect actual ownership before editing. This map is a route, not a substitute for reading affected code.

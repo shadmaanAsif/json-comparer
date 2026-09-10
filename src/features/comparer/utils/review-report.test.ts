@@ -26,7 +26,7 @@ describe("selected finding reports", () => {
       [structure.id]: { status: "reviewed", text: "Approved" }
     });
     expect(report).toContain("Actionable findings: 2");
-    expect(report).toContain("Response A:");
+    expect(report).toContain("Baseline:");
     expect(report).toContain("Required baseline field is absent.");
     expect(report).toContain("Check rounding");
     expect(report).toContain("Approved");

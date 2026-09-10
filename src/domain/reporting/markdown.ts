@@ -33,8 +33,8 @@ export function createMarkdownReport(
       ...("detail" in finding
         ? [`- Detail: ${printable(finding.detail)}`]
         : [
-            `- Response A: ${printable(finding.valueA)}`,
-            `- Response B: ${printable(finding.valueB)}`
+            `- Baseline: ${printable(finding.valueA)}`,
+            `- Candidate: ${printable(finding.valueB)}`
           ]),
       ""
     );

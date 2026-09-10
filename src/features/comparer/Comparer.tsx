@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DisplayLineMaps } from "@/domain/comparison/display-format";
 import { displayPath } from "@/domain/comparison/path";
 import type { ArrayMode, ComparisonOptions, ComparisonResult } from "@/domain/comparison/types";
-import { createReviewReport } from "./utils/review-report";
 import { PanelActions } from "./components/PanelActions";
 import { usePanelInteractions, type ReviewFinding } from "./hooks/usePanelInteractions";
 import type { WorkerRequest, WorkerResponse } from "@/workers/comparison.worker";
@@ -14,12 +13,12 @@ import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
 import { JsonInputPane } from "./components/JsonInputPane";
 import { OnboardingTour } from "./components/OnboardingTour";
-import { APP_AUTHOR, MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B } from "./constants";
+import { APP_AUTHOR, MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B, SIDE_LABELS } from "./constants";
 import { fetchRemoteResponse } from "./services/remote-fetch";
+import { useReportExports } from "./hooks/useReportExports";
 import { useSynchronizedEditors } from "./hooks/useSynchronizedEditors";
-import type { ExportPreviewData, ResponseSide, ReviewNote, WorkspaceStatus } from "./types";
+import type { ResponseSide, ReviewNote, WorkspaceStatus } from "./types";
 import { alignValidInputText } from "./utils/display-alignment";
-import { downloadMarkdown } from "./utils/download";
 import { createLineHighlights } from "./utils/line-highlights";
 import { formatComparisonOutcome, projectComparisonResult } from "./utils/result-projections";
 
@@ -59,7 +58,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [curlB, setCurlB] = useState<string | null>(null);
   const [fetchingSide, setFetchingSide] = useState<ResponseSide | null>(null);
   const [notes, setNotes] = useState<Record<string, ReviewNote>>({});
-  const [exportPreview, setExportPreview] = useState<ExportPreviewData | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [jsonPanelsExpanded, setJsonPanelsExpanded] = useState(false);
@@ -177,6 +175,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
         : status,
     [comparisonDurationMs, resultProjection, status]
   );
+  const reports = useReportExports({
+    result,
+    projection: resultProjection,
+    arrayMode,
+    notes,
+    selected,
+    onStatus: setStatus
+  });
 
   const stopWorker = () => {
     workerRef.current?.terminate();
@@ -192,7 +198,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setComparisonDurationMs(null);
     setSelected(new Set());
     setNotes({});
-    setExportPreview(null);
+    reports.clearPreview();
     panels.closeActions();
     setStatus({ tone: "idle", message: "Inputs changed. Compare again to enable line actions." });
   };
@@ -203,7 +209,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     activeJobRef.current = jobId;
     setBusy(true);
     setStatus({ tone: "idle", message: "Comparing responses…" });
-    setExportPreview(null);
+    reports.clearPreview();
     panels.closeActions();
     const worker = new Worker(new URL("../../workers/comparison.worker.ts", import.meta.url));
     workerRef.current = worker;
@@ -265,11 +271,11 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     try {
       const formatted = JSON.stringify(JSON.parse(raw), null, 2);
       updateImportedInput(side, formatted);
-      setStatus({ tone: "success", message: `Response ${side} prettified.` });
+      setStatus({ tone: "success", message: `${SIDE_LABELS[side]} prettified.` });
     } catch (error) {
       setStatus({
         tone: "error",
-        message: `Response ${side}: ${error instanceof Error ? error.message : String(error)}`
+        message: `${SIDE_LABELS[side]}: ${error instanceof Error ? error.message : String(error)}`
       });
     }
   };
@@ -284,14 +290,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     updateImportedInput(side, raw);
     setStatus({
       tone: "success",
-      message: `Loaded ${file.name} into Response ${side}.`
+      message: `Loaded ${file.name} into ${SIDE_LABELS[side]}.`
     });
     setModalSide(null);
   };
 
   const runRemote = async (side: ResponseSide, command: string): Promise<boolean> => {
     setFetchingSide(side);
-    setStatus({ tone: "idle", message: `Fetching into Response ${side}…` });
+    setStatus({ tone: "idle", message: `Fetching into ${SIDE_LABELS[side]}…` });
     try {
       const { formattedBody, response } = await fetchRemoteResponse(command);
       updateImportedInput(side, formattedBody);
@@ -301,8 +307,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
         tone: response.status >= 200 && response.status < 300 ? "success" : "error",
         message:
           response.status >= 200 && response.status < 300
-            ? `Fetched ${response.status} ${response.statusText} into Response ${side}.`
-            : `Server responded ${response.status} ${response.statusText} — body loaded into Response ${side} anyway.`
+            ? `Fetched ${response.status} ${response.statusText} into ${SIDE_LABELS[side]}.`
+            : `Server responded ${response.status} ${response.statusText} — body loaded into ${SIDE_LABELS[side]} anyway.`
       });
       return true;
     } catch (error) {
@@ -323,30 +329,26 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     });
   };
 
-  const exportReport = (selectedOnly = false) => {
-    if (!result) return;
-    const missing = result.findings.filter(
-      (finding) => finding.kind === "added" || finding.kind === "removed"
-    );
-    const findings = selectedOnly
-      ? [...result.findings, ...result.structure].filter((finding) => selected.has(finding.id))
-      : missing;
-    if (selectedOnly && !findings.some((finding) => !finding.ignored)) {
-      setStatus({
-        tone: "error",
-        message:
-          "No actionable findings selected. Select a finding for the report; ignored findings are excluded."
+  const setFindingsSelected = (ids: string[], nextSelected: boolean) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      ids.forEach((id) => {
+        if (nextSelected) next.add(id);
+        else next.delete(id);
       });
-      return;
-    }
-    const filename = selectedOnly ? "selected-findings-report.md" : "missing-fields-report.md";
-    const content = createReviewReport(findings, arrayMode, notes);
-    downloadMarkdown(filename, content);
-    setExportPreview({ filename, content });
+      return next;
+    });
     setStatus({
       tone: "success",
-      message: "Markdown report downloaded. Review it before sharing."
+      message: `${nextSelected ? "Selected" : "Cleared"} ${ids.length} finding${
+        ids.length === 1 ? "" : "s"
+      } ${nextSelected ? "for the report." : "from the report selection."}`
     });
+  };
+
+  const applyIgnorePaths = (paths: string[]) => {
+    setIgnorePaths(paths);
+    runComparison(paths);
   };
 
   const updateNote = (id: string, patch: Partial<ReviewNote>) =>
@@ -375,26 +377,28 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setStatus({ tone: "idle", message: "Comparison cancelled." });
   };
 
-  const copyExportPreview = () => {
-    if (!exportPreview) return;
-    void navigator.clipboard
-      .writeText(exportPreview.content)
-      .then(() => setStatus({ tone: "success", message: "Copied to clipboard." }))
-      .catch(() =>
-        setStatus({
-          tone: "error",
-          message:
-            "Clipboard access was blocked — select the preview text and press Ctrl/Cmd+C to copy."
-        })
-      );
-  };
-
   const focusElement = (id: string) =>
     requestAnimationFrame(() => {
       const element = document.getElementById(id);
       element?.focus({ preventScroll: true });
       element?.scrollIntoView({ block: "center" });
     });
+  const manageIgnores = () => focusElement("ignore-paths-input");
+  const scrollToPanel = (pointer: string, homeSide: ResponseSide, resolveCounterpart: boolean) => {
+    panels.navigate(homeSide, pointer);
+    const otherSide: ResponseSide = homeSide === "A" ? "B" : "A";
+    const counterpartPointer = resolveCounterpart
+      ? panels.resolveCounterpartPointer(homeSide, pointer)
+      : undefined;
+    if (counterpartPointer) panels.navigate(otherSide, counterpartPointer);
+    setStatus({
+      tone: "success",
+      message:
+        resolveCounterpart && !counterpartPointer
+          ? `Highlighted the field in ${SIDE_LABELS[homeSide]}. No safe counterpart mapping in ${SIDE_LABELS[otherSide]}.`
+          : "Highlighted the corresponding field in the JSON panels."
+    });
+  };
   const revealFinding = (finding: ReviewFinding) => {
     const section =
       "detail" in finding
@@ -568,6 +572,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             showStructureOnlyInB
           }}
           sections={expandedSections}
+          ignorePaths={ignorePaths}
           onFiltersChange={(patch) => {
             if (patch.path !== undefined) setPathFilter(patch.path);
             if (patch.showOnlyInA !== undefined) setShowOnlyInA(patch.showOnlyInA);
@@ -580,18 +585,24 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           }}
           onSectionsChange={(patch) => setExpandedSections((current) => ({ ...current, ...patch }))}
           onToggleAllSections={toggleAllResultSections}
-          onExport={exportReport}
+          onExport={reports.exportReport}
+          onExportSection={reports.exportSection}
           onToggleSelected={toggleSelected}
+          onSelectFindings={setFindingsSelected}
+          onCopyPaths={reports.copyPaths}
+          onIgnorePaths={applyIgnorePaths}
+          onManageIgnores={manageIgnores}
+          onScrollToPanel={scrollToPanel}
           onNoteChange={updateNote}
         />
       )}
 
-      {exportPreview && (
+      {reports.preview && (
         <ExportPreview
-          preview={exportPreview}
-          onCopy={copyExportPreview}
-          onDownload={() => downloadMarkdown(exportPreview.filename, exportPreview.content)}
-          onClose={() => setExportPreview(null)}
+          preview={reports.preview}
+          onCopy={reports.copyPreview}
+          onDownload={reports.downloadPreview}
+          onClose={reports.clearPreview}
         />
       )}
 
@@ -613,17 +624,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           selected={selected}
           notes={notes}
           onClose={panels.closeActions}
-          onIgnore={(paths) => {
-            setIgnorePaths(paths);
-            runComparison(paths);
-          }}
-          onManageIgnores={() => focusElement("ignore-paths-input")}
+          onIgnore={applyIgnorePaths}
+          onManageIgnores={manageIgnores}
           onJump={() => {
             if (panels.counterpart) panels.navigate(panels.otherSide, panels.counterpart.pointer);
             setStatus({
               tone: "success",
               message: panels.counterpart?.placeholder
-                ? `Not present in Response ${panels.otherSide}. Showing its missing-field location.`
+                ? `Not present in ${SIDE_LABELS[panels.otherSide]}. Showing its missing-field location.`
                 : "Highlighted the corresponding field."
             });
           }}

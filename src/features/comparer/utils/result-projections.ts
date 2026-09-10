@@ -1,5 +1,6 @@
 import { displayPath, toJsonPointer } from "@/domain/comparison/path";
 import type { ComparisonResult, Finding, StructureFinding } from "@/domain/comparison/types";
+import type { ResultSectionKey } from "../types";
 
 export interface ComparisonResultFilters {
   path: string;
@@ -32,6 +33,16 @@ export interface ComparisonProjectionCounts {
   onlyInB: VisibleTotalCount;
   modified: VisibleTotalCount;
   ignored: VisibleTotalCount;
+}
+
+/** The findings one result disclosure currently displays, in row order. */
+export function selectSectionFindings(
+  section: ResultSectionKey,
+  projection: ComparisonResultProjection
+): (Finding | StructureFinding)[] {
+  if (section === "structure") return projection.structureFindings;
+  if (section === "missing") return [...projection.onlyInA, ...projection.onlyInB];
+  return projection.differences;
 }
 
 export function formatComparisonOutcome(

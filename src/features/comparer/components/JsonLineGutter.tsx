@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { SIDE_LABELS } from "../constants";
 import type { HighlightCategory, ResponseSide } from "../types";
 import type { PanelIndex } from "../utils/panel-context";
 
@@ -38,7 +39,7 @@ export function JsonLineGutter({
     <div
       className="line-gutter"
       role={panelIndex ? "toolbar" : undefined}
-      aria-label={panelIndex ? "Response " + side + " line actions" : undefined}
+      aria-label={panelIndex ? SIDE_LABELS[side] + " line actions" : undefined}
       aria-orientation={panelIndex ? "vertical" : undefined}
       aria-hidden={panelIndex ? undefined : true}
       onKeyDown={(event) => {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { formatAlignedForDisplay } from "@/domain/comparison/display-format";
-import { buildPanelIndex, getCounterpart, getIgnoreAction } from "./panel-context";
+import {
+  buildPanelIndex,
+  getCounterpart,
+  getIgnoreAction,
+  resolveNearestField
+} from "./panel-context";
 
 describe("panel field context", () => {
   it.each([null, 42, "root", [], {}].map((value) => ({ value })))(
@@ -73,6 +78,21 @@ describe("panel field context", () => {
     expect(getCounterpart(field, b, a, "unordered", matchedPointers)?.pointer).toBe("/items/1/id");
     // An item outside the matched map (genuinely unmatched) still gets no counterpart.
     expect(getCounterpart(field, b, a, "unordered", {})).toBeUndefined();
+  });
+
+  it("resolveNearestField walks up to the nearest existing ancestor pointer", () => {
+    const index = buildPanelIndex("", { "": 1, "/items": 2, "/items/0": 3, "/items/0/id": 4 }, {});
+    // A schema-only pointer that never had a line of its own on this side (e.g. a Candidate
+    // array index Baseline never reached) falls back to its nearest existing container.
+    expect(resolveNearestField(index, "/items/2/amount")?.pointer).toBe("/items");
+    // An exact match still returns itself rather than climbing further.
+    expect(resolveNearestField(index, "/items/0/id")?.pointer).toBe("/items/0/id");
+    expect(resolveNearestField(index, "/missing")?.pointer).toBe("");
+  });
+
+  it("resolveNearestField returns undefined when no ancestor exists at all", () => {
+    const index = buildPanelIndex("", { "/items/0": 1 }, {});
+    expect(resolveNearestField(index, "/other/path")).toBeUndefined();
   });
 
   it("restores only its own exact rule and never removes inherited or wildcard rules", () => {

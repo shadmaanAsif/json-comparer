@@ -3,6 +3,7 @@
 import { buildLineMap } from "@/domain/comparison/line-map";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TreeNavigationRequest, TreeParentRequest } from "../hooks/usePanelEditorActions";
+import { SIDE_LABELS } from "../constants";
 import type { HighlightCategory, ResponseSide } from "../types";
 import { FindingStepper } from "./FindingNavigation";
 import { JsonTreeNode, type TreeFieldActions } from "./JsonTreeNode";
@@ -134,7 +135,7 @@ export function JsonTree({
     <div className="tree-with-navigation">
       {navigation?.placeholder && (
         <p className="tree-navigation-status" role="status">
-          Not present in Response {side}: {navigation.pointer || "(root)"}. Showing the nearest
+          Not present in {SIDE_LABELS[side]}: {navigation.pointer || "(root)"}. Showing the nearest
           existing parent.
         </p>
       )}

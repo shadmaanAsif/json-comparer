@@ -67,7 +67,7 @@ describe("JsonInputPane validation state", () => {
       display.placeholderLineMapA
     );
     const { props, container } = renderPane(display.textA, { panelIndex, onOpenActions: vi.fn() });
-    const editor = screen.getByRole("textbox", { name: "JSON for Response A" });
+    const editor = screen.getByRole("textbox", { name: "JSON for Baseline" });
     fireEvent.mouseMove(editor, { clientY: 44 });
     expect(screen.getByRole("button", { name: "Actions for line 2" })).toHaveClass("is-hovered");
     fireEvent.click(editor);
@@ -108,7 +108,7 @@ describe("JsonInputPane validation state", () => {
       onOpenActions: vi.fn()
     });
     const editor = screen.getByRole("textbox", {
-      name: "JSON for Response A"
+      name: "JSON for Baseline"
     }) as HTMLTextAreaElement;
     editor.focus();
     editor.setSelectionRange(display.textA.indexOf('"code"'), display.textA.indexOf('"code"'));
@@ -129,7 +129,7 @@ describe("JsonInputPane validation state", () => {
         panelIndex={buildPanelIndex(display.textA, display.lineMapA, display.placeholderLineMapA)}
       />
     );
-    await user.click(screen.getByRole("button", { name: "Field actions for Response A" }));
+    await user.click(screen.getByRole("button", { name: "Field actions for Baseline" }));
     expect(vi.mocked(props.onOpenActions!).mock.lastCall?.[0].branchExpanded).toBe(false);
     expect(vi.mocked(props.onOpenActions!).mock.lastCall?.[0].field.pointer).toBe("/config");
   });
@@ -143,10 +143,10 @@ describe("JsonInputPane validation state", () => {
       display.placeholderLineMapA
     );
     const { props, rerender } = renderPane(display.textA, { panelIndex, onOpenActions: vi.fn() });
-    expect(screen.getByRole("button", { name: "Line actions for Response A" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeEnabled();
     rerender(<JsonInputPane {...props} value="{" panelIndex={null} />);
-    expect(screen.getByRole("button", { name: "Line actions for Response A" })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Line actions for Response A" }));
+    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Line actions for Baseline" }));
     expect(props.onOpenActions).not.toHaveBeenCalled();
   });
 
@@ -186,7 +186,7 @@ describe("JsonInputPane validation state", () => {
       />
     );
     await waitFor(() =>
-      expect(screen.getByRole("textbox", { name: "JSON for Response A" })).toHaveFocus()
+      expect(screen.getByRole("textbox", { name: "JSON for Baseline" })).toHaveFocus()
     );
     expect(screen.getByRole("tab", { name: "JSON" })).toHaveAttribute("aria-selected", "true");
     expect(container.querySelector(".line-context")).toBeInTheDocument();
@@ -246,14 +246,14 @@ describe("JsonInputPane validation state", () => {
     act(() => vi.mocked(props.onOpenActions!).mock.lastCall?.[0].onToggleBranch?.());
     await waitFor(() => expect(branch).toHaveAttribute("open"));
     await user.click(screen.getByRole("button", { name: "Actions for field /a~1b/~0key" }));
-    await user.click(screen.getByRole("button", { name: "Field actions for Response A" }));
+    await user.click(screen.getByRole("button", { name: "Field actions for Baseline" }));
     expect(vi.mocked(props.onOpenActions!).mock.lastCall?.[0].field.pointer).toBe("/a~1b/~0key");
     expect(props.onChange).not.toHaveBeenCalled();
     rerender(<JsonInputPane {...props} panelIndex={null} />);
     expect(
       screen.queryByRole("button", { name: "Actions for field /empty" })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Field actions for Response A" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Field actions for Baseline" })).toBeDisabled();
   });
 
   it("supports context-menu keys on Tree fields and does not open a menu on ordinary leaf clicks", async () => {
@@ -315,7 +315,7 @@ describe("JsonInputPane validation state", () => {
     );
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(
-        "Not present in Response A: /config/absent"
+        "Not present in Baseline: /config/absent"
       )
     );
     expect(screen.getByRole("tab", { name: "Tree" })).toHaveAttribute("aria-selected", "true");
@@ -367,7 +367,7 @@ describe("JsonInputPane validation state", () => {
   it("highlights the invalid JSON line and panel only in the JSON view", async () => {
     const user = userEvent.setup();
     const { container } = renderPane('{"broken":}');
-    const editor = screen.getByRole("textbox", { name: "JSON for Response A" });
+    const editor = screen.getByRole("textbox", { name: "JSON for Baseline" });
 
     expect(container.querySelector(".input-panel")).toHaveClass("has-json-error");
     expect(editor).toHaveAttribute("aria-invalid", "true");
@@ -385,7 +385,7 @@ describe("JsonInputPane validation state", () => {
     const { container, rerender } = renderPane('{"valid":true}');
 
     expect(container.querySelector(".input-panel")).not.toHaveClass("has-json-error");
-    expect(screen.getByRole("textbox", { name: "JSON for Response A" })).toHaveAttribute(
+    expect(screen.getByRole("textbox", { name: "JSON for Baseline" })).toHaveAttribute(
       "aria-invalid",
       "false"
     );
@@ -421,7 +421,7 @@ describe("JsonInputPane validation state", () => {
       lineHighlights: { 40: "differences", 80: "missing" },
       synchronizeScroll
     });
-    const editor = screen.getByRole("textbox", { name: "JSON for Response A" });
+    const editor = screen.getByRole("textbox", { name: "JSON for Baseline" });
     Object.defineProperties(editor, {
       clientHeight: { configurable: true, value: 360 },
       scrollHeight: { configurable: true, value: 2200 }
@@ -447,16 +447,16 @@ describe("JsonInputPane validation state", () => {
     });
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(2);
-    expect(screen.getByLabelText("Response A finding navigation")).toHaveTextContent("1/2");
+    expect(screen.getByLabelText("Baseline finding navigation")).toHaveTextContent("1/2");
 
     rerender(<JsonInputPane {...props} lineHighlights={{ 3: "differences" }} />);
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(1);
-    expect(screen.getByLabelText("Response A finding navigation")).toHaveTextContent("1/1");
+    expect(screen.getByLabelText("Baseline finding navigation")).toHaveTextContent("1/1");
 
     rerender(<JsonInputPane {...props} lineHighlights={{}} />);
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(0);
-    expect(screen.queryByLabelText("Response A finding navigation")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Baseline finding navigation")).not.toBeInTheDocument();
   });
 });

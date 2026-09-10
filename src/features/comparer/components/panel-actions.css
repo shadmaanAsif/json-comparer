@@ -269,13 +269,6 @@
 .results tr:focus {
   background: var(--accent-dark);
 }
-.finding-review-controls {
-  display: grid;
-  gap: 8px;
-}
-.finding-review-controls > label {
-  font-size: 0.75rem;
-}
 .path-filter-block {
   display: flex;
   align-items: end;

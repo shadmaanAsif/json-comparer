@@ -1,6 +1,6 @@
 # JSON Comparer Constitution
 
-Version: 2.1.0
+Version: 3.0.0
 Ratified: 2026-08-21
 Applies to: humans, coding agents, automated agents, repository-local skills, and generated changes.
 
@@ -85,7 +85,7 @@ Accounts, sharing, and cloud persistence additionally require explicit tenancy, 
 1. Domain invariants receive unit and property-style coverage: identity, object-key order independence, duplicate multiset behavior, path escaping, ignore consistency, and limits.
 2. User workflows receive component or end-to-end coverage appropriate to their risk.
 3. Security controls receive adversarial integration tests; accessibility receives automated and manual checks.
-4. A code change is incomplete until tests, strict type checking, linting, and the production build pass—or the exact blocker is documented.
+4. Fast local checks — tests, linting, formatting, and the standards audit — may run by default after a change, for interactive and autonomous agents alike. Type checking, the production build, and a manual browser/preview check are opt-in: run only when the user explicitly asks. Make the change, report exactly what changed, and stop when broader verification isn't requested; the full command list lives in `.agents/EFFICIENCY.md`. This defers *when* full evidence is produced; it does not excuse skipping tests required by clauses 1–3 once verification is actually requested or performed.
 5. Agents report actual commands and outcomes. They do not weaken tests, limits, type safety, or lint rules merely to pass a gate.
 
 ## Article VIII — Minimal scope and reversible evolution
@@ -121,6 +121,7 @@ Every amendment includes rationale, affected requirements/architecture/tests, mi
 
 ## Amendment record
 
+- 3.0.0 (2026-09-09): With explicit user approval, splits verification into fast local checks (tests, lint, format, standards audit) that may run by default, and opt-in checks (type checking, the production build, a manual browser/preview check) that run only when explicitly asked — for interactive and autonomous agents alike. Coverage requirements (Article VII.1-3) and the prohibition on weakening tests to pass a gate (VII.5) are unchanged. See `docs/decisions/ADR-003-opt-in-verification.md`.
 - 2.1.0 (2026-08-26): With explicit user approval, permits an opt-in local-development exception for HTTP/HTTPS loopback APIs. Production, non-loopback app origins, private LAN, metadata, deceptive DNS, and public HTTP remain prohibited. See `docs/decisions/ADR-002-localhost-fetch.md`.
 - 2.0.1 (2026-08-26): Renamed the project and product from JSON Response Comparer to JSON Comparer with explicit user approval. This naming-only amendment changes no behavior, privacy, security, architecture, or rollout requirements.
 - 2.0.0 (2026-08-25): With explicit user approval, permits a reversible local-development wildcard for public HTTPS targets. Production and non-loopback use remain prohibited; all SSRF controls remain mandatory. See `docs/decisions/ADR-001-local-fetch-wildcard.md`.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MAX_DOCUMENT_BYTES } from "../constants";
+import { MAX_DOCUMENT_BYTES, SIDE_LABELS } from "../constants";
 import { usePanelEditorActions } from "../hooks/usePanelEditorActions";
 import type { PanelActionRequest, PanelNavigation } from "../hooks/usePanelInteractions";
 import type { PanelIndex } from "../utils/panel-context";
@@ -245,8 +245,10 @@ export function JsonInputPane({
     >
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Response {side}</span>
-          <h2 id={`response-${side}-heading`}>{side === "A" ? "Baseline" : "Candidate"}</h2>
+          <span className="eyebrow">
+            {side === "A" ? "Expected response" : "Response under test"}
+          </span>
+          <h2 id={`response-${side}-heading`}>{SIDE_LABELS[side]}</h2>
           {showsJsonError && (
             <span
               id={`response-${side}-json-error`}
@@ -294,7 +296,7 @@ export function JsonInputPane({
         </div>
       </div>
 
-      <div className="panel-tabs" role="tablist" aria-label={`Response ${side} view`}>
+      <div className="panel-tabs" role="tablist" aria-label={`${SIDE_LABELS[side]} view`}>
         <button
           type="button"
           role="tab"
@@ -325,7 +327,9 @@ export function JsonInputPane({
           type="button"
           className="text-button"
           disabled={!panelIndex}
-          aria-label={(activeView === "tree" ? "Field" : "Line") + " actions for Response " + side}
+          aria-label={
+            (activeView === "tree" ? "Field" : "Line") + " actions for " + SIDE_LABELS[side]
+          }
           aria-haspopup="dialog"
           onClick={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
@@ -340,7 +344,7 @@ export function JsonInputPane({
       {isFindOpen && activeView === "json" && (
         <div className="find-bar">
           <label>
-            <span className="visually-hidden">Find in Response {side}</span>
+            <span className="visually-hidden">Find in {SIDE_LABELS[side]}</span>
             <input
               autoFocus
               value={findText}
@@ -381,7 +385,7 @@ export function JsonInputPane({
       )}
 
       <label className="visually-hidden" htmlFor={`response-${side}`}>
-        JSON for Response {side}
+        JSON for {SIDE_LABELS[side]}
       </label>
       {activeView === "json" ? (
         <div
@@ -512,7 +516,7 @@ export function JsonInputPane({
               />
             )}
             <FindingStepper
-              label={`Response ${side}`}
+              label={SIDE_LABELS[side]}
               categories={categoriesFor(highlightedLines)}
               current={safeNavigationIndex + 1}
               total={highlightedLines.length}
@@ -562,7 +566,7 @@ export function JsonInputPane({
       </div>
       {curlCommand !== null && (
         <div className="inline-curl">
-          <label htmlFor={`curl-${side}`}>URL or cURL for Response {side}</label>
+          <label htmlFor={`curl-${side}`}>URL or cURL for {SIDE_LABELS[side]}</label>
           <div>
             <textarea
               id={`curl-${side}`}

@@ -20,7 +20,7 @@ The first production release (MVP) is a single-user, local-first application. Pa
 
 ### 3.1 Existing workflow
 
-1. Populate Response A and B by paste, local `.json`/`.txt` file, URL, or a limited cURL parser.
+1. Populate Baseline and Candidate by paste, local `.json`/`.txt` file, URL, or a limited cURL parser.
 2. Inspect or prettify JSON, switch between text and collapsible tree views, and search each response.
 3. Enter ignore-path patterns and choose highlight categories.
 4. Compare. The application recursively computes missing paths and changed values, then separately evaluates structural differences.

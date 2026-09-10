@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import type { ResponseSide } from "../types";
-import { scrollOffsetForLine, type EditorViewportMetrics } from "../utils/editor-navigation";
+import {
+  scrollOffsetForLine,
+  windowScrollTargetForRect,
+  type EditorViewportMetrics
+} from "../utils/editor-navigation";
 import type { PanelField, PanelIndex } from "../utils/panel-context";
 import { createPanelAnchor } from "../utils/panel-anchor";
 import type { PanelActionRequest, PanelNavigation } from "./usePanelInteractions";
@@ -177,7 +181,12 @@ export function usePanelEditorActions({
       );
       setScrollTop(editor.scrollTop);
       synchronizeScroll(side, editor);
-      editor.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      const scrollTarget = windowScrollTargetForRect(
+        editor.getBoundingClientRect(),
+        window.innerHeight,
+        window.scrollY
+      );
+      if (scrollTarget !== null) window.scrollTo({ top: scrollTarget, behavior: "smooth" });
     });
     return () => cancelAnimationFrame(frame);
   }, [

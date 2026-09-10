@@ -1,6 +1,8 @@
 @import "./components/author-byline.css";
 @import "./components/ignore-path-selector.css";
 @import "./components/panel-actions.css";
+@import "./components/result-section-menu.css";
+@import "./components/row-action-menu.css";
 @import "./components/tree-actions.css";
 @import "./components/onboarding-tour.css";
 
@@ -1157,6 +1159,12 @@ td pre {
   color: var(--muted);
   font-weight: 600;
 }
+.result-section-meta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
 .result-section .table-scroll {
   border: 0;
   border-top: 1px solid var(--border);
@@ -1213,6 +1221,9 @@ td pre {
 }
 .ignored-row {
   opacity: 0.55;
+}
+.selected-row {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 .empty-state {
   padding: 50px 20px;

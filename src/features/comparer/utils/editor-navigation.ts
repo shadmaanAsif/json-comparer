@@ -50,6 +50,22 @@ export function scrollOffsetForLine(
   return clamp(desiredOffset, 0, maximumOffset);
 }
 
+/**
+ * Target window scrollY to bring `rect` fully into the viewport, or null if it already is.
+ * `.workspace`'s decorative `overflow: hidden` (for its rounded corners) stops the browser's
+ * native `scrollIntoView` ancestor walk from ever reaching the window, so a caller scrolled far
+ * from the editor (e.g. a result row) sees no scroll at all. This bypasses that by targeting
+ * the window directly from the element's viewport-relative rect.
+ */
+export function windowScrollTargetForRect(
+  rect: { top: number; bottom: number; height: number },
+  viewportHeight: number,
+  currentScrollY: number
+): number | null {
+  if (rect.top >= 0 && rect.bottom <= viewportHeight) return null;
+  return Math.max(0, currentScrollY + rect.top - Math.max(0, (viewportHeight - rect.height) / 2));
+}
+
 export function navigationTargetLine(
   highlightedLines: number[],
   direction: 1 | -1,

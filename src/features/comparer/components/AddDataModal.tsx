@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SIDE_LABELS } from "../constants";
 import type { ResponseSide } from "../types";
 
 interface AddDataModalProps {
@@ -63,7 +64,7 @@ export function AddDataModal({
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Import data</p>
-            <h2 id="add-modal-title">Add data to Response {side}</h2>
+            <h2 id="add-modal-title">Add data to {SIDE_LABELS[side]}</h2>
           </div>
           <button
             className="text-button modal-close"

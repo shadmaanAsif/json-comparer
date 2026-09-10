@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { displayPath } from "@/domain/comparison/path";
 import type { PanelActionRequest, ReviewFinding } from "../hooks/usePanelInteractions";
 import { useAnchoredPanelDialog } from "../hooks/useAnchoredPanelDialog";
+import { SIDE_LABELS } from "../constants";
 import type { ResponseSide, ReviewNote } from "../types";
 import { getIgnoreAction, type PanelField } from "../utils/panel-context";
 import { FindingReview } from "./FindingReview";
@@ -93,7 +94,7 @@ export function PanelActions({
         <header className="panel-actions-heading">
           <div>
             <h2 id="panel-actions-title">
-              {isTree ? "Field" : "Line"} actions · Response {request.side}
+              {isTree ? "Field" : "Line"} actions · {SIDE_LABELS[request.side]}
             </h2>
             <code>{request.field.pointer || "(root — empty JSON Pointer)"}</code>
             <small>
@@ -203,7 +204,7 @@ export function PanelActions({
           )}
           {counterpart?.placeholder && (
             <p className="panel-action-help">
-              Not present in Response {request.side === "A" ? "B" : "A"}. Shows its JSON gap or
+              Not present in {SIDE_LABELS[request.side === "A" ? "B" : "A"]}. Shows its JSON gap or
               nearest existing Tree parent.
             </p>
           )}

@@ -3,14 +3,16 @@
 import { displayPath } from "@/domain/comparison/path";
 import type { ComparisonResult, Finding, StructureFinding } from "@/domain/comparison/types";
 import { ONLY_IN_LABELS, RESULT_SECTION_LABELS, SIDE_LABELS } from "../constants";
-import type { ReviewNote } from "../types";
+import type { ResponseSide, ReviewNote } from "../types";
 import { FindingReview } from "./FindingReview";
 import {
   formatComparisonOutcome,
   type ComparisonProjectionCounts
 } from "../utils/result-projections";
+import { buildRowActions } from "../utils/row-actions";
 import { buildSectionActions, type SectionFinding } from "../utils/section-actions";
 import { ResultSectionMenu } from "./ResultSectionMenu";
+import { RowActionMenu } from "./RowActionMenu";
 import { ValueCell } from "./ValueCell";
 
 export interface ResultFilters {
@@ -52,6 +54,8 @@ export interface ComparisonResultsProps {
   onSelectFindings: (findingIds: string[], selected: boolean) => void;
   onCopyPaths: (pointers: string[], sectionLabel: string) => void;
   onIgnorePaths: (paths: string[]) => void;
+  onManageIgnores: () => void;
+  onScrollToPanel: (pointer: string, homeSide: ResponseSide, resolveCounterpart: boolean) => void;
   onNoteChange: (findingId: string, patch: Partial<ReviewNote>) => void;
 }
 
@@ -90,6 +94,8 @@ export function ComparisonResults({
   onSelectFindings,
   onCopyPaths,
   onIgnorePaths,
+  onManageIgnores,
+  onScrollToPanel,
   onNoteChange
 }: ComparisonResultsProps) {
   const missingFindings = [...onlyInA, ...onlyInB];
@@ -291,6 +297,9 @@ export function ComparisonResults({
               <caption className="visually-hidden">Structure schema findings</caption>
               <thead>
                 <tr>
+                  <th scope="col" className="row-actions-column">
+                    Actions
+                  </th>
                   <th scope="col">Field path</th>
                   <th scope="col">Issue</th>
                   <th scope="col">Detail</th>
@@ -305,6 +314,18 @@ export function ComparisonResults({
                     tabIndex={-1}
                     className={finding.ignored ? "ignored-row" : ""}
                   >
+                    <td className="row-actions-cell">
+                      <RowActionMenu
+                        label={`Row actions for ${displayPath(finding.path)}`}
+                        actions={buildRowActions({
+                          finding,
+                          ignorePaths,
+                          onIgnorePaths,
+                          onManageIgnores,
+                          onScrollToPanel
+                        })}
+                      />
+                    </td>
                     <td>
                       <FindingPath finding={finding} />
                     </td>
@@ -364,6 +385,9 @@ export function ComparisonResults({
               <caption className="visually-hidden">Missing fields grouped by response</caption>
               <thead>
                 <tr>
+                  <th scope="col" className="row-actions-column">
+                    Actions
+                  </th>
                   <th scope="col">Select</th>
                   <th scope="col">Field path</th>
                   <th scope="col">{SIDE_LABELS.A}</th>
@@ -377,16 +401,24 @@ export function ComparisonResults({
                   findings={onlyInA}
                   selectedFindingIds={selectedFindingIds}
                   notesByFindingId={notesByFindingId}
+                  ignorePaths={ignorePaths}
                   onToggleSelected={onToggleSelected}
                   onNoteChange={onNoteChange}
+                  onIgnorePaths={onIgnorePaths}
+                  onManageIgnores={onManageIgnores}
+                  onScrollToPanel={onScrollToPanel}
                 />
                 <MissingFindingGroup
                   label={ONLY_IN_LABELS.B}
                   findings={onlyInB}
                   selectedFindingIds={selectedFindingIds}
                   notesByFindingId={notesByFindingId}
+                  ignorePaths={ignorePaths}
                   onToggleSelected={onToggleSelected}
                   onNoteChange={onNoteChange}
+                  onIgnorePaths={onIgnorePaths}
+                  onManageIgnores={onManageIgnores}
+                  onScrollToPanel={onScrollToPanel}
                 />
               </tbody>
             </table>
@@ -540,21 +572,29 @@ function MissingFindingGroup({
   findings,
   selectedFindingIds,
   notesByFindingId,
+  ignorePaths,
   onToggleSelected,
-  onNoteChange
+  onNoteChange,
+  onIgnorePaths,
+  onManageIgnores,
+  onScrollToPanel
 }: {
   label: string;
   findings: Finding[];
   selectedFindingIds: ReadonlySet<string>;
   notesByFindingId: Record<string, ReviewNote>;
+  ignorePaths: string[];
   onToggleSelected: (findingId: string) => void;
   onNoteChange: (findingId: string, patch: Partial<ReviewNote>) => void;
+  onIgnorePaths: (paths: string[]) => void;
+  onManageIgnores: () => void;
+  onScrollToPanel: (pointer: string, homeSide: ResponseSide, resolveCounterpart: boolean) => void;
 }) {
   if (!findings.length) return null;
   return (
     <>
       <tr className="finding-group">
-        <th scope="rowgroup" colSpan={5}>
+        <th scope="rowgroup" colSpan={6}>
           {label} <small>{findings.length}</small>
         </th>
       </tr>
@@ -567,6 +607,18 @@ function MissingFindingGroup({
             tabIndex={-1}
             className={finding.ignored ? "ignored-row" : ""}
           >
+            <td className="row-actions-cell">
+              <RowActionMenu
+                label={`Row actions for ${displayPath(finding.path)} (${label})`}
+                actions={buildRowActions({
+                  finding,
+                  ignorePaths,
+                  onIgnorePaths,
+                  onManageIgnores,
+                  onScrollToPanel
+                })}
+              />
+            </td>
             <td>
               <input
                 type="checkbox"

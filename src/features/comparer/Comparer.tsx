@@ -383,6 +383,22 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       element?.focus({ preventScroll: true });
       element?.scrollIntoView({ block: "center" });
     });
+  const manageIgnores = () => focusElement("ignore-paths-input");
+  const scrollToPanel = (pointer: string, homeSide: ResponseSide, resolveCounterpart: boolean) => {
+    panels.navigate(homeSide, pointer);
+    const otherSide: ResponseSide = homeSide === "A" ? "B" : "A";
+    const counterpartPointer = resolveCounterpart
+      ? panels.resolveCounterpartPointer(homeSide, pointer)
+      : undefined;
+    if (counterpartPointer) panels.navigate(otherSide, counterpartPointer);
+    setStatus({
+      tone: "success",
+      message:
+        resolveCounterpart && !counterpartPointer
+          ? `Highlighted the field in ${SIDE_LABELS[homeSide]}. No safe counterpart mapping in ${SIDE_LABELS[otherSide]}.`
+          : "Highlighted the corresponding field in the JSON panels."
+    });
+  };
   const revealFinding = (finding: ReviewFinding) => {
     const section =
       "detail" in finding
@@ -575,6 +591,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           onSelectFindings={setFindingsSelected}
           onCopyPaths={reports.copyPaths}
           onIgnorePaths={applyIgnorePaths}
+          onManageIgnores={manageIgnores}
+          onScrollToPanel={scrollToPanel}
           onNoteChange={updateNote}
         />
       )}
@@ -607,7 +625,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           notes={notes}
           onClose={panels.closeActions}
           onIgnore={applyIgnorePaths}
-          onManageIgnores={() => focusElement("ignore-paths-input")}
+          onManageIgnores={manageIgnores}
           onJump={() => {
             if (panels.counterpart) panels.navigate(panels.otherSide, panels.counterpart.pointer);
             setStatus({

@@ -92,6 +92,8 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
     onSelectFindings: vi.fn(),
     onCopyPaths: vi.fn(),
     onIgnorePaths: vi.fn(),
+    onManageIgnores: vi.fn(),
+    onScrollToPanel: vi.fn(),
     onNoteChange: vi.fn(),
     ...overrides
   };
@@ -401,5 +403,71 @@ describe("ComparisonResults disclosures", () => {
     await user.click(within(statusGroup).getByRole("radio", { name: "Needed" }));
 
     expect(props.onNoteChange).toHaveBeenCalledWith(missingFinding.id, { status: "needed" });
+  });
+
+  it("renders a row action menu trigger for a structure row and a missing-fields row", () => {
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      onlyInA: [missingFinding],
+      sections: { missing: true, structure: true, differences: false }
+    });
+
+    expect(screen.getByRole("button", { name: "Row actions for baselineOnly" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Row actions for config.code (Only in Baseline)" })
+    ).toBeVisible();
+  });
+
+  it("adds a structure row's pointer to the ignore list from its action menu", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      structureFindings: [structureOnlyInA],
+      sections: { missing: false, structure: true, differences: false }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Row actions for baselineOnly" }));
+    await user.click(
+      within(screen.getByRole("menu", { name: "Row actions for baselineOnly" })).getByRole(
+        "menuitem",
+        { name: "Add to ignore path" }
+      )
+    );
+
+    expect(props.onIgnorePaths).toHaveBeenCalledWith([structureOnlyInA.pointer]);
+  });
+
+  it("scrolls to the panel from a missing-fields row's action menu", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({
+      onlyInA: [missingFinding],
+      sections: { missing: true, structure: false, differences: false }
+    });
+    const rowLabel = "Row actions for config.code (Only in Baseline)";
+
+    await user.click(screen.getByRole("button", { name: rowLabel }));
+    await user.click(
+      within(screen.getByRole("menu", { name: rowLabel })).getByRole("menuitem", {
+        name: "Scroll to panel"
+      })
+    );
+
+    expect(props.onScrollToPanel).toHaveBeenCalledWith(missingFinding.pointer, "A", true);
+  });
+
+  it("closes an open row action menu on Escape and returns focus to its trigger", async () => {
+    const user = userEvent.setup();
+    renderResults({
+      structureFindings: [structureOnlyInA],
+      sections: { missing: false, structure: true, differences: false }
+    });
+    const trigger = screen.getByRole("button", { name: "Row actions for baselineOnly" });
+
+    await user.click(trigger);
+    expect(screen.getByRole("menu")).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(trigger).toHaveFocus();
   });
 });

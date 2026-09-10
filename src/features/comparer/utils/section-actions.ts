@@ -3,7 +3,7 @@ import { getIgnoreAction } from "./panel-context";
 
 export type SectionFinding = Finding | StructureFinding;
 
-export interface SectionAction {
+export interface ResultMenuAction {
   label: string;
   disabled?: boolean;
   onSelect: () => void;
@@ -86,7 +86,7 @@ export function buildSectionActions({
   ignorePaths,
   isSelectable,
   handlers
-}: SectionActionOptions): SectionAction[] {
+}: SectionActionOptions): ResultMenuAction[] {
   const plan = planSectionActions(findings, selectedFindingIds, ignorePaths, isSelectable);
   // Offer restoring only once nothing in the section can still be ignored.
   const restoring = plan.ignorePointers.length === 0 && plan.restorePointers.length > 0;

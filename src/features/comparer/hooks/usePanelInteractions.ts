@@ -124,6 +124,21 @@ export function usePanelInteractions({
       [side]: { field, index, token: (current[side]?.token ?? 0) + 1 }
     }));
   };
+  /**
+   * Resolve `pointer`'s counterpart field on the opposite side of `homeSide`, the same
+   * matched-item-aware resolution the per-line "Jump to corresponding field" panel action uses
+   * (getCounterpart + arrayMatches), generalized to any pointer rather than only the current
+   * panel selection. Returns undefined when there is no safe counterpart to navigate to.
+   */
+  const resolveCounterpartPointer = (homeSide: ResponseSide, pointer: string) => {
+    if (!indexes) return undefined;
+    const homeIndex = indexes[homeSide];
+    const otherSide: ResponseSide = homeSide === "A" ? "B" : "A";
+    const field = homeIndex.byPointer.get(pointer);
+    if (!field) return undefined;
+    const matches = homeSide === "A" ? (result?.arrayMatches ?? {}) : reverseArrayMatches;
+    return getCounterpart(field, indexes[otherSide], homeIndex, arrayMode, matches)?.pointer;
+  };
   return {
     indexes: enabled ? indexes : null,
     selection,
@@ -137,6 +152,7 @@ export function usePanelInteractions({
       if (enabled && index) setRequest({ ...action, side, index });
     },
     closeActions: () => setRequest(null),
-    navigate
+    navigate,
+    resolveCounterpartPointer
   };
 }

@@ -14,6 +14,31 @@ export const SAMPLE_B = JSON.stringify(
   2
 );
 
+/**
+ * Distinct from SAMPLE_A/SAMPLE_B: the guided tour loads this pair to demonstrate the
+ * results sections live, so it deliberately covers all three at once — a field only in
+ * Baseline, one only in Candidate, a changed value, and a type mismatch.
+ */
+export const TOUR_DEMO_A = JSON.stringify(
+  {
+    status: "ok",
+    data: { id: 42, amount: 100, currency: "USD", tags: ["api", "stable"], region: "eu-west" },
+    meta: { version: 1 }
+  },
+  null,
+  2
+);
+
+export const TOUR_DEMO_B = JSON.stringify(
+  {
+    status: "ok",
+    data: { id: 42, amount: 150, currency: "USD", tags: ["stable", "api"], discount: true },
+    meta: { version: "1" }
+  },
+  null,
+  2
+);
+
 export const MAX_DOCUMENT_BYTES = Number(
   process.env.NEXT_PUBLIC_MAX_DOCUMENT_BYTES ?? 10 * 1024 * 1024
 );

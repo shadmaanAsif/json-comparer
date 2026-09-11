@@ -13,7 +13,15 @@ import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
 import { JsonInputPane } from "./components/JsonInputPane";
 import { OnboardingTour } from "./components/OnboardingTour";
-import { APP_AUTHOR, MAX_DOCUMENT_BYTES, SAMPLE_A, SAMPLE_B, SIDE_LABELS } from "./constants";
+import {
+  APP_AUTHOR,
+  MAX_DOCUMENT_BYTES,
+  SAMPLE_A,
+  SAMPLE_B,
+  SIDE_LABELS,
+  TOUR_DEMO_A,
+  TOUR_DEMO_B
+} from "./constants";
 import { fetchRemoteResponse } from "./services/remote-fetch";
 import { useReportExports } from "./hooks/useReportExports";
 import { useSynchronizedEditors } from "./hooks/useSynchronizedEditors";
@@ -379,6 +387,13 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     });
   };
 
+  const loadTourDemo = () => {
+    invalidateComparison();
+    const aligned = alignValidInputText(TOUR_DEMO_A, TOUR_DEMO_B);
+    setTextA(aligned?.textA ?? TOUR_DEMO_A);
+    setTextB(aligned?.textB ?? TOUR_DEMO_B);
+  };
+
   const cancelComparison = () => {
     stopWorker();
     setStatus({ tone: "idle", message: "Comparison cancelled." });
@@ -461,7 +476,17 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           <div className="privacy-badge" data-tour="privacy">
             <span aria-hidden="true">●</span> Local processing
           </div>
-          <OnboardingTour hasResults={result !== null} />
+          <OnboardingTour
+            hasResults={result !== null}
+            isWorkspaceEmpty={!textA.trim() && !textB.trim()}
+            onLoadDemoData={loadTourDemo}
+            onRunComparison={() => runComparison()}
+            onClearWorkspace={clearWorkspace}
+            isDifferencesExpanded={expandedSections.differences}
+            onSetDifferencesExpanded={(expanded) =>
+              setExpandedSections((current) => ({ ...current, differences: expanded }))
+            }
+          />
           <button
             className="secondary-button"
             type="button"

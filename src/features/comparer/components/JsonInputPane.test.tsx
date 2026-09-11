@@ -497,6 +497,18 @@ describe("JsonInputPane validation state", () => {
     expect(markers[1]).toHaveAttribute("title", "Line 3 — differences (ignored)");
   });
 
+  it("fades the ignored line's own JSON text, not just the highlight bar behind it", () => {
+    const value = ["{", '  "kept": 1,', '  "ignored": 2', "}"].join("\n");
+    const { container } = renderPane(value, {
+      lineHighlights: {
+        2: { category: "differences", ignored: false },
+        3: { category: "differences", ignored: true }
+      }
+    });
+
+    expect(container.querySelectorAll(".line-text-dim")).toHaveLength(1);
+  });
+
   it("dims an ignored highlight in the Tree view and labels its badge", async () => {
     const user = userEvent.setup();
     const value = ["{", '  "kept": 1,', '  "ignored": 2', "}"].join("\n");

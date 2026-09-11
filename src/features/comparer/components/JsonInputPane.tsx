@@ -518,6 +518,20 @@ export function JsonInputPane({
                 synchronizeScroll(side, event.currentTarget);
               }}
             />
+            <div className="line-text-dim-layer" aria-hidden="true">
+              {highlightedLines
+                .filter((line) => effectiveLineHighlights[line]!.ignored)
+                .map((line) => (
+                  <span
+                    key={line}
+                    className="line-text-dim"
+                    style={{
+                      top: `${editorMetrics.paddingTop + (line - 1) * editorMetrics.lineHeight - scrollTop}px`,
+                      height: `${editorMetrics.lineHeight}px`
+                    }}
+                  />
+                ))}
+            </div>
             {highlightsAbove.length > 0 && (
               <OffscreenFindingChip
                 direction="above"

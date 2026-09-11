@@ -7,8 +7,6 @@ export interface ComparisonResultFilters {
   showOnlyInA: boolean;
   showOnlyInB: boolean;
   showIgnored: boolean;
-  showStructureOnlyInA: boolean;
-  showStructureOnlyInB: boolean;
 }
 
 export interface ComparisonResultProjection {
@@ -70,8 +68,8 @@ function matchesStructureSource(
   finding: StructureFinding,
   filters: ComparisonResultFilters
 ): boolean {
-  if (finding.kind === "extra-in-b") return filters.showStructureOnlyInB;
-  if (finding.kind === "missing-in-b") return filters.showStructureOnlyInA;
+  if (finding.kind === "extra-in-b") return filters.showOnlyInB;
+  if (finding.kind === "missing-in-b") return filters.showOnlyInA;
   return true;
 }
 

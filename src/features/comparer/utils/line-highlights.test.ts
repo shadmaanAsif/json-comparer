@@ -11,9 +11,7 @@ const filters: ComparisonResultFilters = {
   path: "",
   showOnlyInA: true,
   showOnlyInB: true,
-  showIgnored: false,
-  showStructureOnlyInA: true,
-  showStructureOnlyInB: true
+  showIgnored: false
 };
 
 function project(result: ComparisonResult, overrides: Partial<ComparisonResultFilters> = {}) {
@@ -171,20 +169,11 @@ describe("createLineHighlights", () => {
       toggles
     );
     expect(partial.a[onlyALine]).toEqual({ category: "structure", ignored: false });
-    expect(partial.b[onlyBLine]).toEqual({ category: "structure", ignored: false });
+    // showOnlyInB now gates both the value-level "added" finding and the structure-level
+    // "extra-in-b" finding for the same path, so one toggle hides the line across both.
+    expect(partial.b[onlyBLine]).toBeUndefined();
     expect(partial.a[changedLine]).toEqual({ category: "differences", ignored: false });
     expect(partial.a[ignoredLine]).toBeUndefined();
-
-    const hiddenAcrossSections = createLineHighlights(
-      project(result, {
-        showOnlyInB: false,
-        showStructureOnlyInB: false
-      }),
-      aligned.textA,
-      aligned.textB,
-      toggles
-    );
-    expect(hiddenAcrossSections.b[onlyBLine]).toBeUndefined();
 
     const withIgnored = createLineHighlights(
       project(result, { showIgnored: true }),

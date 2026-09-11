@@ -20,8 +20,6 @@ export interface ResultFilters {
   showOnlyInA: boolean;
   showOnlyInB: boolean;
   showIgnored: boolean;
-  showStructureOnlyInA: boolean;
-  showStructureOnlyInB: boolean;
 }
 
 export interface ResultSectionState {
@@ -272,33 +270,6 @@ export function ComparisonResults({
             />
           </span>
         </summary>
-        <div className="structure-filter-bar">
-          <span>Show schema differences</span>
-          <div className="filter-chip-group" role="group" aria-label="Structure schema filters">
-            <FilterChip
-              className="structure-only-a-chip"
-              pressed={filters.showStructureOnlyInA}
-              onClick={() =>
-                onFiltersChange({
-                  showStructureOnlyInA: !filters.showStructureOnlyInA
-                })
-              }
-            >
-              {ONLY_IN_LABELS.A}
-            </FilterChip>
-            <FilterChip
-              className="structure-only-b-chip"
-              pressed={filters.showStructureOnlyInB}
-              onClick={() =>
-                onFiltersChange({
-                  showStructureOnlyInB: !filters.showStructureOnlyInB
-                })
-              }
-            >
-              {ONLY_IN_LABELS.B}
-            </FilterChip>
-          </div>
-        </div>
         {structureFindings.length === 0 ? (
           <EmptyResult title="No structure issues">
             No structure findings match the active source and path filters.

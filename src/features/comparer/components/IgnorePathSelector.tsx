@@ -182,7 +182,15 @@ export function IgnorePathSelector({
             onBlur={() => setIsOpen(false)}
             onChange={(event) => {
               const nextQuery = event.target.value;
-              if (/[,\n]$/.test(nextQuery)) addPaths(parseIgnorePatterns(nextQuery));
+              // Normally paste is caught by onPaste below, but some paste paths (middle-click
+              // paste, certain mobile/IME flows) never fire a clipboard `paste` event and land
+              // here instead — inputType still reports insertFromPaste, so treat it the same way
+              // rather than leaving the pasted path stranded in the query box uncommitted.
+              const isPastedInsert =
+                (event.nativeEvent as InputEvent).inputType === "insertFromPaste";
+              const pastedPaths =
+                isPastedInsert || /[,\n]$/.test(nextQuery) ? parseIgnorePatterns(nextQuery) : [];
+              if (pastedPaths.length) addPaths(pastedPaths);
               else {
                 setQuery(nextQuery);
                 setActiveOptionIndex(0);

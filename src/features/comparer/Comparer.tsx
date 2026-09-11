@@ -50,8 +50,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [showIgnored, setShowIgnored] = useState(false);
   const [showOnlyInA, setShowOnlyInA] = useState(true);
   const [showOnlyInB, setShowOnlyInB] = useState(true);
-  const [showStructureOnlyInA, setShowStructureOnlyInA] = useState(true);
-  const [showStructureOnlyInB, setShowStructureOnlyInB] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalSide, setModalSide] = useState<ResponseSide | null>(null);
   const [curlA, setCurlA] = useState<string | null>(null);
@@ -154,20 +152,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             path: pathFilter,
             showOnlyInA,
             showOnlyInB,
-            showIgnored,
-            showStructureOnlyInA,
-            showStructureOnlyInB
+            showIgnored
           })
         : null,
-    [
-      pathFilter,
-      result,
-      showIgnored,
-      showOnlyInA,
-      showOnlyInB,
-      showStructureOnlyInA,
-      showStructureOnlyInB
-    ]
+    [pathFilter, result, showIgnored, showOnlyInA, showOnlyInB]
   );
   const ignorePathSuggestions = useMemo(
     () =>
@@ -428,8 +416,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setPathFilter("");
     setShowOnlyInA(true);
     setShowOnlyInB(true);
-    setShowStructureOnlyInA(true);
-    setShowStructureOnlyInB(true);
     if (finding.ignored) setShowIgnored(true);
     setExpandedSections((current) => ({ ...current, [section]: true }));
     focusElement("finding-" + section + "-" + finding.id);
@@ -439,8 +425,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setPathFilter(panels.selection.field.pointer);
     setShowOnlyInA(true);
     setShowOnlyInB(true);
-    setShowStructureOnlyInA(true);
-    setShowStructureOnlyInB(true);
     setExpandedSections({ missing: true, structure: true, differences: true });
     focusElement("results-path-filter");
   };
@@ -590,9 +574,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             path: pathFilter,
             showOnlyInA,
             showOnlyInB,
-            showIgnored,
-            showStructureOnlyInA,
-            showStructureOnlyInB
+            showIgnored
           }}
           sections={expandedSections}
           ignorePaths={ignorePaths}
@@ -601,10 +583,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             if (patch.showOnlyInA !== undefined) setShowOnlyInA(patch.showOnlyInA);
             if (patch.showOnlyInB !== undefined) setShowOnlyInB(patch.showOnlyInB);
             if (patch.showIgnored !== undefined) setShowIgnored(patch.showIgnored);
-            if (patch.showStructureOnlyInA !== undefined)
-              setShowStructureOnlyInA(patch.showStructureOnlyInA);
-            if (patch.showStructureOnlyInB !== undefined)
-              setShowStructureOnlyInB(patch.showStructureOnlyInB);
           }}
           onSectionsChange={(patch) => setExpandedSections((current) => ({ ...current, ...patch }))}
           onToggleAllSections={toggleAllResultSections}

@@ -11,9 +11,7 @@ const filters: ComparisonResultFilters = {
   path: "",
   showOnlyInA: true,
   showOnlyInB: true,
-  showIgnored: false,
-  showStructureOnlyInA: true,
-  showStructureOnlyInB: true
+  showIgnored: false
 };
 
 function project(result: ComparisonResult, overrides: Partial<ComparisonResultFilters> = {}) {
@@ -34,9 +32,9 @@ describe("createLineHighlights", () => {
       { ...toggles, structure: false }
     );
 
-    expect(highlights.b[phoneLine]).toBe("missing");
+    expect(highlights.b[phoneLine]).toEqual({ category: "missing", ignored: false });
     expect(aligned.placeholderLineMapA["/data/config/countries/0/phone"]).toBe(phoneLine);
-    expect(highlights.a[phoneLine]).toBe("missing");
+    expect(highlights.a[phoneLine]).toEqual({ category: "missing", ignored: false });
   });
 
   it("highlights modified leaves on both sides and missing-in-B structure on A", () => {
@@ -49,9 +47,18 @@ describe("createLineHighlights", () => {
 
     const highlights = createLineHighlights(project(compareJson(a, b)), textA, textB, toggles);
 
-    expect(highlights.a[linesA["/nested/changed"]!]).toBe("differences");
-    expect(highlights.b[linesB["/nested/changed"]!]).toBe("differences");
-    expect(highlights.a[linesA["/nested/removed"]!]).toBe("structure");
+    expect(highlights.a[linesA["/nested/changed"]!]).toEqual({
+      category: "differences",
+      ignored: false
+    });
+    expect(highlights.b[linesB["/nested/changed"]!]).toEqual({
+      category: "differences",
+      ignored: false
+    });
+    expect(highlights.a[linesA["/nested/removed"]!]).toEqual({
+      category: "structure",
+      ignored: false
+    });
   });
 
   it("uses the structure highlight for a one-sided schema field when structure is enabled", () => {
@@ -86,20 +93,29 @@ describe("createLineHighlights", () => {
       structure: true,
       differences: false
     });
-    expect(structureOnly.b[line]).toBe("structure");
-    expect(structureOnly.a[aligned.placeholderLineMapA[pointer]!]).toBe("structure");
+    expect(structureOnly.b[line]).toEqual({ category: "structure", ignored: false });
+    expect(structureOnly.a[aligned.placeholderLineMapA[pointer]!]).toEqual({
+      category: "structure",
+      ignored: false
+    });
 
     const allCategories = createLineHighlights(result, aligned.textA, aligned.textB, toggles);
-    expect(allCategories.b[line]).toBe("structure");
-    expect(allCategories.a[aligned.placeholderLineMapA[pointer]!]).toBe("structure");
+    expect(allCategories.b[line]).toEqual({ category: "structure", ignored: false });
+    expect(allCategories.a[aligned.placeholderLineMapA[pointer]!]).toEqual({
+      category: "structure",
+      ignored: false
+    });
 
     const missingOnly = createLineHighlights(result, aligned.textA, aligned.textB, {
       missing: true,
       structure: false,
       differences: false
     });
-    expect(missingOnly.b[line]).toBe("missing");
-    expect(missingOnly.a[aligned.placeholderLineMapA[pointer]!]).toBe("missing");
+    expect(missingOnly.b[line]).toEqual({ category: "missing", ignored: false });
+    expect(missingOnly.a[aligned.placeholderLineMapA[pointer]!]).toEqual({
+      category: "missing",
+      ignored: false
+    });
   });
 
   it("uses the worker's exact line maps for large aligned documents", () => {
@@ -124,8 +140,8 @@ describe("createLineHighlights", () => {
       }
     );
 
-    expect(highlights.a[exactLine]).toBe("structure");
-    expect(highlights.b[exactLine]).toBe("structure");
+    expect(highlights.a[exactLine]).toEqual({ category: "structure", ignored: false });
+    expect(highlights.b[exactLine]).toEqual({ category: "structure", ignored: false });
   });
 
   it("uses the filtered projection for ignored, source, path, and category highlights", () => {
@@ -152,21 +168,12 @@ describe("createLineHighlights", () => {
       aligned.textB,
       toggles
     );
-    expect(partial.a[onlyALine]).toBe("structure");
-    expect(partial.b[onlyBLine]).toBe("structure");
-    expect(partial.a[changedLine]).toBe("differences");
+    expect(partial.a[onlyALine]).toEqual({ category: "structure", ignored: false });
+    // showOnlyInB now gates both the value-level "added" finding and the structure-level
+    // "extra-in-b" finding for the same path, so one toggle hides the line across both.
+    expect(partial.b[onlyBLine]).toBeUndefined();
+    expect(partial.a[changedLine]).toEqual({ category: "differences", ignored: false });
     expect(partial.a[ignoredLine]).toBeUndefined();
-
-    const hiddenAcrossSections = createLineHighlights(
-      project(result, {
-        showOnlyInB: false,
-        showStructureOnlyInB: false
-      }),
-      aligned.textA,
-      aligned.textB,
-      toggles
-    );
-    expect(hiddenAcrossSections.b[onlyBLine]).toBeUndefined();
 
     const withIgnored = createLineHighlights(
       project(result, { showIgnored: true }),
@@ -174,8 +181,11 @@ describe("createLineHighlights", () => {
       aligned.textB,
       toggles
     );
-    expect(withIgnored.a[ignoredLine]).toBe("differences");
-    expect(withIgnored.b[ignoredLine]).toBe("differences");
+    // Ignored findings shown only via "Show ignored" carry ignored: true, so panels can
+    // render them dimmed instead of indistinguishable from an active finding.
+    expect(withIgnored.a[ignoredLine]).toEqual({ category: "differences", ignored: true });
+    expect(withIgnored.b[ignoredLine]).toEqual({ category: "differences", ignored: true });
+    expect(withIgnored.a[changedLine]).toEqual({ category: "differences", ignored: false });
 
     const differencesOnly = createLineHighlights(project(result), aligned.textA, aligned.textB, {
       missing: false,
@@ -184,7 +194,7 @@ describe("createLineHighlights", () => {
     });
     expect(differencesOnly.a[onlyALine]).toBeUndefined();
     expect(differencesOnly.b[onlyBLine]).toBeUndefined();
-    expect(differencesOnly.a[changedLine]).toBe("differences");
+    expect(differencesOnly.a[changedLine]).toEqual({ category: "differences", ignored: false });
 
     const noPathMatch = createLineHighlights(
       project(result, { path: "does-not-exist", showIgnored: true }),

@@ -5,7 +5,7 @@ import { MAX_DOCUMENT_BYTES, SIDE_LABELS } from "../constants";
 import { usePanelEditorActions } from "../hooks/usePanelEditorActions";
 import type { PanelActionRequest, PanelNavigation } from "../hooks/usePanelInteractions";
 import type { PanelIndex } from "../utils/panel-context";
-import type { HighlightCategory, ResponseSide } from "../types";
+import type { HighlightCategory, LineHighlight, ResponseSide } from "../types";
 import {
   DEFAULT_EDITOR_VIEWPORT_METRICS,
   navigationTargetLine,
@@ -31,12 +31,17 @@ export interface JsonInputPaneProps {
   onCurlRun: () => void;
   onCurlClose: () => void;
   isFetching: boolean;
-  lineHighlights: Record<number, HighlightCategory>;
+  lineHighlights: Record<number, LineHighlight>;
   registerEditor: (side: ResponseSide, editor: HTMLTextAreaElement | null) => void;
   synchronizeScroll: (side: ResponseSide, editor: HTMLTextAreaElement) => void;
   panelIndex?: PanelIndex | null;
   panelNavigation?: PanelNavigation;
   onOpenActions?: (request: PanelActionRequest) => void;
+  /** The partner panel's current line, mirrored here at the same line number so aligned
+   *  panels show a "same row" cue even though this panel's own selection is untouched. */
+  mirroredLine?: number | null;
+  /** Reports this panel's own current line up so the partner panel can mirror it. */
+  onActiveLineChange?: (line: number | null) => void;
 }
 
 export function JsonInputPane({
@@ -57,7 +62,9 @@ export function JsonInputPane({
   synchronizeScroll,
   panelIndex,
   panelNavigation,
-  onOpenActions
+  onOpenActions,
+  mirroredLine = null,
+  onActiveLineChange
 }: JsonInputPaneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -85,16 +92,19 @@ export function JsonInputPane({
     synchronizeScroll,
     onOpenActions
   });
+  useEffect(() => {
+    onActiveLineChange?.(panelActions.selectedLine);
+  }, [panelActions.selectedLine, onActiveLineChange]);
   const jsonIssue = useMemo(() => getJsonSyntaxIssue(value), [value]);
   const jsonError = jsonIssue?.message ?? null;
   const showsJsonError = jsonIssue !== null && activeView === "json";
   const effectiveLineHighlights = useMemo(
     () =>
       jsonIssue
-        ? ({ ...lineHighlights, [jsonIssue.line]: "invalid" } satisfies Record<
-            number,
-            HighlightCategory
-          >)
+        ? ({
+            ...lineHighlights,
+            [jsonIssue.line]: { category: "invalid", ignored: false }
+          } satisfies Record<number, LineHighlight>)
         : lineHighlights,
     [jsonIssue, lineHighlights]
   );
@@ -188,7 +198,7 @@ export function JsonInputPane({
 
   const categoriesFor = (targetLines: number[]) =>
     (["missing", "structure", "differences", "invalid"] as const).filter((category) =>
-      targetLines.some((line) => effectiveLineHighlights[line] === category)
+      targetLines.some((line) => effectiveLineHighlights[line]?.category === category)
     );
   const previousError =
     highlightedLines.filter((line) => line < firstVisibleLine).at(-1) ?? highlightedLines.at(-1);
@@ -430,12 +440,21 @@ export function JsonInputPane({
                   }}
                 />
               )}
+              {mirroredLine !== null && mirroredLine <= totalLines && (
+                <span
+                  className="full-line-highlight line-context line-mirror"
+                  style={{
+                    top: `${editorMetrics.paddingTop + (mirroredLine - 1) * editorMetrics.lineHeight - scrollTop}px`,
+                    height: `${editorMetrics.lineHeight}px`
+                  }}
+                />
+              )}
               {highlightedLines.map((line) => (
                 <span
                   key={line}
-                  className={`full-line-highlight line-${effectiveLineHighlights[line]}${
-                    selectedNavigationLine === line ? " is-active" : ""
-                  }`}
+                  className={`full-line-highlight line-${effectiveLineHighlights[line]!.category}${
+                    effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
+                  }${selectedNavigationLine === line ? " is-active" : ""}`}
                   style={{
                     top: `${editorMetrics.paddingTop + (line - 1) * editorMetrics.lineHeight - scrollTop}px`,
                     height: `${editorMetrics.lineHeight}px`
@@ -499,6 +518,20 @@ export function JsonInputPane({
                 synchronizeScroll(side, event.currentTarget);
               }}
             />
+            <div className="line-text-dim-layer" aria-hidden="true">
+              {highlightedLines
+                .filter((line) => effectiveLineHighlights[line]!.ignored)
+                .map((line) => (
+                  <span
+                    key={line}
+                    className="line-text-dim"
+                    style={{
+                      top: `${editorMetrics.paddingTop + (line - 1) * editorMetrics.lineHeight - scrollTop}px`,
+                      height: `${editorMetrics.lineHeight}px`
+                    }}
+                  />
+                ))}
+            </div>
             {highlightsAbove.length > 0 && (
               <OffscreenFindingChip
                 direction="above"
@@ -529,12 +562,14 @@ export function JsonInputPane({
               <button
                 key={line}
                 type="button"
-                className={`minimap-marker line-${effectiveLineHighlights[line]}${
-                  selectedNavigationLine === line ? " is-active" : ""
-                }`}
+                className={`minimap-marker line-${effectiveLineHighlights[line]!.category}${
+                  effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
+                }${selectedNavigationLine === line ? " is-active" : ""}`}
                 style={{ top: `${totalLines === 1 ? 0 : ((line - 1) / (totalLines - 1)) * 100}%` }}
                 aria-label={`Go to highlighted line ${line}`}
-                title={`Line ${line} — ${effectiveLineHighlights[line]}`}
+                title={`Line ${line} — ${effectiveLineHighlights[line]!.category}${
+                  effectiveLineHighlights[line]!.ignored ? " (ignored)" : ""
+                }`}
                 onClick={() => jumpToLine(line)}
               />
             ))}

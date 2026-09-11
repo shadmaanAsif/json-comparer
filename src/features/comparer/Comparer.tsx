@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DisplayLineMaps } from "@/domain/comparison/display-format";
 import { displayPath } from "@/domain/comparison/path";
 import type { ArrayMode, ComparisonOptions, ComparisonResult } from "@/domain/comparison/types";
@@ -50,8 +50,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [showIgnored, setShowIgnored] = useState(false);
   const [showOnlyInA, setShowOnlyInA] = useState(true);
   const [showOnlyInB, setShowOnlyInB] = useState(true);
-  const [showStructureOnlyInA, setShowStructureOnlyInA] = useState(true);
-  const [showStructureOnlyInB, setShowStructureOnlyInB] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalSide, setModalSide] = useState<ResponseSide | null>(null);
   const [curlA, setCurlA] = useState<string | null>(null);
@@ -89,6 +87,25 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     arrayMode,
     enabled: !busy
   });
+  // The current line, mirrored onto the aligned panel at the same line number. Owned here
+  // (not inside either panel) since it's the one piece of state both panels need to read.
+  // Stable callback identities (empty deps) matter: JsonInputPane re-reports on every change
+  // to this prop, so an unstable callback here would re-trigger itself every render.
+  const [activeLine, setActiveLine] = useState<{ side: ResponseSide; line: number } | null>(null);
+  const onActiveLineChangeA = useCallback((line: number | null) => {
+    setActiveLine((current) => {
+      if (line === null) return current?.side === "A" ? null : current;
+      if (current?.side === "A" && current.line === line) return current;
+      return { side: "A", line };
+    });
+  }, []);
+  const onActiveLineChangeB = useCallback((line: number | null) => {
+    setActiveLine((current) => {
+      if (line === null) return current?.side === "B" ? null : current;
+      if (current?.side === "B" && current.line === line) return current;
+      return { side: "B", line };
+    });
+  }, []);
   const allResultsExpanded = Object.values(expandedSections).every(Boolean);
   const toggleAllResultSections = () => {
     const next = !allResultsExpanded;
@@ -135,20 +152,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             path: pathFilter,
             showOnlyInA,
             showOnlyInB,
-            showIgnored,
-            showStructureOnlyInA,
-            showStructureOnlyInB
+            showIgnored
           })
         : null,
-    [
-      pathFilter,
-      result,
-      showIgnored,
-      showOnlyInA,
-      showOnlyInB,
-      showStructureOnlyInA,
-      showStructureOnlyInB
-    ]
+    [pathFilter, result, showIgnored, showOnlyInA, showOnlyInB]
   );
   const ignorePathSuggestions = useMemo(
     () =>
@@ -409,8 +416,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setPathFilter("");
     setShowOnlyInA(true);
     setShowOnlyInB(true);
-    setShowStructureOnlyInA(true);
-    setShowStructureOnlyInB(true);
     if (finding.ignored) setShowIgnored(true);
     setExpandedSections((current) => ({ ...current, [section]: true }));
     focusElement("finding-" + section + "-" + finding.id);
@@ -420,8 +425,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setPathFilter(panels.selection.field.pointer);
     setShowOnlyInA(true);
     setShowOnlyInB(true);
-    setShowStructureOnlyInA(true);
-    setShowStructureOnlyInB(true);
     setExpandedSections({ missing: true, structure: true, differences: true });
     focusElement("results-path-filter");
   };
@@ -508,6 +511,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             panelIndex={panels.indexes?.A}
             panelNavigation={panels.navigation.A}
             onOpenActions={(request) => panels.openActions("A", request)}
+            mirroredLine={activeLine?.side === "B" ? activeLine.line : null}
+            onActiveLineChange={onActiveLineChangeA}
           />
           <JsonInputPane
             side="B"
@@ -528,6 +533,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             panelIndex={panels.indexes?.B}
             panelNavigation={panels.navigation.B}
             onOpenActions={(request) => panels.openActions("B", request)}
+            mirroredLine={activeLine?.side === "A" ? activeLine.line : null}
+            onActiveLineChange={onActiveLineChangeB}
           />
         </div>
 
@@ -567,9 +574,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             path: pathFilter,
             showOnlyInA,
             showOnlyInB,
-            showIgnored,
-            showStructureOnlyInA,
-            showStructureOnlyInB
+            showIgnored
           }}
           sections={expandedSections}
           ignorePaths={ignorePaths}
@@ -578,10 +583,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             if (patch.showOnlyInA !== undefined) setShowOnlyInA(patch.showOnlyInA);
             if (patch.showOnlyInB !== undefined) setShowOnlyInB(patch.showOnlyInB);
             if (patch.showIgnored !== undefined) setShowIgnored(patch.showIgnored);
-            if (patch.showStructureOnlyInA !== undefined)
-              setShowStructureOnlyInA(patch.showStructureOnlyInA);
-            if (patch.showStructureOnlyInB !== undefined)
-              setShowStructureOnlyInB(patch.showStructureOnlyInB);
           }}
           onSectionsChange={(patch) => setExpandedSections((current) => ({ ...current, ...patch }))}
           onToggleAllSections={toggleAllResultSections}

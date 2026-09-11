@@ -46,9 +46,7 @@ const filters: ComparisonResultFilters = {
   path: "",
   showOnlyInA: true,
   showOnlyInB: true,
-  showIgnored: false,
-  showStructureOnlyInA: true,
-  showStructureOnlyInB: true
+  showIgnored: false
 };
 
 describe("projectComparisonResult", () => {
@@ -94,10 +92,10 @@ describe("projectComparisonResult", () => {
     expect(projection.differences).toHaveLength(3);
   });
 
-  it("filters structure findings by either source or both while preserving internal A issues", () => {
+  it("filters structure findings by the same only-in-A/B source filter as other findings", () => {
     const onlyInB = projectComparisonResult(result, {
       ...filters,
-      showStructureOnlyInA: false
+      showOnlyInA: false
     });
     expect(onlyInB.structureFindings.map((item) => item.kind)).toEqual([
       "extra-in-b",
@@ -106,7 +104,7 @@ describe("projectComparisonResult", () => {
 
     const onlyInA = projectComparisonResult(result, {
       ...filters,
-      showStructureOnlyInB: false
+      showOnlyInB: false
     });
     expect(onlyInA.structureFindings.map((item) => item.kind)).toEqual([
       "missing-in-b",
@@ -137,8 +135,7 @@ describe("projectComparisonResult", () => {
   it("updates zero, partial, and fully visible counts for combined source and path filters", () => {
     const partial = projectComparisonResult(result, {
       ...filters,
-      showOnlyInA: false,
-      showStructureOnlyInB: false
+      showOnlyInA: false
     });
     expect(partial.counts.differences).toEqual({ visible: 2, total: 4 });
     expect(partial.counts.missing).toEqual({ visible: 1, total: 2 });

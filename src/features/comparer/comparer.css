@@ -254,6 +254,28 @@
     inset 0 -1px color-mix(in srgb, currentColor 78%, white);
   filter: saturate(1.25) brightness(1.12);
 }
+.full-line-highlight.is-ignored {
+  /* Matches .ignored-row's dimming in the results tables — shown only while "Show
+     ignored" is on, so an ignored finding still reads as suppressed, not active. */
+  opacity: 0.55;
+}
+.line-text-dim-layer {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.line-text-dim {
+  /* The textarea itself can't take per-line text color, so an ignored line's own
+     JSON text is faded toward the editor background — same 0.55 dimming as the
+     highlight bar behind it — instead of only the bar looking suppressed. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--editor-bg);
+  opacity: 0.55;
+}
 .input-panel[data-side="A"] .full-line-highlight.line-missing {
   border-left-color: var(--removed);
   color: var(--removed);
@@ -335,6 +357,9 @@
   box-shadow: inset 0 0 0 1px currentColor;
   font-weight: 900;
 }
+.line-gutter button.is-ignored {
+  opacity: 0.55;
+}
 .input-panel[data-side="A"] .line-gutter .line-missing {
   border-left-color: var(--removed);
   background: color-mix(in srgb, var(--removed) 15%, transparent);
@@ -387,6 +412,9 @@
   width: 15px;
   outline: 2px solid var(--text);
   z-index: 2;
+}
+.minimap-marker.is-ignored {
+  opacity: 0.55;
 }
 .minimap-marker.line-missing {
   background: var(--removed);
@@ -609,6 +637,9 @@
   outline: 1px solid color-mix(in srgb, var(--tree-highlight-color) 82%, white);
   outline-offset: 1px;
   filter: saturate(1.2) brightness(1.12);
+}
+.tree-highlight.is-ignored {
+  opacity: 0.55;
 }
 .tree-highlight-badge {
   display: inline-flex;
@@ -965,30 +996,6 @@
   color: var(--muted);
   font-size: 0.76rem;
   white-space: nowrap;
-}
-.structure-filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-}
-.structure-filter-bar > span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-.structure-only-a-chip[aria-pressed="true"] {
-  border-color: var(--removed);
-  background: color-mix(in srgb, var(--removed) 17%, var(--surface));
-  color: var(--removed);
-}
-.structure-only-b-chip[aria-pressed="true"] {
-  border-color: var(--added);
-  background: color-mix(in srgb, var(--added) 17%, var(--surface));
-  color: var(--added);
 }
 .table-scroll {
   overflow-x: auto;
@@ -1429,10 +1436,6 @@ footer {
   .filter-chip-group .select-chip {
     flex: 1 1 auto;
     justify-content: center;
-  }
-  .structure-filter-bar {
-    align-items: flex-start;
-    flex-direction: column;
   }
   .input-panel {
     padding: 15px;

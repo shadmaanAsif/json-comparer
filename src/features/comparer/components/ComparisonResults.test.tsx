@@ -77,9 +77,7 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
       path: "",
       showOnlyInA: true,
       showOnlyInB: true,
-      showIgnored: false,
-      showStructureOnlyInA: true,
-      showStructureOnlyInB: true
+      showIgnored: false
     },
     sections: { missing: false, structure: false, differences: false },
     ignorePaths: [],
@@ -185,7 +183,7 @@ describe("ComparisonResults disclosures", () => {
     expect(screen.getByText("8 / 8 ignored")).toBeVisible();
   });
 
-  it("toggles Only in A and Only in B structure filters independently", async () => {
+  it("filters structure findings from the single Result filters chip group, not a duplicate section group", async () => {
     const user = userEvent.setup();
     const { props } = renderResults({
       result: {
@@ -199,7 +197,12 @@ describe("ComparisonResults disclosures", () => {
       },
       sections: { missing: false, structure: true, differences: false }
     });
-    const filters = screen.getByRole("group", { name: "Structure schema filters" });
+
+    expect(
+      screen.queryByRole("group", { name: "Structure schema filters" })
+    ).not.toBeInTheDocument();
+
+    const filters = screen.getByRole("group", { name: "Result filters" });
     const onlyInA = within(filters).getByRole("button", { name: "Only in Baseline" });
     const onlyInB = within(filters).getByRole("button", { name: "Only in Candidate" });
 
@@ -209,12 +212,8 @@ describe("ComparisonResults disclosures", () => {
     await user.click(onlyInA);
     await user.click(onlyInB);
 
-    expect(props.onFiltersChange).toHaveBeenNthCalledWith(1, {
-      showStructureOnlyInA: false
-    });
-    expect(props.onFiltersChange).toHaveBeenNthCalledWith(2, {
-      showStructureOnlyInB: false
-    });
+    expect(props.onFiltersChange).toHaveBeenNthCalledWith(1, { showOnlyInA: false });
+    expect(props.onFiltersChange).toHaveBeenNthCalledWith(2, { showOnlyInB: false });
   });
 
   it("shows an arrow and toggles each result section with native summary controls", async () => {

@@ -338,4 +338,41 @@ describe("Comparer panel actions", () => {
     expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
     expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
   });
+
+  it("mirrors the current line onto the other panel and clears both on an outside click", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Comparer />);
+    fillInputs();
+    await compare(user);
+
+    const editorA = screen.getByRole("textbox", {
+      name: "JSON for Baseline"
+    }) as HTMLTextAreaElement;
+    const caret = editorA.value.indexOf('"price"');
+    editorA.focus();
+    editorA.setSelectionRange(caret, caret);
+    fireEvent.select(editorA);
+
+    const contextInA = container.querySelector(
+      '.input-panel[data-side="A"] .full-line-highlight.line-context:not(.line-mirror)'
+    );
+    expect(contextInA).toBeInTheDocument();
+
+    const mirrorInB = container.querySelector(
+      '.input-panel[data-side="B"] .full-line-highlight.line-mirror'
+    );
+    expect(mirrorInB).toBeInTheDocument();
+    // Same line number on both sides means the same computed vertical offset.
+    expect(mirrorInB).toHaveStyle({ top: (contextInA as HTMLElement).style.top });
+    expect(
+      container.querySelector(
+        '.input-panel[data-side="B"] .full-line-highlight.line-context:not(.line-mirror)'
+      )
+    ).not.toBeInTheDocument();
+
+    await user.click(document.body);
+
+    expect(container.querySelector(".full-line-highlight.line-context")).not.toBeInTheDocument();
+    expect(container.querySelector(".full-line-highlight.line-mirror")).not.toBeInTheDocument();
+  });
 });

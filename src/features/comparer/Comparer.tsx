@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DisplayLineMaps } from "@/domain/comparison/display-format";
 import { displayPath } from "@/domain/comparison/path";
 import type { ArrayMode, ComparisonOptions, ComparisonResult } from "@/domain/comparison/types";
@@ -89,6 +89,25 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     arrayMode,
     enabled: !busy
   });
+  // The current line, mirrored onto the aligned panel at the same line number. Owned here
+  // (not inside either panel) since it's the one piece of state both panels need to read.
+  // Stable callback identities (empty deps) matter: JsonInputPane re-reports on every change
+  // to this prop, so an unstable callback here would re-trigger itself every render.
+  const [activeLine, setActiveLine] = useState<{ side: ResponseSide; line: number } | null>(null);
+  const onActiveLineChangeA = useCallback((line: number | null) => {
+    setActiveLine((current) => {
+      if (line === null) return current?.side === "A" ? null : current;
+      if (current?.side === "A" && current.line === line) return current;
+      return { side: "A", line };
+    });
+  }, []);
+  const onActiveLineChangeB = useCallback((line: number | null) => {
+    setActiveLine((current) => {
+      if (line === null) return current?.side === "B" ? null : current;
+      if (current?.side === "B" && current.line === line) return current;
+      return { side: "B", line };
+    });
+  }, []);
   const allResultsExpanded = Object.values(expandedSections).every(Boolean);
   const toggleAllResultSections = () => {
     const next = !allResultsExpanded;
@@ -508,6 +527,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             panelIndex={panels.indexes?.A}
             panelNavigation={panels.navigation.A}
             onOpenActions={(request) => panels.openActions("A", request)}
+            mirroredLine={activeLine?.side === "B" ? activeLine.line : null}
+            onActiveLineChange={onActiveLineChangeA}
           />
           <JsonInputPane
             side="B"
@@ -528,6 +549,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             panelIndex={panels.indexes?.B}
             panelNavigation={panels.navigation.B}
             onOpenActions={(request) => panels.openActions("B", request)}
+            mirroredLine={activeLine?.side === "A" ? activeLine.line : null}
+            onActiveLineChange={onActiveLineChangeB}
           />
         </div>
 

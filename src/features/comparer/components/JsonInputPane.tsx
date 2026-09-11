@@ -37,6 +37,11 @@ export interface JsonInputPaneProps {
   panelIndex?: PanelIndex | null;
   panelNavigation?: PanelNavigation;
   onOpenActions?: (request: PanelActionRequest) => void;
+  /** The partner panel's current line, mirrored here at the same line number so aligned
+   *  panels show a "same row" cue even though this panel's own selection is untouched. */
+  mirroredLine?: number | null;
+  /** Reports this panel's own current line up so the partner panel can mirror it. */
+  onActiveLineChange?: (line: number | null) => void;
 }
 
 export function JsonInputPane({
@@ -57,7 +62,9 @@ export function JsonInputPane({
   synchronizeScroll,
   panelIndex,
   panelNavigation,
-  onOpenActions
+  onOpenActions,
+  mirroredLine = null,
+  onActiveLineChange
 }: JsonInputPaneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -85,6 +92,9 @@ export function JsonInputPane({
     synchronizeScroll,
     onOpenActions
   });
+  useEffect(() => {
+    onActiveLineChange?.(panelActions.selectedLine);
+  }, [panelActions.selectedLine, onActiveLineChange]);
   const jsonIssue = useMemo(() => getJsonSyntaxIssue(value), [value]);
   const jsonError = jsonIssue?.message ?? null;
   const showsJsonError = jsonIssue !== null && activeView === "json";
@@ -427,6 +437,15 @@ export function JsonInputPane({
                       (panelActions.selectedLine - 1) * editorMetrics.lineHeight -
                       scrollTop,
                     height: editorMetrics.lineHeight
+                  }}
+                />
+              )}
+              {mirroredLine !== null && mirroredLine <= totalLines && (
+                <span
+                  className="full-line-highlight line-context line-mirror"
+                  style={{
+                    top: `${editorMetrics.paddingTop + (mirroredLine - 1) * editorMetrics.lineHeight - scrollTop}px`,
+                    height: `${editorMetrics.lineHeight}px`
                   }}
                 />
               )}

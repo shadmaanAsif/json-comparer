@@ -147,6 +147,18 @@ export function usePanelEditorActions({
       return next;
     });
   useEffect(() => {
+    // A pointer landing outside this panel (the other panel, the results section, the page
+    // background) clears its current-line indicator; the "Line actions" dialog lives outside
+    // paneRef too, so opening it also clears the indicator underneath it, harmlessly.
+    const clearOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target || paneRef.current?.contains(target)) return;
+      setSelection(null);
+    };
+    document.addEventListener("pointerdown", clearOnOutsideClick, true);
+    return () => document.removeEventListener("pointerdown", clearOnOutsideClick, true);
+  }, [paneRef]);
+  useEffect(() => {
     if (!navigation || navigation.index !== index || lastNavigation.current === navigation) return;
     // Navigate in the destination's current view, without switching tabs.
     const frame = requestAnimationFrame(() => {

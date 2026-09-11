@@ -128,3 +128,8 @@ narrowly* something runs, not *whether* an opt-in gate is authorized.
   module-size threshold. Accepted on manual review as still cohesive, not a new problem to
   re-diagnose each run. Only revisit if the file's *responsibilities* — not just its length
   — start to blur.
+- `pnpm lint` reports `'author' is assigned a value but never used` in
+  `src/features/comparer/Comparer.tsx` (the `ComparerProps.author` prop, currently
+  unwired pending a future author-display feature). Accepted; don't re-flag or attempt to
+  fix it each run. Only revisit when that feature is actually implemented or the prop is
+  deliberately removed.

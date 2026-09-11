@@ -1,5 +1,8 @@
 export type ResponseSide = "A" | "B";
 export type HighlightCategory = "missing" | "structure" | "differences" | "invalid";
+/** One rendered line/field's highlight: its category, and whether it's an ignored finding
+ *  shown only because "Show ignored" is on — rendered dimmed rather than at full strength. */
+export type LineHighlight = { category: HighlightCategory; ignored: boolean };
 export type WorkspaceStatus = {
   tone: "idle" | "error" | "success";
   message: string;

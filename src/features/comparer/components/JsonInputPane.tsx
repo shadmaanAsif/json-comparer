@@ -5,7 +5,7 @@ import { MAX_DOCUMENT_BYTES, SIDE_LABELS } from "../constants";
 import { usePanelEditorActions } from "../hooks/usePanelEditorActions";
 import type { PanelActionRequest, PanelNavigation } from "../hooks/usePanelInteractions";
 import type { PanelIndex } from "../utils/panel-context";
-import type { HighlightCategory, ResponseSide } from "../types";
+import type { HighlightCategory, LineHighlight, ResponseSide } from "../types";
 import {
   DEFAULT_EDITOR_VIEWPORT_METRICS,
   navigationTargetLine,
@@ -31,7 +31,7 @@ export interface JsonInputPaneProps {
   onCurlRun: () => void;
   onCurlClose: () => void;
   isFetching: boolean;
-  lineHighlights: Record<number, HighlightCategory>;
+  lineHighlights: Record<number, LineHighlight>;
   registerEditor: (side: ResponseSide, editor: HTMLTextAreaElement | null) => void;
   synchronizeScroll: (side: ResponseSide, editor: HTMLTextAreaElement) => void;
   panelIndex?: PanelIndex | null;
@@ -91,10 +91,10 @@ export function JsonInputPane({
   const effectiveLineHighlights = useMemo(
     () =>
       jsonIssue
-        ? ({ ...lineHighlights, [jsonIssue.line]: "invalid" } satisfies Record<
-            number,
-            HighlightCategory
-          >)
+        ? ({
+            ...lineHighlights,
+            [jsonIssue.line]: { category: "invalid", ignored: false }
+          } satisfies Record<number, LineHighlight>)
         : lineHighlights,
     [jsonIssue, lineHighlights]
   );
@@ -188,7 +188,7 @@ export function JsonInputPane({
 
   const categoriesFor = (targetLines: number[]) =>
     (["missing", "structure", "differences", "invalid"] as const).filter((category) =>
-      targetLines.some((line) => effectiveLineHighlights[line] === category)
+      targetLines.some((line) => effectiveLineHighlights[line]?.category === category)
     );
   const previousError =
     highlightedLines.filter((line) => line < firstVisibleLine).at(-1) ?? highlightedLines.at(-1);
@@ -433,9 +433,9 @@ export function JsonInputPane({
               {highlightedLines.map((line) => (
                 <span
                   key={line}
-                  className={`full-line-highlight line-${effectiveLineHighlights[line]}${
-                    selectedNavigationLine === line ? " is-active" : ""
-                  }`}
+                  className={`full-line-highlight line-${effectiveLineHighlights[line]!.category}${
+                    effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
+                  }${selectedNavigationLine === line ? " is-active" : ""}`}
                   style={{
                     top: `${editorMetrics.paddingTop + (line - 1) * editorMetrics.lineHeight - scrollTop}px`,
                     height: `${editorMetrics.lineHeight}px`
@@ -529,12 +529,14 @@ export function JsonInputPane({
               <button
                 key={line}
                 type="button"
-                className={`minimap-marker line-${effectiveLineHighlights[line]}${
-                  selectedNavigationLine === line ? " is-active" : ""
-                }`}
+                className={`minimap-marker line-${effectiveLineHighlights[line]!.category}${
+                  effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
+                }${selectedNavigationLine === line ? " is-active" : ""}`}
                 style={{ top: `${totalLines === 1 ? 0 : ((line - 1) / (totalLines - 1)) * 100}%` }}
                 aria-label={`Go to highlighted line ${line}`}
-                title={`Line ${line} — ${effectiveLineHighlights[line]}`}
+                title={`Line ${line} — ${effectiveLineHighlights[line]!.category}${
+                  effectiveLineHighlights[line]!.ignored ? " (ignored)" : ""
+                }`}
                 onClick={() => jumpToLine(line)}
               />
             ))}

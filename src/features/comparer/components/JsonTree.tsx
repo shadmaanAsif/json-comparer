@@ -4,18 +4,18 @@ import { buildLineMap } from "@/domain/comparison/line-map";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TreeNavigationRequest, TreeParentRequest } from "../hooks/usePanelEditorActions";
 import { SIDE_LABELS } from "../constants";
-import type { HighlightCategory, ResponseSide } from "../types";
+import type { LineHighlight, ResponseSide } from "../types";
 import { FindingStepper } from "./FindingNavigation";
 import { JsonTreeNode, type TreeFieldActions } from "./JsonTreeNode";
 
 function treeHighlights(
   raw: string,
-  lineHighlights: Record<number, HighlightCategory>
-): Record<string, HighlightCategory> {
-  const highlights: Record<string, HighlightCategory> = {};
+  lineHighlights: Record<number, LineHighlight>
+): Record<string, LineHighlight> {
+  const highlights: Record<string, LineHighlight> = {};
   for (const [pointer, line] of Object.entries(buildLineMap(raw))) {
-    const category = lineHighlights[line];
-    if (category) highlights[pointer] = category;
+    const highlight = lineHighlights[line];
+    if (highlight) highlights[pointer] = highlight;
   }
   return highlights;
 }
@@ -32,7 +32,7 @@ export function JsonTree({
 }: {
   side: ResponseSide;
   raw: string;
-  lineHighlights?: Record<number, HighlightCategory>;
+  lineHighlights?: Record<number, LineHighlight>;
   collapsedPointers?: ReadonlySet<string>;
   onExpandedChange?: (pointer: string, expanded: boolean) => void;
   parentRequest?: TreeParentRequest;
@@ -81,7 +81,7 @@ export function JsonTree({
   const highlightedPointers = Object.keys(highlights);
   const activeIndex = activePointer === null ? -1 : highlightedPointers.indexOf(activePointer);
   const categories = (["missing", "structure", "differences", "invalid"] as const).filter(
-    (category) => Object.values(highlights).includes(category)
+    (category) => Object.values(highlights).some((highlight) => highlight.category === category)
   );
 
   const registerHighlight = (pointer: string, node: HTMLElement | null) => {

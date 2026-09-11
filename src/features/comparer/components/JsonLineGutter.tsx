@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { SIDE_LABELS } from "../constants";
-import type { HighlightCategory, ResponseSide } from "../types";
+import type { LineHighlight, ResponseSide } from "../types";
 import type { PanelIndex } from "../utils/panel-context";
 
 export function JsonLineGutter({
@@ -20,7 +20,7 @@ export function JsonLineGutter({
   side: ResponseSide;
   totalLines: number;
   scrollTop: number;
-  highlights: Record<number, HighlightCategory>;
+  highlights: Record<number, LineHighlight>;
   activeLine: number | null;
   hoveredLine: number | null;
   panelIndex?: PanelIndex | null;
@@ -66,7 +66,8 @@ export function JsonLineGutter({
           const line = index + 1;
           const actionable = !!panelIndex?.byLine.has(line);
           const classes = [
-            highlights[line] ? "line-" + highlights[line] : "",
+            highlights[line] ? "line-" + highlights[line].category : "",
+            highlights[line]?.ignored ? "is-ignored" : "",
             activeLine === line ? "is-active" : "",
             actionable ? "line-action-trigger" : "",
             actionable && hoveredLine === line ? "is-hovered" : ""

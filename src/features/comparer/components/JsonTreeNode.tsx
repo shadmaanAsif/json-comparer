@@ -3,7 +3,7 @@
 import { useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { toJsonPointer } from "@/domain/comparison/path";
 import type { PathSegment } from "@/domain/comparison/types";
-import type { HighlightCategory } from "../types";
+import type { HighlightCategory, LineHighlight } from "../types";
 import type { PanelIndex } from "../utils/panel-context";
 
 export interface TreeFieldActions {
@@ -17,7 +17,7 @@ interface JsonTreeNodeProps {
   name?: string;
   value: unknown;
   path: PathSegment[];
-  highlights: Record<string, HighlightCategory>;
+  highlights: Record<string, LineHighlight>;
   activePointer: string | null;
   registerNode: (pointer: string, node: HTMLElement | null) => void;
   collapsedPointers?: ReadonlySet<string>;
@@ -45,9 +45,10 @@ export function JsonTreeNode({
 }: JsonTreeNodeProps) {
   const pointer = toJsonPointer(path);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const category = highlights[pointer];
+  const highlight = highlights[pointer];
+  const category = highlight?.category;
   const canAct = !!actions.index?.byPointer.has(pointer);
-  const classes = `${category ? ` tree-highlight tree-highlight-${category}` : ""}${pointer === activePointer ? " is-active" : ""}${canAct && pointer === actions.selectedPointer ? " tree-field-selected" : ""}`;
+  const classes = `${category ? ` tree-highlight tree-highlight-${category}` : ""}${highlight?.ignored ? " is-ignored" : ""}${pointer === activePointer ? " is-active" : ""}${canAct && pointer === actions.selectedPointer ? " tree-field-selected" : ""}`;
   const select = () => {
     if (canAct) actions.onSelect(pointer);
   };
@@ -91,7 +92,10 @@ export function JsonTreeNode({
     </button>
   );
   const badge = category && (
-    <span className="tree-highlight-badge">{highlightLabels[category]}</span>
+    <span className="tree-highlight-badge">
+      {highlightLabels[category]}
+      {highlight?.ignored ? " · Ignored" : ""}
+    </span>
   );
   const entries = value !== null && typeof value === "object" ? Object.entries(value) : null;
   if (entries?.length) {

@@ -339,7 +339,10 @@ describe("JsonInputPane validation state", () => {
       "}"
     ].join("\n");
     const { container } = renderPane(value, {
-      lineHighlights: { 2: "differences", 6: "missing" }
+      lineHighlights: {
+        2: { category: "differences", ignored: false },
+        6: { category: "missing", ignored: false }
+      }
     });
 
     await user.click(screen.getByRole("tab", { name: "Tree" }));
@@ -418,7 +421,10 @@ describe("JsonInputPane validation state", () => {
     const lines = ["[", ...Array.from({ length: 98 }, (_, index) => `  ${index},`), "  98", "]"];
     const synchronizeScroll = vi.fn();
     const { container } = renderPane(lines.join("\n"), {
-      lineHighlights: { 40: "differences", 80: "missing" },
+      lineHighlights: {
+        40: { category: "differences", ignored: false },
+        80: { category: "missing", ignored: false }
+      },
       synchronizeScroll
     });
     const editor = screen.getByRole("textbox", { name: "JSON for Baseline" });
@@ -443,13 +449,21 @@ describe("JsonInputPane validation state", () => {
   it("updates JSON markers and navigation immediately when visible highlights change", () => {
     const value = ["{", '  "first": 1,', '  "second": 2', "}"].join("\n");
     const { container, props, rerender } = renderPane(value, {
-      lineHighlights: { 2: "missing", 3: "differences" }
+      lineHighlights: {
+        2: { category: "missing", ignored: false },
+        3: { category: "differences", ignored: false }
+      }
     });
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(2);
     expect(screen.getByLabelText("Baseline finding navigation")).toHaveTextContent("1/2");
 
-    rerender(<JsonInputPane {...props} lineHighlights={{ 3: "differences" }} />);
+    rerender(
+      <JsonInputPane
+        {...props}
+        lineHighlights={{ 3: { category: "differences", ignored: false } }}
+      />
+    );
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(1);
     expect(screen.getByLabelText("Baseline finding navigation")).toHaveTextContent("1/1");
@@ -458,5 +472,45 @@ describe("JsonInputPane validation state", () => {
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(0);
     expect(screen.queryByLabelText("Baseline finding navigation")).not.toBeInTheDocument();
+  });
+
+  it("dims an ignored highlight in the gutter, full-line overlay, and minimap alike", () => {
+    const value = ["{", '  "kept": 1,', '  "ignored": 2', "}"].join("\n");
+    const { container } = renderPane(value, {
+      lineHighlights: {
+        2: { category: "differences", ignored: false },
+        3: { category: "differences", ignored: true }
+      }
+    });
+
+    const gutterButtons = container.querySelectorAll(".line-gutter button");
+    expect(gutterButtons[1]).not.toHaveClass("is-ignored");
+    expect(gutterButtons[2]).toHaveClass("is-ignored");
+
+    const overlayLines = container.querySelectorAll(".full-line-highlight.line-differences");
+    expect(overlayLines[0]).not.toHaveClass("is-ignored");
+    expect(overlayLines[1]).toHaveClass("is-ignored");
+
+    const markers = container.querySelectorAll(".json-minimap .minimap-marker");
+    expect(markers[0]).not.toHaveClass("is-ignored");
+    expect(markers[1]).toHaveClass("is-ignored");
+    expect(markers[1]).toHaveAttribute("title", "Line 3 — differences (ignored)");
+  });
+
+  it("dims an ignored highlight in the Tree view and labels its badge", async () => {
+    const user = userEvent.setup();
+    const value = ["{", '  "kept": 1,', '  "ignored": 2', "}"].join("\n");
+    renderPane(value, {
+      lineHighlights: {
+        2: { category: "differences", ignored: false },
+        3: { category: "differences", ignored: true }
+      }
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Tree" }));
+
+    expect(screen.getByText("kept").closest(".tree-leaf")).not.toHaveClass("is-ignored");
+    expect(screen.getByText("ignored").closest(".tree-leaf")).toHaveClass("is-ignored");
+    expect(screen.getAllByText(/Changed/)[1]).toHaveTextContent("Changed · Ignored");
   });
 });

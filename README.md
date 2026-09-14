@@ -50,7 +50,7 @@ pnpm build
 pnpm start
 ```
 
-For production on Vercel, open **Project → Settings → Environment Variables**. Set `FETCH_PROXY_ALLOWLIST` to the exact API hostnames users may fetch, without protocols, paths, or ports. Add `NEXT_PUBLIC_APP_AUTHOR` to display an author name in the application header. Apply each variable to Production and, when required, Preview, then redeploy so the new values are included. The `*` value and `FETCH_PROXY_ALLOW_LOCALHOST=true` are rejected in production and on non-loopback application origins. `NEXT_PUBLIC_MAX_DOCUMENT_BYTES` changes the per-document byte limit.
+For production on Vercel, open **Project → Settings → Environment Variables**. Set `FETCH_PROXY_ALLOWLIST` to the exact API hostnames users may fetch, without protocols, paths, or ports. Add `NEXT_PUBLIC_APP_AUTHOR` to display an author name in the application header. Set `NEXT_PUBLIC_SITE_URL` to the public production URL so canonical links, `sitemap.xml`, `robots.txt`, and generated social preview images point at the deployed domain instead of the `http://localhost:3001` development default. Apply each variable to Production and, when required, Preview, then redeploy so the new values are included. The `*` value and `FETCH_PROXY_ALLOW_LOCALHOST=true` are rejected in production and on non-loopback application origins. `NEXT_PUBLIC_MAX_DOCUMENT_BYTES` changes the per-document byte limit.
 
 Credential-bearing cURL commands are stripped of `Authorization` and `Cookie` headers by default. Only set `FETCH_PROXY_ALLOW_CREDENTIALS=true` in a controlled deployment after reviewing who can access the application and which hosts are allowlisted.
 

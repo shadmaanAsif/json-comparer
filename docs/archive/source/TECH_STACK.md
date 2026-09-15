@@ -208,7 +208,7 @@ Every technology below is tagged with exactly one of:
 **Purpose:** Authentication and session management, needed only if the persistence module ships or if network-layer access control (VPN/internal-only deployment) is judged insufficient.
 
 **Options, not a recommendation:**
-1. **Federate into an existing company SSO/IdP via OIDC** — almost certainly correct for an internal engineering tool if Almosafer already centralizes internal-tool auth this way; not assumed here because the IdP is unknown (`SRS.md` §15.1).
+1. **Federate into an existing company SSO/IdP via OIDC** — almost certainly correct for an internal engineering tool if the organization already centralizes internal-tool auth this way; not assumed here because the IdP is unknown (`SRS.md` §15.1).
 2. **Better Auth** — modern, self-hosted, framework-agnostic, first-class Next.js support, OIDC/SSO plugin; the default *if* there is no existing SSO to plug into.
 3. **Auth.js (NextAuth) v5** — mature, free, included for completeness; reasonable if the team already has NextAuth expertise/infra.
 4. **Clerk** — fully managed, fastest to ship, but adds a paid third-party dependency and off-site user-data storage; better suited to a customer-facing product than an internal tool.

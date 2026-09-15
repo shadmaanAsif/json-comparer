@@ -557,7 +557,7 @@ export function JsonInputPane({
               onNext={() => navigateError(1)}
             />
           </div>
-          <aside className="json-minimap" aria-label={`Response ${side} highlighted lines`}>
+          <aside className="json-minimap" aria-label={`${SIDE_LABELS[side]} highlighted lines`}>
             {highlightedLines.map((line) => (
               <button
                 key={line}
@@ -625,7 +625,7 @@ export function JsonInputPane({
             <button
               className="text-button"
               type="button"
-              aria-label={`Hide cURL bar for Response ${side}`}
+              aria-label={`Hide cURL bar for ${SIDE_LABELS[side]}`}
               onClick={onCurlClose}
             >
               ×

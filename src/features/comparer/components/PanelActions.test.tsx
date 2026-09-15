@@ -220,7 +220,7 @@ describe("PanelActions", () => {
           kind: "missing-in-b",
           path: ["price"],
           pointer: "/price",
-          detail: "Field missing in Response B.",
+          detail: "Field missing in Candidate.",
           ignored: false
         }
       ]

@@ -152,6 +152,39 @@ describe("ComparisonResults disclosures", () => {
     expect(screen.getByRole("rowheader", { name: "Only in Candidate 1" })).toBeVisible();
   });
 
+  it("shows a neutral Missing badge per row instead of repeating the group's Only-in label, with detail on hover", async () => {
+    const user = userEvent.setup();
+    renderResults({
+      result: {
+        ...emptyResult,
+        findings: [missingFinding, onlyInBFinding],
+        counts: { ...emptyResult.counts, removed: 1, added: 1 }
+      },
+      onlyInA: [missingFinding],
+      onlyInB: [onlyInBFinding],
+      differences: [missingFinding, onlyInBFinding],
+      counts: {
+        ...emptyCounts,
+        differences: { visible: 2, total: 2 },
+        missing: { visible: 2, total: 2 },
+        onlyInA: { visible: 1, total: 1 },
+        onlyInB: { visible: 1, total: 1 }
+      },
+      sections: { missing: true, structure: false, differences: false }
+    });
+
+    expect(screen.getAllByText("Missing")).toHaveLength(2);
+    const [onlyInABadge, onlyInBBadge] = screen.getAllByRole("button", {
+      name: "Why this field is missing"
+    });
+    expect(onlyInABadge).toHaveAttribute("title", expect.stringContaining("only in Baseline"));
+    expect(onlyInBBadge).toHaveAttribute("title", expect.stringContaining("only in Candidate"));
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    await user.hover(onlyInABadge!);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("only in Baseline");
+  });
+
   it("shows displayed-versus-total counts and comparison duration", () => {
     renderResults({
       counts: {
@@ -172,7 +205,9 @@ describe("ComparisonResults disclosures", () => {
       sections: { missing: false, structure: false, differences: false }
     });
 
-    expect(screen.getByRole("status")).toHaveTextContent("133 of 165 differences shown in 120 ms.");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Showing 133 of 165 differences (8 ignored) in 120 ms."
+    );
     expect(screen.getByText("Missing Fields").closest("summary")).toHaveTextContent(
       "12 / 20 · 0 selected"
     );
@@ -181,6 +216,22 @@ describe("ComparisonResults disclosures", () => {
     );
     expect(screen.getByText("Differences").closest("summary")).toHaveTextContent("133 / 165");
     expect(screen.getByText("8 / 8 ignored")).toBeVisible();
+    expect(document.querySelector(".shown-count")).toHaveTextContent(
+      "133 / 165 differences (8 ignored)"
+    );
+  });
+
+  it("keeps the differences-shown summary free of an ignored clause when nothing is ignored", () => {
+    renderResults({
+      counts: {
+        ...emptyCounts,
+        differences: { visible: 4, total: 4 }
+      },
+      comparisonDurationMs: 30
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 4 of 4 differences in 30 ms.");
+    expect(document.querySelector(".shown-count")).toHaveTextContent("4 / 4 differences");
   });
 
   it("filters structure findings from the single Result filters chip group, not a duplicate section group", async () => {

@@ -4,6 +4,7 @@ import type { ArrayMode } from "@/domain/comparison/types";
 import type { WorkspaceStatus } from "../types";
 import { ONLY_IN_LABELS } from "../constants";
 import { IgnorePathSelector } from "./IgnorePathSelector";
+import { InfoTooltipButton } from "./InfoTooltipButton";
 
 export interface HighlightVisibility {
   missing: boolean;
@@ -128,19 +129,24 @@ export function ComparisonControls({
 
       <fieldset className="highlight-controls" data-tour="highlight-controls">
         <legend>Highlight in JSON panels</legend>
-        <button
-          className="select-chip missing-chip"
-          type="button"
-          aria-pressed={highlightVisibility.missing}
-          onClick={() => toggleHighlight("missing")}
-        >
-          <span className="legend-pair">
-            <i className="legend-a" />
-            {ONLY_IN_LABELS.A} <i className="legend-b" />
-            {ONLY_IN_LABELS.B}
-          </span>{" "}
-          Missing fields
-        </button>
+        <span className="select-chip missing-chip">
+          <button
+            className="chip-toggle"
+            type="button"
+            aria-pressed={highlightVisibility.missing}
+            onClick={() => toggleHighlight("missing")}
+          >
+            <span className="legend-pair" aria-hidden="true">
+              <i className="legend-a" />
+              <i className="legend-b" />
+            </span>
+            Missing fields
+          </button>
+          <InfoTooltipButton
+            label="Missing-fields highlight colors"
+            detail={`${ONLY_IN_LABELS.A} is highlighted in red, ${ONLY_IN_LABELS.B} in green.`}
+          />
+        </span>
         <button
           className="select-chip structure-chip"
           type="button"

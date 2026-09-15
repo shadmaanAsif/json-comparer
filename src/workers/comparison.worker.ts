@@ -2,7 +2,7 @@
 
 import { compareJson } from "../domain/comparison/engine";
 import { formatAlignedForDisplay, type DisplayLineMaps } from "../domain/comparison/display-format";
-import { parseJson } from "../domain/comparison/parse";
+import { JsonParseError, parseJson } from "../domain/comparison/parse";
 import type { ComparisonOptions, ComparisonResult } from "../domain/comparison/types";
 
 export interface WorkerRequest {
@@ -23,7 +23,7 @@ export type WorkerResponse =
       result: ComparisonResult;
       durationMs: number;
     }
-  | { jobId: string; ok: false; error: string };
+  | { jobId: string; ok: false; error: string; side?: "A" | "B" };
 
 self.onmessage = (event: MessageEvent<WorkerRequest>) => {
   const started = performance.now();
@@ -50,7 +50,8 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
     self.postMessage({
       jobId: event.data.jobId,
       ok: false,
-      error: error instanceof Error ? error.message : "Comparison failed"
+      error: error instanceof Error ? error.message : "Comparison failed",
+      side: error instanceof JsonParseError ? error.side : undefined
     } satisfies WorkerResponse);
   }
 };

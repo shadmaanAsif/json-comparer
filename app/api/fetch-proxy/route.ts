@@ -32,7 +32,17 @@ export async function POST(request: Request) {
       { error: "invalid_request", message: "The proxy request is too large." },
       { status: 413 }
     );
-  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // On Vercel, x-vercel-forwarded-for and x-forwarded-for/x-real-ip are all set from the
+  // real connecting client and are not attacker-controllable by default (Vercel overwrites
+  // any client-supplied value); x-vercel-forwarded-for additionally survives an extra proxy
+  // placed in front of Vercel, which can rewrite the other two. Outside Vercel (bare
+  // `pnpm start`/local dev with no equivalent trusted reverse proxy), none of these headers
+  // are trustworthy and this rate limit is a soft, best-effort control only.
+  const client =
+    request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
   if (!checkRateLimit(client, numberEnv("FETCH_PROXY_RATE_LIMIT", 20, 1, 1000), 60_000))
     return NextResponse.json(
       {
@@ -45,6 +55,7 @@ export async function POST(request: Request) {
     const input = schema.parse(await request.json());
     const allowlist = configuredAllowlist();
     const allowLocalhost = process.env.FETCH_PROXY_ALLOW_LOCALHOST === "true";
+    const allowCredentials = process.env.FETCH_PROXY_ALLOW_CREDENTIALS === "true";
     if (allowlist.includes("*") || allowLocalhost) {
       const inboundHost = new URL(request.url).hostname;
       if (process.env.NODE_ENV === "production" || !isLocalhostTarget(inboundHost))
@@ -54,10 +65,16 @@ export async function POST(request: Request) {
           403
         );
     }
+    if (allowCredentials && (allowlist.includes("*") || allowLocalhost))
+      throw new ProxyError(
+        "blocked_target",
+        "Credential forwarding cannot be combined with a wildcard or localhost-only allowlist.",
+        403
+      );
     const result = await executeSecureFetch(input, {
       allowlist,
       allowLocalhost,
-      allowCredentials: process.env.FETCH_PROXY_ALLOW_CREDENTIALS === "true",
+      allowCredentials,
       timeoutMs: numberEnv("FETCH_PROXY_TIMEOUT_MS", 10_000, 1000, 30_000),
       maxResponseBytes: numberEnv(
         "FETCH_PROXY_MAX_RESPONSE_BYTES",

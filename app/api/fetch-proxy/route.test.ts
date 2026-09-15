@@ -122,4 +122,22 @@ describe("fetch proxy route", () => {
     const second = await call(body, { "x-real-ip": "1.2.3.4", "x-forwarded-for": "8.8.8.8" });
     expect(second.status).toBe(429);
   });
+  it("prefers x-vercel-forwarded-for over both x-real-ip and x-forwarded-for for the rate-limit key", async () => {
+    // x-vercel-forwarded-for survives an extra proxy placed in front of Vercel, which could
+    // rewrite x-forwarded-for/x-real-ip (per Vercel's request-header documentation).
+    vi.stubEnv("FETCH_PROXY_RATE_LIMIT", "1");
+    const body = { url: "https://example.com", method: "GET", headers: {}, body: null };
+    const first = await call(body, {
+      "x-vercel-forwarded-for": "5.6.7.8",
+      "x-real-ip": "1.2.3.4",
+      "x-forwarded-for": "9.9.9.9"
+    });
+    expect(first.status).not.toBe(429);
+    const second = await call(body, {
+      "x-vercel-forwarded-for": "5.6.7.8",
+      "x-real-ip": "4.3.2.1",
+      "x-forwarded-for": "8.8.8.8"
+    });
+    expect(second.status).toBe(429);
+  });
 });

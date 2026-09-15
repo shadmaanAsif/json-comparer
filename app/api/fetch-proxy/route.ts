@@ -32,7 +32,14 @@ export async function POST(request: Request) {
       { error: "invalid_request", message: "The proxy request is too large." },
       { status: 413 }
     );
+  // On Vercel, x-vercel-forwarded-for and x-forwarded-for/x-real-ip are all set from the
+  // real connecting client and are not attacker-controllable by default (Vercel overwrites
+  // any client-supplied value); x-vercel-forwarded-for additionally survives an extra proxy
+  // placed in front of Vercel, which can rewrite the other two. Outside Vercel (bare
+  // `pnpm start`/local dev with no equivalent trusted reverse proxy), none of these headers
+  // are trustworthy and this rate limit is a soft, best-effort control only.
   const client =
+    request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip")?.trim() ||
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "unknown";

@@ -5,7 +5,7 @@ export class JsonParseError extends Error {
     public readonly side: "A" | "B",
     message: string
   ) {
-    super(`Response ${side} is not valid JSON: ${message}`);
+    super(`JSON is not valid: ${message}`);
     this.name = "JsonParseError";
   }
 }

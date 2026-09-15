@@ -11,6 +11,7 @@ import {
 } from "../utils/result-projections";
 import { buildRowActions } from "../utils/row-actions";
 import { buildSectionActions, type SectionFinding } from "../utils/section-actions";
+import { MissingFieldBadge } from "./MissingFieldBadge";
 import { ResultSectionMenu } from "./ResultSectionMenu";
 import { RowActionMenu } from "./RowActionMenu";
 import { ValueCell } from "./ValueCell";
@@ -196,7 +197,7 @@ export function ComparisonResults({
         </div>
 
         <p className="comparison-outcome" role="status" aria-live="polite">
-          {formatComparisonOutcome(counts.differences, comparisonDurationMs)}
+          {formatComparisonOutcome(counts.differences, counts.ignored, comparisonDurationMs)}
         </p>
 
         <div className="results-toolbar">
@@ -247,6 +248,7 @@ export function ComparisonResults({
             </div>
             <span className="shown-count">
               {counts.differences.visible} / {counts.differences.total} differences
+              {counts.ignored.visible > 0 ? ` (${counts.ignored.visible} ignored)` : ""}
             </span>
           </div>
         </div>
@@ -656,7 +658,7 @@ function MissingFindingGroup({
             </td>
             <td>
               <FindingPath finding={finding} />
-              <span className={`kind-pill ${finding.kind}`}>{findingLabel(finding)}</span>
+              <MissingFieldBadge kind={finding.kind === "added" ? "added" : "removed"} />
             </td>
             <td>
               <ValueCell value={finding.valueA} />

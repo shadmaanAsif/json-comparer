@@ -40,6 +40,13 @@ class TestWorker {
       })
     );
   }
+  fail(error: string, side?: "A" | "B") {
+    this.onmessage?.(
+      new MessageEvent<WorkerResponse>("message", {
+        data: { jobId: this.request!.jobId, ok: false, error, side }
+      })
+    );
+  }
 }
 
 beforeEach(() => {
@@ -106,6 +113,49 @@ describe("Comparer panel actions", () => {
     expect(detailsFor("Structure Schema Compare")).toHaveAttribute("open");
     expect(detailsFor("Missing Fields")).toHaveAttribute("open");
     expect(detailsFor("Differences")).not.toHaveAttribute("open");
+  });
+
+  it("shows ignored findings by default instead of requiring Show ignored to be turned on", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await compare(user);
+
+    expect(screen.getByRole("button", { name: "Show ignored" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  it("includes the ignored count in the workspace status bar after a successful comparison", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await compare(user);
+    const dialog = openPrice();
+    await user.click(within(dialog).getByRole("button", { name: "Ignore path" }));
+    act(() => TestWorker.instances.at(-1)!.complete());
+
+    expect(document.querySelector(".status.success")).toHaveTextContent(
+      "Showing 3 of 3 differences (1 ignored) in 12 ms."
+    );
+  });
+
+  it("labels a JSON parse failure with the side's display name, not its internal letter", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await user.click(screen.getByRole("button", { name: "Compare responses" }));
+    act(() =>
+      TestWorker.instances
+        .at(-1)!
+        .fail("JSON is not valid: Unexpected token o in JSON at position 1", "A")
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Baseline: JSON is not valid: Unexpected token o in JSON at position 1"
+    );
+    expect(screen.queryByText(/Response A/)).not.toBeInTheDocument();
   });
 
   it("shares Tree review, report selection and ignore/restore with the JSON panel", async () => {

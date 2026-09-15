@@ -45,9 +45,11 @@ export function selectSectionFindings(
 
 export function formatComparisonOutcome(
   count: VisibleTotalCount,
+  ignored: VisibleTotalCount,
   comparisonDurationMs: number
 ): string {
-  return `${count.visible} of ${count.total} differences shown in ${Math.round(comparisonDurationMs)} ms.`;
+  const ignoredClause = ignored.visible > 0 ? ` (${ignored.visible} ignored)` : "";
+  return `Showing ${count.visible} of ${count.total} differences${ignoredClause} in ${Math.round(comparisonDurationMs)} ms.`;
 }
 
 function matchesPath(path: Array<string | number>, query: string): boolean {

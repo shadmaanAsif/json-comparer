@@ -8,7 +8,15 @@ describe("parseJson", () => {
 
   it("reports the failing side", () => {
     expect(() => parseJson("{", "B")).toThrowError(JsonParseError);
-    expect(() => parseJson("{", "B")).toThrow(/Response B/);
+    let caught: unknown;
+    try {
+      parseJson("{", "B");
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(JsonParseError);
+    expect((caught as JsonParseError).side).toBe("B");
+    expect((caught as Error).message).not.toMatch(/Response/);
   });
 
   it("enforces byte limits", () => {

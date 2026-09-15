@@ -33,14 +33,24 @@ function renderControls(overrides: Partial<ComparisonControlsProps> = {}) {
 }
 
 describe("ComparisonControls", () => {
-  it("labels missing-field highlight directions as Only in Baseline and Only in Candidate", () => {
+  it("keeps the missing-fields highlight toggle simple, moving the Baseline/Candidate color legend to a hover detail", async () => {
+    const user = userEvent.setup();
     renderControls();
 
-    expect(
-      screen.getByRole("button", {
-        name: "Only in Baseline Only in Candidate Missing fields"
-      })
-    ).toBeVisible();
+    const toggle = screen.getByRole("button", { name: "Missing fields" });
+    expect(toggle).toBeVisible();
+    expect(toggle).not.toHaveTextContent("Only in Baseline");
+
+    const info = screen.getByRole("button", { name: "Missing-fields highlight colors" });
+    expect(info).toHaveAttribute(
+      "title",
+      "Only in Baseline is highlighted in red, Only in Candidate in green."
+    );
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    await user.hover(info);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Only in Baseline is highlighted in red, Only in Candidate in green."
+    );
   });
 
   it("warns that ignore rules don't help unordered array items match, only in that mode", () => {

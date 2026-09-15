@@ -55,7 +55,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   });
   const [busy, setBusy] = useState(false);
   const [pathFilter, setPathFilter] = useState("");
-  const [showIgnored, setShowIgnored] = useState(false);
+  const [showIgnored, setShowIgnored] = useState(true);
   const [showOnlyInA, setShowOnlyInA] = useState(true);
   const [showOnlyInB, setShowOnlyInB] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -184,6 +184,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             source: "comparison",
             message: formatComparisonOutcome(
               resultProjection.counts.differences,
+              resultProjection.counts.ignored,
               comparisonDurationMs
             )
           }
@@ -237,7 +238,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       if (!event.data.ok) {
         setResult(null);
         setDisplayLineMaps(null);
-        setStatus({ tone: "error", message: event.data.error });
+        setStatus({
+          tone: "error",
+          message: event.data.side
+            ? `${SIDE_LABELS[event.data.side]}: ${event.data.error}`
+            : event.data.error
+        });
         return;
       }
       setTextA(event.data.formattedA);

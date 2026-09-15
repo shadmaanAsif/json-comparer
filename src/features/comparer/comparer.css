@@ -1,5 +1,6 @@
 @import "./components/author-byline.css";
 @import "./components/ignore-path-selector.css";
+@import "./components/info-tooltip.css";
 @import "./components/panel-actions.css";
 @import "./components/result-section-menu.css";
 @import "./components/row-action-menu.css";
@@ -762,7 +763,22 @@
     inset 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent),
     0 5px 18px rgba(0, 0, 0, 0.16);
 }
-.missing-chip[aria-pressed="true"] {
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.missing-chip:has(.chip-toggle[aria-pressed="true"]) {
+  color: var(--text);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent),
+    0 5px 18px rgba(0, 0, 0, 0.16);
   border-color: color-mix(in srgb, var(--removed) 55%, var(--added));
   background: linear-gradient(
     110deg,
@@ -1220,6 +1236,13 @@ td pre {
 .kind-pill.type-changed {
   color: var(--type);
   background: color-mix(in srgb, var(--type) 12%, var(--surface));
+}
+.kind-pill.missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  background: var(--surface-2);
 }
 .ignored-pill {
   margin-left: 8px;

@@ -87,4 +87,39 @@ describe("fetch proxy route", () => {
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({ error: "blocked_target" });
   });
+  it("rejects credential forwarding combined with the wildcard allowlist", async () => {
+    process.env.FETCH_PROXY_ALLOWLIST = "*";
+    vi.stubEnv("FETCH_PROXY_ALLOW_CREDENTIALS", "true");
+    const response = await call({
+      url: "https://example.com",
+      method: "GET",
+      headers: {},
+      body: null
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ error: "blocked_target" });
+  });
+  it("rejects credential forwarding combined with the localhost exception", async () => {
+    process.env.FETCH_PROXY_ALLOWLIST = "api.example.com";
+    process.env.FETCH_PROXY_ALLOW_LOCALHOST = "true";
+    vi.stubEnv("FETCH_PROXY_ALLOW_CREDENTIALS", "true");
+    const response = await call({
+      url: "https://api.example.com",
+      method: "GET",
+      headers: {},
+      body: null
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ error: "blocked_target" });
+  });
+  it("prefers x-real-ip over a client-suppliable x-forwarded-for for the rate-limit key", async () => {
+    vi.stubEnv("FETCH_PROXY_RATE_LIMIT", "1");
+    const body = { url: "https://example.com", method: "GET", headers: {}, body: null };
+    const first = await call(body, { "x-real-ip": "1.2.3.4", "x-forwarded-for": "9.9.9.9" });
+    expect(first.status).not.toBe(429);
+    const second = await call(body, { "x-real-ip": "1.2.3.4", "x-forwarded-for": "8.8.8.8" });
+    expect(second.status).toBe(429);
+  });
 });

@@ -20,7 +20,12 @@ describe("fetch proxy security", () => {
     "fc00::1",
     "fe80::1",
     "ff02::1",
-    "::ffff:127.0.0.1"
+    "::ffff:127.0.0.1",
+    "::7f00:1",
+    "::ac10:1",
+    "::c0a8:101",
+    "::a9fe:a9fe",
+    "64:ff9b::7f00:1"
   ])("blocks restricted address %s", (address) => expect(isBlockedAddress(address)).toBe(true));
   it.each(["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"])("allows public address %s", (address) =>
     expect(isBlockedAddress(address)).toBe(false)

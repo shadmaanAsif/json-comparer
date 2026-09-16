@@ -37,7 +37,7 @@ const LEGACY_TOUR_SEEN_STORAGE_PREFIX = `${TOUR_SEEN_STORAGE_KEY}:`;
 const AUTO_START_DELAY_MS = 1_500;
 /** Pacing for the live demo so a viewer sees each stage rather than an instant jump. */
 const DEMO_INTRO_PAUSE_MS = 500;
-const DEMO_LOAD_PAUSE_MS = 700;
+const DEMO_SAMPLE_PAUSE_MS = 900;
 const DEMO_RESULT_PAUSE_MS = 400;
 const DEMO_POLL_INTERVAL_MS = 50;
 const DEMO_RESULT_TIMEOUT_MS = 6_000;
@@ -320,7 +320,24 @@ export function OnboardingTour({
       if (!isRunningDemoRef.current) return;
 
       onLoadDemoDataRef.current();
-      await wait(reduceMotion ? 0 : DEMO_LOAD_PAUSE_MS);
+      // The panels now hold the sample pair — narrate what's actually in them (not just that
+      // "a sample" loaded) before running the comparison, so the later result steps read as
+      // confirmation of something the viewer was already told to expect.
+      activeTour.highlight({
+        element: '[data-tour="json-inputs"]',
+        data: {
+          example:
+            'Baseline: amount 100, region "eu-west"\nCandidate: amount 150, no region, version "1"'
+        },
+        popover: {
+          title: "A live example, ready to compare",
+          description:
+            "Baseline and Candidate are filled in: amount changed, region disappeared, and meta.version flipped from a number to a string. Comparing next.",
+          side: "bottom",
+          align: "center"
+        }
+      });
+      await wait(reduceMotion ? 0 : DEMO_SAMPLE_PAUSE_MS);
       if (!isRunningDemoRef.current) return;
       onRunComparisonRef.current();
 

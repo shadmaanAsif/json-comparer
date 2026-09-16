@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Config, DriveStep } from "driver.js";
+import type { Config, DriveStep, DriverHook } from "driver.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { destroyTour, driveTour, driverMock } = vi.hoisted(() => ({
@@ -165,7 +165,7 @@ describe("OnboardingTour", () => {
     const config = driverMock.mock.calls[0]?.[0] as Config;
     expect(typeof config.overlayClickBehavior).toBe("function");
     expect(
-      (config.overlayClickBehavior as () => void)(undefined as never, {} as never, {} as never)
+      (config.overlayClickBehavior as DriverHook)(undefined, {} as DriveStep, {} as never)
     ).toBeUndefined();
     expect(destroyTour).not.toHaveBeenCalled();
   });

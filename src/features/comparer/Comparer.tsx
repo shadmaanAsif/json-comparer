@@ -457,7 +457,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           <span className="brand-mark" aria-hidden="true">{`{ }`}</span>
           <p className="eyebrow">Developer utility</p>
           <div className="hero-title-row">
-            <h1>JSON Comparer</h1>
+            <h1>Compare JSON Files</h1>
             {/* {displayAuthor && (
               <div className="author-byline">
                 <span className="author-avatar" aria-hidden="true">

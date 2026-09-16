@@ -1,4 +1,4 @@
-# JSON Comparer Development Guide
+# CompareFiles Development Guide
 
 This repository is a privacy-first Next.js application. Read `AGENTS.md` and `.agents/CONSTITUTION.md` before changing behavior or architecture. Those files are authoritative when this guide is incomplete. Read `.agents/EFFICIENCY.md` too — it covers what to read for a given question and when to run which verification commands, so this file doesn't have to repeat that guidance.
 

@@ -1,4 +1,4 @@
-# Architecture — JSON Comparer
+# Architecture — CompareFiles
 
 Status: Current implementation; explicitly marked P2 sections describe future options only.
 Decision baseline: local-first MVP with a narrowly scoped remote-fetch backend.

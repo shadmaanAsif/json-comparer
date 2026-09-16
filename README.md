@@ -1,4 +1,4 @@
-# JSON Comparer
+# CompareFiles
 
 A privacy-first, standalone web application for comparing JSON API responses. It was implemented from the product, architecture, technology, and delivery specifications in `Claude/json-response-comparer/docs`. Parsing and comparison run in a Web Worker in the browser; payloads are not uploaded.
 

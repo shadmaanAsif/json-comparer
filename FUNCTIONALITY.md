@@ -1,6 +1,6 @@
-# JSON Comparer — Functionality
+# CompareFiles — Functionality
 
-This file is the authoritative catalogue of functionality implemented in the JSON Comparer application. Update it whenever user-visible behavior changes. Planned requirements belong in `docs/reference/SRS.md`, while implementation gaps and source-specification parity are tracked in `docs/FEATURE_AUDIT.md`.
+This file is the authoritative catalogue of functionality implemented in the CompareFiles application. Update it whenever user-visible behavior changes. Planned requirements belong in `docs/reference/SRS.md`, while implementation gaps and source-specification parity are tracked in `docs/FEATURE_AUDIT.md`.
 
 ## Application identity
 

@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Config, DriveStep } from "driver.js";
+import type { Config, DriveStep, DriverHook } from "driver.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { destroyTour, driveTour, driverMock } = vi.hoisted(() => ({
@@ -155,6 +155,19 @@ describe("OnboardingTour", () => {
     expect(config.steps?.at(-3)?.popover?.description).toContain("structurally missing");
     expect(config.steps?.at(-2)?.popover?.description).toContain("review note");
     expect(config.steps?.at(-1)?.popover?.description).toContain("Baseline and Candidate values");
+  });
+
+  it("never closes or advances on an overlay click — only the close button or Done does", async () => {
+    const user = userEvent.setup();
+    renderTour();
+    await user.click(screen.getByRole("button", { name: "Guided tour" }));
+
+    const config = driverMock.mock.calls[0]?.[0] as Config;
+    expect(typeof config.overlayClickBehavior).toBe("function");
+    expect(
+      (config.overlayClickBehavior as DriverHook)(undefined, {} as DriveStep, {} as never)
+    ).toBeUndefined();
+    expect(destroyTour).not.toHaveBeenCalled();
   });
 
   it("turns off tour motion when the user requests reduced motion", async () => {

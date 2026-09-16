@@ -1,4 +1,4 @@
-# Implementation Plan — JSON Comparer
+# Implementation Plan — CompareFiles
 
 This is a delivery plan, not implementation. Estimates are relative engineering effort and must be recalibrated after unresolved SRS decisions and technical spikes.
 

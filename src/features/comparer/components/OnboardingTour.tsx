@@ -84,12 +84,13 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
     {
       element: '[data-tour="privacy"]',
       data: {
-        example: 'A: {"status":"ok"}\nB: {"status":"ok"} — compared locally'
+        example:
+          'Baseline: {"status":"ok"}\nCandidate: {"status":"okay"} — compared locally, never uploaded'
       },
       popover: {
-        title: "Compare JSON with confidence",
+        title: "Catch contract drift before it bites",
         description:
-          "This quick tour explains the full workflow. Your pasted files and comparisons stay in your browser; only an explicit URL or cURL import uses the restricted fetch service.",
+          "A renamed field, a flipped type, a value that quietly changed — this quick tour shows exactly how to catch it. Everything compares right here in your browser; only an explicit URL or cURL import touches the restricted fetch service.",
         side: "bottom",
         align: "end"
       }
@@ -382,7 +383,10 @@ export function OnboardingTour({
       smoothScroll: !reduceMotion,
       allowKeyboardControl: true,
       allowScroll: true,
-      overlayClickBehavior: "close",
+      // A no-op, not "close" or "nextStep": clicking the dimmed overlay must neither dismiss
+      // the tour nor skip a step. Only the popover's own close (X) button or "Done" on the
+      // last step should end it — allowClose stays at its default so both keep working.
+      overlayClickBehavior: () => {},
       disableActiveInteraction: true,
       skipMissingElement: true,
       showProgress: true,

@@ -157,6 +157,19 @@ describe("OnboardingTour", () => {
     expect(config.steps?.at(-1)?.popover?.description).toContain("Baseline and Candidate values");
   });
 
+  it("never closes or advances on an overlay click — only the close button or Done does", async () => {
+    const user = userEvent.setup();
+    renderTour();
+    await user.click(screen.getByRole("button", { name: "Guided tour" }));
+
+    const config = driverMock.mock.calls[0]?.[0] as Config;
+    expect(typeof config.overlayClickBehavior).toBe("function");
+    expect(
+      (config.overlayClickBehavior as () => void)(undefined as never, {} as never, {} as never)
+    ).toBeUndefined();
+    expect(destroyTour).not.toHaveBeenCalled();
+  });
+
   it("turns off tour motion when the user requests reduced motion", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     const user = userEvent.setup();

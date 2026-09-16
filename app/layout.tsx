@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "driver.js/dist/driver.css";
 import "./globals.css";
 import "@/features/comparer/comparer.css";
@@ -10,6 +10,7 @@ const structuredData = {
   name: SITE_NAME,
   description: SITE_DESCRIPTION,
   url: SITE_URL,
+  image: `${SITE_URL}/opengraph-image`,
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Any",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
@@ -29,13 +30,20 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: SITE_NAME,
     title: SITE_TITLE,
-    description: SITE_DESCRIPTION
+    description: SITE_DESCRIPTION,
+    locale: "en_US"
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION
   }
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#081018"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

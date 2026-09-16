@@ -1,9 +1,9 @@
 ---
 name: maintain-json-comparer
-description: Safely analyze, implement, refactor, test, review, or document changes in the JSON Comparer Next.js and TypeScript project. Use for comparison algorithms, JSON Pointer or ignore-rule behavior, Web Worker messaging, React comparer UI, exports, privacy and security controls, dependencies, architecture changes, accessibility, and release verification in this repository.
+description: Safely analyze, implement, refactor, test, review, or document changes in the CompareFiles Next.js and TypeScript project. Use for comparison algorithms, JSON Pointer or ignore-rule behavior, Web Worker messaging, React comparer UI, exports, privacy and security controls, dependencies, architecture changes, accessibility, and release verification in this repository.
 ---
 
-# Maintain JSON Comparer
+# Maintain CompareFiles
 
 ## Start with project authority
 

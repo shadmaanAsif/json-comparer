@@ -1,4 +1,4 @@
-# Software Requirements Specification — JSON Comparer
+# Software Requirements Specification — CompareFiles
 
 Status: Proposed baseline, 2026-08-21
 Source artifact: `/Users/shadmaan.asif/Downloads/index.html` (analysis input only)

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Maintain JSON Comparer"
-  short_description: "Safely evolve the JSON comparer project"
+  display_name: "Maintain CompareFiles"
+  short_description: "Safely evolve the CompareFiles project"
   default_prompt: "Use $maintain-json-comparer to implement and verify a change to this project."

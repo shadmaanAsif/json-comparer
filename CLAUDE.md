@@ -95,6 +95,7 @@ Keep these boundaries unless a measured responsibility change justifies moving t
 - Keep API handlers thin. Fetch security policy, DNS/IP restrictions, redirect validation, pinning, limits, and safe error mapping remain in `src/server/fetch/`.
 - Never log or persist payloads, URLs with query strings, headers, credentials, notes, or report contents.
 - Do not add dependencies unless existing platform capabilities are insufficient and the dependency is justified.
+- Whenever `OnboardingTour.tsx`'s steps, triggers, or copy change meaningfully, bump `TOUR_VERSION` in that file (see its in-file comment for why) so returning visitors are auto-replayed the update. Nothing enforces this automatically — it is easy to miss and has been missed before.
 
 ## Change workflow
 

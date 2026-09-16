@@ -6,7 +6,8 @@ import type { ReviewNote } from "../types";
 export function createReviewReport(
   findings: (Finding | StructureFinding)[],
   arrayMode: ArrayMode,
-  notes: Record<string, ReviewNote>
+  notes: Record<string, ReviewNote>,
+  keyFields: string[] = []
 ) {
   const noteLines = findings
     .filter((finding) => !finding.ignored)
@@ -23,7 +24,7 @@ export function createReviewReport(
         : [];
     });
   return (
-    createMarkdownReport(findings, arrayMode) +
+    createMarkdownReport(findings, arrayMode, keyFields) +
     (noteLines.length ? "\n## Review Notes\n\n" + noteLines.join("\n") : "")
   );
 }

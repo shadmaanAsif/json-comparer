@@ -45,6 +45,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
   const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
+  const [keyFields, setKeyFields] = useState<string[]>([]);
   const [ignorePaths, setIgnorePaths] = useState<string[]>([]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [displayLineMaps, setDisplayLineMaps] = useState<DisplayLineMaps | null>(null);
@@ -131,11 +132,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const options: ComparisonOptions = useMemo(
     () => ({
       arrayMode,
+      keyFields,
       ignorePatterns: ignorePaths,
       maxDepth: 256,
       maxFindings: 100_000
     }),
-    [arrayMode, ignorePaths]
+    [arrayMode, keyFields, ignorePaths]
   );
 
   const updateImportedInput = (side: ResponseSide, raw: string) => {
@@ -195,6 +197,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     result,
     projection: resultProjection,
     arrayMode,
+    keyFields,
     notes,
     selected,
     onStatus: setStatus
@@ -571,6 +574,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
 
         <ComparisonControls
           arrayMode={arrayMode}
+          keyFields={keyFields}
           ignorePaths={ignorePaths}
           ignorePathSuggestions={ignorePathSuggestions}
           highlightVisibility={highlightToggles}
@@ -578,6 +582,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           status={displayedStatus}
           onArrayModeChange={(mode) => {
             setArrayMode(mode);
+            invalidateComparison();
+          }}
+          onKeyFieldsChange={(fields) => {
+            setKeyFields(fields);
             invalidateComparison();
           }}
           onIgnorePathsChange={setIgnorePaths}

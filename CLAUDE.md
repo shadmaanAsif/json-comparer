@@ -84,7 +84,7 @@ Keep these boundaries unless a measured responsibility change justifies moving t
 - Keep raw JSON editors unwrapped and derive highlight, gutter, visibility, and navigation geometry from rendered textarea metrics. Centralize shared line-height and padding CSS variables; do not introduce independent pixel estimates or fixed navigation offsets.
 - Center programmatic finding navigation within the current editor viewport, focus with scroll prevention, and explicitly synchronize the partner editor so compact and expanded modes behave identically.
 - Apply automatic display alignment only after explicit whole-value actions (Compare, paste, upload, remote fetch, Load Sample) and only when both panels contain valid JSON. Ordinary typing must remain uninterrupted.
-- Preserve ordered/unordered array modes, typed paths, JSON Pointer identity, ignore behavior, limits, and truncation signals.
+- Preserve ordered/unordered/keyed array modes, typed paths, JSON Pointer identity, ignore behavior, limits, and truncation signals. Keyed mode pairs object-array items by a user-supplied key field and falls back to unordered matching when a key cannot pair items unambiguously.
 - Ignore matching is prefix-based: an exact path includes its descendants, `*` consumes one segment and includes the matched child subtree when terminal, and terminal `**` remains an explicit recursive form. Preserve dotted-path and JSON Pointer support.
 
 ## UI and API practices

@@ -21,6 +21,7 @@ export interface ReportExportOptions {
   result: ComparisonResult | null;
   projection: ComparisonResultProjection | null;
   arrayMode: ArrayMode;
+  keyFields: string[];
   notes: Record<string, ReviewNote>;
   selected: ReadonlySet<string>;
   onStatus: (status: WorkspaceStatus) => void;
@@ -35,6 +36,7 @@ export function useReportExports({
   result,
   projection,
   arrayMode,
+  keyFields,
   notes,
   selected,
   onStatus
@@ -42,7 +44,7 @@ export function useReportExports({
   const [preview, setPreview] = useState<ExportPreviewData | null>(null);
 
   const publish = (filename: string, findings: (Finding | StructureFinding)[], message: string) => {
-    const content = createReviewReport(findings, arrayMode, notes);
+    const content = createReviewReport(findings, arrayMode, notes, keyFields);
     downloadMarkdown(filename, content);
     setPreview({ filename, content });
     onStatus({ tone: "success", message });

@@ -107,8 +107,10 @@ export function getCounterpart(
   matchedPointers: Record<string, string> = {}
 ): PanelField | undefined {
   const counterpart = other.byPointer.get(field.pointer);
+  // Both unordered and keyed break index correspondence between sides, so a within-array
+  // field's counterpart must be resolved through arrayMatches rather than by identical pointer.
   if (
-    arrayMode === "unordered" &&
+    arrayMode !== "ordered" &&
     (own.byPointer.get(field.pointer)?.withinArray || counterpart?.withinArray)
   ) {
     const matched = resolveMatchedPointer(field.pointer, matchedPointers);

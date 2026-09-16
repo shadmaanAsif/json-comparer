@@ -11,6 +11,7 @@ import type {
 
 const defaultOptions: ComparisonOptions = {
   arrayMode: "ordered",
+  keyFields: [],
   ignorePatterns: [],
   maxDepth: 256,
   maxFindings: 100_000
@@ -36,6 +37,38 @@ function canonical(value: JsonValue): string {
 
 function isJsonObject(value: JsonValue): value is Record<string, JsonValue> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isPrimitiveValue(value: JsonValue): boolean {
+  return value === null || typeof value !== "object";
+}
+
+// A key field is usable for keyed matching on one side only when every item is an object that
+// carries the field with a primitive value, and those values are unique within the side. Any
+// other shape (non-object item, missing key, object/array key value, duplicate value, or no
+// items at all) makes the key unusable, and keyed matching then falls back to unordered.
+function isUsableKeyField(items: JsonValue[], field: string): boolean {
+  if (!items.length) return false;
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (!isJsonObject(item) || !(field in item)) return false;
+    const value = item[field]!;
+    if (!isPrimitiveValue(value)) return false;
+    const canon = canonical(value);
+    if (seen.has(canon)) return false;
+    seen.add(canon);
+  }
+  return true;
+}
+
+function selectKeyField(
+  itemsA: JsonValue[],
+  itemsB: JsonValue[],
+  candidates: string[]
+): string | undefined {
+  return candidates.find(
+    (field) => isUsableKeyField(itemsA, field) && isUsableKeyField(itemsB, field)
+  );
 }
 
 export function compareJson(
@@ -99,6 +132,67 @@ export function compareJson(
     return true;
   };
 
+  // Unordered multiset matching by exact canonical equality. Matched items are canonically
+  // equal, so they need no further diff; only the A→B pointer pairing is recorded.
+  const matchUnordered = (itemsA: JsonValue[], itemsB: JsonValue[], basePath: PathSegment[]) => {
+    const buckets = new Map<string, Array<{ value: JsonValue; index: number }>>();
+    itemsB.forEach((value, index) => {
+      const key = canonical(value);
+      buckets.set(key, [...(buckets.get(key) ?? []), { value, index }]);
+    });
+    itemsA.forEach((value, index) => {
+      const key = canonical(value);
+      const matches = buckets.get(key);
+      const consumed = matches?.length ? matches.shift() : undefined;
+      if (consumed) {
+        arrayMatches[toJsonPointer([...basePath, index])] = toJsonPointer([
+          ...basePath,
+          consumed.index
+        ]);
+      } else {
+        add("removed", [...basePath, index], value);
+      }
+    });
+    for (const matches of buckets.values()) {
+      for (const match of matches) add("added", [...basePath, match.index], undefined, match.value);
+    }
+  };
+
+  // Keyed matching pairs items by their key field value, then diffs each pair through the
+  // normal engine (so a one-field difference surfaces as a field-level `changed`, not a
+  // whole-object removed+added). Uniqueness is guaranteed by selectKeyField, so each key
+  // value maps to at most one item per side.
+  const matchKeyed = (
+    itemsA: JsonValue[],
+    itemsB: JsonValue[],
+    basePath: PathSegment[],
+    depth: number,
+    field: string
+  ) => {
+    const bByKey = new Map<string, { item: JsonValue; index: number }>();
+    itemsB.forEach((item, index) => {
+      bByKey.set(canonical((item as Record<string, JsonValue>)[field]!), { item, index });
+    });
+    const matchedB = new Set<number>();
+    itemsA.forEach((item, index) => {
+      const key = canonical((item as Record<string, JsonValue>)[field]!);
+      const match = bByKey.get(key);
+      if (match) {
+        matchedB.add(match.index);
+        arrayMatches[toJsonPointer([...basePath, index])] = toJsonPointer([
+          ...basePath,
+          match.index
+        ]);
+        jobs.push({ a: item, b: match.item, path: [...basePath, index], depth: depth + 1 });
+      } else {
+        add("removed", [...basePath, index], item);
+      }
+    });
+    itemsB.forEach((item, index) => {
+      if (!matchedB.has(index)) add("added", [...basePath, index], undefined, item);
+    });
+  };
+
   while (jobs.length > 0 && !truncated) {
     const job = jobs.pop()!;
     if (job.depth > options.maxDepth)
@@ -123,29 +217,15 @@ export function compareJson(
     }
 
     if (Array.isArray(job.a) && Array.isArray(job.b)) {
-      if (options.arrayMode === "unordered") {
-        const buckets = new Map<string, Array<{ value: JsonValue; index: number }>>();
-        job.b.forEach((value, index) => {
-          const key = canonical(value);
-          buckets.set(key, [...(buckets.get(key) ?? []), { value, index }]);
-        });
-        job.a.forEach((value, index) => {
-          const key = canonical(value);
-          const matches = buckets.get(key);
-          const consumed = matches?.length ? matches.shift() : undefined;
-          if (consumed) {
-            arrayMatches[toJsonPointer([...job.path, index])] = toJsonPointer([
-              ...job.path,
-              consumed.index
-            ]);
-          } else {
-            add("removed", [...job.path, index], value);
-          }
-        });
-        for (const matches of buckets.values()) {
-          for (const match of matches)
-            add("added", [...job.path, match.index], undefined, match.value);
+      if (options.arrayMode === "keyed") {
+        const field = selectKeyField(job.a, job.b, options.keyFields);
+        if (field !== undefined) {
+          matchKeyed(job.a, job.b, job.path, job.depth, field);
+        } else {
+          matchUnordered(job.a, job.b, job.path);
         }
+      } else if (options.arrayMode === "unordered") {
+        matchUnordered(job.a, job.b, job.path);
       } else {
         const length = Math.max(job.a.length, job.b.length);
         for (let index = length - 1; index >= 0; index -= 1) {

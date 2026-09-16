@@ -9,14 +9,19 @@ function printable(value: unknown): string {
 
 export function createMarkdownReport(
   findings: (Finding | StructureFinding)[],
-  arrayMode: ArrayMode
+  arrayMode: ArrayMode,
+  keyFields: string[] = []
 ): string {
   const actionable = findings.filter((finding) => !finding.ignored);
+  const arrayModeLine =
+    arrayMode === "keyed" && keyFields.length
+      ? `Array mode: keyed (key fields: ${keyFields.join(", ")})`
+      : `Array mode: ${arrayMode}`;
   const lines = [
     "# JSON Comparison Report",
     "",
     `Generated: ${new Date().toISOString()}`,
-    `Array mode: ${arrayMode}`,
+    arrayModeLine,
     `Actionable findings: ${actionable.length}`,
     `Ignored findings: ${findings.length - actionable.length}`,
     "",

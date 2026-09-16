@@ -822,6 +822,27 @@
 .segmented label:has(input:focus-visible) {
   outline: 3px solid var(--accent);
 }
+.key-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+.key-field > label {
+  font-size: 0.77rem;
+  font-weight: 750;
+}
+.key-field small {
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 8px;
+}
+.key-field-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  background: var(--input-bg);
+}
 .ignore-field {
   display: grid;
   gap: 7px;

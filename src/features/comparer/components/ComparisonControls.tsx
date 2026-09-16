@@ -1,10 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import type { ArrayMode } from "@/domain/comparison/types";
 import type { WorkspaceStatus } from "../types";
 import { ONLY_IN_LABELS } from "../constants";
 import { IgnorePathSelector } from "./IgnorePathSelector";
 import { InfoTooltipButton } from "./InfoTooltipButton";
+
+function parseKeyFields(text: string): string[] {
+  return text
+    .split(/[\s,]+/)
+    .map((field) => field.trim())
+    .filter(Boolean);
+}
 
 export interface HighlightVisibility {
   missing: boolean;
@@ -14,12 +22,14 @@ export interface HighlightVisibility {
 
 export interface ComparisonControlsProps {
   arrayMode: ArrayMode;
+  keyFields: string[];
   ignorePaths: string[];
   ignorePathSuggestions: string[];
   highlightVisibility: HighlightVisibility;
   isComparing: boolean;
   status: WorkspaceStatus;
   onArrayModeChange: (mode: ArrayMode) => void;
+  onKeyFieldsChange: (fields: string[]) => void;
   onIgnorePathsChange: (paths: string[]) => void;
   onApplyIgnorePaths: (paths: string[]) => void;
   onHighlightVisibilityChange: (value: HighlightVisibility) => void;
@@ -31,12 +41,14 @@ export interface ComparisonControlsProps {
 
 export function ComparisonControls({
   arrayMode,
+  keyFields,
   ignorePaths,
   ignorePathSuggestions,
   highlightVisibility,
   isComparing,
   status,
   onArrayModeChange,
+  onKeyFieldsChange,
   onIgnorePathsChange,
   onApplyIgnorePaths,
   onHighlightVisibilityChange,
@@ -45,6 +57,7 @@ export function ComparisonControls({
   onLoadSample,
   onClear
 }: ComparisonControlsProps) {
+  const [keyFieldsText, setKeyFieldsText] = useState(keyFields.join(", "));
   const toggleHighlight = (category: keyof HighlightVisibility) => {
     onHighlightVisibilityChange({
       ...highlightVisibility,
@@ -101,7 +114,41 @@ export function ComparisonControls({
               />
               Unordered arrays
             </label>
+            <label>
+              <input
+                type="radio"
+                name="array-mode"
+                value="keyed"
+                checked={arrayMode === "keyed"}
+                onChange={() => onArrayModeChange("keyed")}
+              />
+              Keyed arrays
+            </label>
           </fieldset>
+          {arrayMode === "keyed" && (
+            <div className="key-field">
+              <label htmlFor="key-fields-input">
+                Key fields{" "}
+                <small>comma or space separated; the first usable key pairs array items</small>
+              </label>
+              <input
+                id="key-fields-input"
+                type="text"
+                className="key-field-input"
+                value={keyFieldsText}
+                placeholder="id, uuid, key"
+                disabled={isComparing}
+                onChange={(event) => {
+                  setKeyFieldsText(event.target.value);
+                  onKeyFieldsChange(parseKeyFields(event.target.value));
+                }}
+              />
+              <p className="ignore-field-note">
+                Object arrays are paired by the first key field present with a unique value on every
+                item of each side. Arrays without a usable key fall back to Unordered matching.
+              </p>
+            </div>
+          )}
         </div>
         <div className="ignore-field" data-tour="ignore-paths">
           <label htmlFor="ignore-paths-input">

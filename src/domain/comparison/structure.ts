@@ -62,7 +62,10 @@ export function compareStructure(
           "Baseline has no first item to use as the schema reference."
         );
       }
-      if (arrayMode === "unordered") {
+      // Keyed mode uses the same order-independent union-of-keys schema as unordered: keyed
+      // pairs items by value for the value diff, but inferring schema per index would still
+      // impose an arbitrary correspondence, so schema stays order-independent here.
+      if (arrayMode !== "ordered") {
         if (job.valueA.length) {
           compareArrayItemUnion(job.valueA, job.valueB, job.path, addFinding);
         }

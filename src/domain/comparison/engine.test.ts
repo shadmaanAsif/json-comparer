@@ -262,3 +262,185 @@ describe("compareJson", () => {
     );
   });
 });
+
+describe("compareJson keyed arrays", () => {
+  it("pairs reordered items by key and surfaces a one-field difference as a single change", () => {
+    const result = compareJson(
+      {
+        users: [
+          { id: 1, role: "admin" },
+          { id: 2, role: "editor" }
+        ]
+      },
+      {
+        users: [
+          { id: 2, role: "viewer" },
+          { id: 1, role: "admin" }
+        ]
+      },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    expect(result.counts).toEqual({ added: 0, removed: 0, changed: 1, "type-changed": 0 });
+    // Anchored at Response A's index for the id:2 item (A index 1), not B's position.
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        kind: "changed",
+        pointer: "/users/1/role",
+        valueA: "editor",
+        valueB: "viewer"
+      })
+    ]);
+  });
+
+  it("reports a key present on only one side as removed or added", () => {
+    const result = compareJson(
+      { users: [{ id: 1 }, { id: 2 }] },
+      { users: [{ id: 2 }, { id: 3 }] },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    expect(result.findings).toHaveLength(2);
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "removed", pointer: "/users/0", valueA: { id: 1 } }),
+        expect.objectContaining({ kind: "added", pointer: "/users/1", valueB: { id: 3 } })
+      ])
+    );
+  });
+
+  it("exposes matched item pointers by key, even when reordered", () => {
+    const result = compareJson(
+      {
+        items: [
+          { id: 1, v: "a" },
+          { id: 2, v: "b" }
+        ]
+      },
+      {
+        items: [
+          { id: 2, v: "b" },
+          { id: 1, v: "a" }
+        ]
+      },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    expect(result.findings).toHaveLength(0);
+    expect(result.arrayMatches).toEqual({ "/items/0": "/items/1", "/items/1": "/items/0" });
+  });
+
+  it("uses the first usable candidate key in preference order", () => {
+    const result = compareJson(
+      { rows: [{ uuid: "x", n: 1 }] },
+      { rows: [{ uuid: "x", n: 2 }] },
+      { arrayMode: "keyed", keyFields: ["id", "uuid"] }
+    );
+    expect(result.counts.changed).toBe(1);
+    expect(result.findings).toEqual([
+      expect.objectContaining({ kind: "changed", pointer: "/rows/0/n" })
+    ]);
+  });
+
+  it("recurses into nested keyed arrays", () => {
+    const result = compareJson(
+      { groups: [{ id: 1, members: [{ id: 10, role: "a" }] }] },
+      { groups: [{ id: 1, members: [{ id: 10, role: "b" }] }] },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    expect(result.counts.changed).toBe(1);
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        kind: "changed",
+        pointer: "/groups/0/members/0/role",
+        valueA: "a",
+        valueB: "b"
+      })
+    ]);
+  });
+
+  it("produces identical findings regardless of Candidate item order", () => {
+    const a = {
+      users: [
+        { id: 1, role: "admin" },
+        { id: 2, role: "editor" },
+        { id: 3, role: "x" }
+      ]
+    };
+    const inOrder = compareJson(
+      a,
+      {
+        users: [
+          { id: 1, role: "admin" },
+          { id: 2, role: "manager" },
+          { id: 3, role: "x" }
+        ]
+      },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    const shuffled = compareJson(
+      a,
+      {
+        users: [
+          { id: 3, role: "x" },
+          { id: 2, role: "manager" },
+          { id: 1, role: "admin" }
+        ]
+      },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    const normalize = (findings: typeof inOrder.findings) =>
+      findings.map((finding) => [finding.kind, finding.pointer]).sort();
+    expect(normalize(inOrder.findings)).toEqual([["changed", "/users/1/role"]]);
+    expect(normalize(shuffled.findings)).toEqual(normalize(inOrder.findings));
+    expect(shuffled.counts).toEqual(inOrder.counts);
+  });
+
+  it("falls back to unordered matching when the key value is duplicated on a side", () => {
+    const result = compareJson(
+      {
+        items: [
+          { id: 1, v: "a" },
+          { id: 1, v: "b" }
+        ]
+      },
+      {
+        items: [
+          { id: 1, v: "a" },
+          { id: 1, v: "c" }
+        ]
+      },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    // No field-level change: the ambiguous item is reported as a whole-object removed + added,
+    // exactly as unordered mode would, and only the canonically-equal item matches.
+    expect(result.counts).toMatchObject({ changed: 0, removed: 1, added: 1 });
+    expect(result.arrayMatches).toEqual({ "/items/0": "/items/0" });
+  });
+
+  it("falls back to unordered matching when items are not objects", () => {
+    const result = compareJson(
+      { tags: ["a", "b"] },
+      { tags: ["b", "c"] },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    expect(result.counts).toMatchObject({ changed: 0, removed: 1, added: 1 });
+  });
+
+  it("falls back to unordered matching when the key is missing on some items", () => {
+    const result = compareJson(
+      { items: [{ id: 1, v: 1 }, { v: 2 }] },
+      { items: [{ id: 1, v: 9 }, { v: 2 }] },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    // A usable key requires the field on every item; the keyless second item forces fallback,
+    // so the id:1 value difference shows as removed + added rather than a change.
+    expect(result.counts).toMatchObject({ changed: 0, removed: 1, added: 1 });
+  });
+
+  it("falls back to unordered matching when the key value is not a primitive", () => {
+    const result = compareJson(
+      { items: [{ id: { n: 1 }, v: 1 }] },
+      { items: [{ id: { n: 1 }, v: 2 }] },
+      { arrayMode: "keyed", keyFields: ["id"] }
+    );
+    expect(result.counts).toMatchObject({ changed: 0, removed: 1, added: 1 });
+  });
+});

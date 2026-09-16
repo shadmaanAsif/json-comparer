@@ -12,12 +12,14 @@ afterEach(() => {
 function renderControls(overrides: Partial<ComparisonControlsProps> = {}) {
   const props: ComparisonControlsProps = {
     arrayMode: "ordered",
+    keyFields: [],
     ignorePaths: ["meta.timestamp"],
     ignorePathSuggestions: ["meta.timestamp", "data.amount", "data.currency"],
     highlightVisibility: { missing: true, structure: true, differences: true },
     isComparing: false,
     status: { tone: "idle", message: "Ready to compare." },
     onArrayModeChange: vi.fn(),
+    onKeyFieldsChange: vi.fn(),
     onIgnorePathsChange: vi.fn(),
     onApplyIgnorePaths: vi.fn(),
     onHighlightVisibilityChange: vi.fn(),
@@ -62,6 +64,33 @@ describe("ComparisonControls", () => {
     expect(screen.getByText(/don't help two array items match/)).toBeVisible();
   });
 
+  it("offers a keyed array mode that selects the mode when chosen", () => {
+    const onArrayModeChange = vi.fn();
+    renderControls({ onArrayModeChange });
+
+    fireEvent.click(screen.getByRole("radio", { name: "Keyed arrays" }));
+    expect(onArrayModeChange).toHaveBeenCalledWith("keyed");
+  });
+
+  it("shows the key-fields input only in keyed mode and emits parsed key names", () => {
+    const onKeyFieldsChange = vi.fn();
+    renderControls({ arrayMode: "ordered", onKeyFieldsChange });
+    expect(screen.queryByLabelText(/Key fields/)).not.toBeInTheDocument();
+
+    cleanup();
+    renderControls({ arrayMode: "keyed", onKeyFieldsChange });
+    const input = screen.getByLabelText(/Key fields/);
+    expect(input).toBeVisible();
+
+    fireEvent.change(input, { target: { value: "id, uuid  key" } });
+    expect(onKeyFieldsChange).toHaveBeenLastCalledWith(["id", "uuid", "key"]);
+  });
+
+  it("seeds the key-fields input from existing key fields", () => {
+    renderControls({ arrayMode: "keyed", keyFields: ["id", "uuid"] });
+    expect(screen.getByLabelText(/Key fields/)).toHaveValue("id, uuid");
+  });
+
   it("searches detected paths and maintains unique removable chips", async () => {
     const user = userEvent.setup();
     const onApplyIgnorePaths = vi.fn();
@@ -71,6 +100,8 @@ describe("ComparisonControls", () => {
       return (
         <ComparisonControls
           arrayMode="ordered"
+          keyFields={[]}
+          onKeyFieldsChange={vi.fn()}
           ignorePaths={ignorePaths}
           ignorePathSuggestions={["meta.timestamp", "data.amount", "data.currency"]}
           highlightVisibility={{ missing: true, structure: true, differences: true }}
@@ -137,6 +168,8 @@ describe("ComparisonControls", () => {
       return (
         <ComparisonControls
           arrayMode="ordered"
+          keyFields={[]}
+          onKeyFieldsChange={vi.fn()}
           ignorePaths={ignorePaths}
           ignorePathSuggestions={[]}
           highlightVisibility={{ missing: true, structure: true, differences: true }}
@@ -185,6 +218,8 @@ describe("ComparisonControls", () => {
       return (
         <ComparisonControls
           arrayMode="ordered"
+          keyFields={[]}
+          onKeyFieldsChange={vi.fn()}
           ignorePaths={ignorePaths}
           ignorePathSuggestions={[]}
           highlightVisibility={{ missing: true, structure: true, differences: true }}

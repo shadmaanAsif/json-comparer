@@ -1,6 +1,6 @@
 # CompareFiles Constitution
 
-Version: 3.0.1
+Version: 3.1.0
 Ratified: 2026-08-21
 Applies to: humans, coding agents, automated agents, repository-local skills, and generated changes.
 
@@ -21,8 +21,8 @@ If this constitution conflicts with an ordinary task description, stop and surfa
 ## Article II — Correctness is a product feature
 
 1. The domain model owns comparison behavior; UI rendering must not redefine it.
-2. Ordered and unordered arrays are distinct, explicit modes. Never silently change their default or meaning.
-3. Unordered arrays are multisets: duplicates count. Matching uses canonical equality and must not invent semantic pairing between unrelated unmatched objects.
+2. Ordered, unordered, and keyed arrays are distinct, explicit modes. Never silently change their default or meaning; ordered is the default.
+3. Unordered arrays are multisets: duplicates count. Matching uses canonical equality and must not invent semantic pairing between unrelated unmatched objects. Keyed matching is user-directed: it pairs object-array items by an explicit key field and falls back to unordered matching whenever a key cannot pair items unambiguously, so it never invents a pairing either.
 4. Internal field identity uses typed path segments and RFC 6901 JSON Pointer. Human-readable dotted paths are presentation only.
 5. Findings distinguish added, removed, changed, and type-changed values.
 6. Ignore rules affect presentation and actionable counts without deleting the underlying finding.
@@ -121,6 +121,7 @@ Every amendment includes rationale, affected requirements/architecture/tests, mi
 
 ## Amendment record
 
+- 3.1.0 (2026-09-16): With explicit user approval, adds "keyed" as a third, opt-in array comparison mode alongside ordered and unordered. Keyed matching pairs object-array items by a user-supplied key field and falls back to unordered matching when a key cannot pair items unambiguously, so the Article II.3 guarantee against invented pairing is preserved. Existing modes, the ordered default, privacy, security, and architecture are unchanged. See `docs/decisions/ADR-004-keyed-array-matching.md`.
 - 3.0.1 (2026-09-16): Renamed the project and product from JSON Comparer to CompareFiles with explicit user approval. This naming-only amendment changes no behavior, privacy, security, architecture, or rollout requirements.
 - 3.0.0 (2026-09-09): With explicit user approval, splits verification into fast local checks (tests, lint, format, standards audit) that may run by default, and opt-in checks (type checking, the production build, a manual browser/preview check) that run only when explicitly asked — for interactive and autonomous agents alike. Coverage requirements (Article VII.1-3) and the prohibition on weakening tests to pass a gate (VII.5) are unchanged. See `docs/decisions/ADR-003-opt-in-verification.md`.
 - 2.1.0 (2026-08-26): With explicit user approval, permits an opt-in local-development exception for HTTP/HTTPS loopback APIs. Production, non-loopback app origins, private LAN, metadata, deceptive DNS, and public HTTP remain prohibited. See `docs/decisions/ADR-002-localhost-fetch.md`.

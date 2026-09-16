@@ -247,8 +247,9 @@ describe("OnboardingTour", () => {
 
       // Fake timers only from here — the click above needs real ones for userEvent.
       vi.useFakeTimers();
+      const highlight = vi.fn();
       panelActionsStep.popover?.onNextClick?.(undefined, panelActionsStep, {
-        driver: { moveNext, highlight: vi.fn() } as never
+        driver: { moveNext, highlight } as never
       } as never);
 
       await act(async () => {
@@ -256,9 +257,15 @@ describe("OnboardingTour", () => {
       });
       expect(onLoadDemoData).toHaveBeenCalledOnce();
       expect(onRunComparison).not.toHaveBeenCalled();
+      // Once loaded, the demo narrates the actual sample (not just "a sample loaded") before
+      // running the comparison.
+      const sampleHighlight = highlight.mock.calls.at(-1)?.[0];
+      expect(sampleHighlight?.element).toBe('[data-tour="json-inputs"]');
+      expect(sampleHighlight?.popover?.title).toBe("A live example, ready to compare");
+      expect(sampleHighlight?.popover?.description).toContain("amount changed");
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(700);
+        await vi.advanceTimersByTimeAsync(900);
       });
       expect(onRunComparison).toHaveBeenCalledOnce();
       expect(moveNext).not.toHaveBeenCalled();

@@ -33,21 +33,21 @@ describe("Comparer JSON panel layout", () => {
     expect(screen.getByRole("button", { name: "Switch to dark theme" })).toBeVisible();
   });
 
-  it("expands and collapses both JSON panels together", async () => {
+  it("shows both JSON panels expanded by default, and collapses them together", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
     const panels = screen.getByLabelText("JSON response inputs");
-    const expandButton = screen.getByRole("button", { name: "Expand panels" });
-
-    expect(panels).not.toHaveClass("panels-expanded");
-    expect(expandButton).toHaveAttribute("aria-expanded", "false");
-
-    await user.click(expandButton);
+    const collapseButton = screen.getByRole("button", { name: "Collapse panels" });
 
     expect(panels).toHaveClass("panels-expanded");
-    expect(screen.getByRole("button", { name: "Collapse panels" })).toHaveAttribute(
+    expect(collapseButton).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(collapseButton);
+
+    expect(panels).not.toHaveClass("panels-expanded");
+    expect(screen.getByRole("button", { name: "Expand panels" })).toHaveAttribute(
       "aria-expanded",
-      "true"
+      "false"
     );
   });
 });

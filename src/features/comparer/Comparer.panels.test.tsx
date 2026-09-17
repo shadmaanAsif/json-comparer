@@ -99,9 +99,20 @@ function openPrice() {
   fireEvent.keyDown(editor, { key: "F10", shiftKey: true });
   return screen.getByRole("dialog", { name: "Line actions · Baseline" });
 }
+// Without a comparison index, opening actions on the current line is a guaranteed no-op —
+// asserted directly rather than through a disabled button, since line actions no longer have
+// one dedicated toolbar control.
+function expectLineActionsUnavailable() {
+  const editor = screen.getByRole("textbox", {
+    name: "JSON for Baseline"
+  }) as HTMLTextAreaElement;
+  editor.focus();
+  fireEvent.keyDown(editor, { key: "F10", shiftKey: true });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+}
 
 describe("Comparer panel actions", () => {
-  it("expands Structure Schema Compare and Missing Fields by default, but not Differences", async () => {
+  it("expands all three result sections by default, including Differences", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
     fillInputs();
@@ -112,7 +123,7 @@ describe("Comparer panel actions", () => {
         ?.closest("details");
     expect(detailsFor("Structure Schema Compare")).toHaveAttribute("open");
     expect(detailsFor("Missing Fields")).toHaveAttribute("open");
-    expect(detailsFor("Differences")).not.toHaveAttribute("open");
+    expect(detailsFor("Differences")).toHaveAttribute("open");
   });
 
   it("shows ignored findings by default instead of requiring Show ignored to be turned on", async () => {
@@ -257,7 +268,12 @@ describe("Comparer panel actions", () => {
     await user.click(
       within(screen.getByRole("region", { name: "Baseline" })).getByRole("tab", { name: "Tree" })
     );
-    await user.click(screen.getByRole("button", { name: "Actions for field /items/0/id" }));
+    // Panels share one view mode now, so both switch to Tree — scope to Baseline's own tree.
+    await user.click(
+      within(screen.getByRole("region", { name: "Baseline" })).getByRole("button", {
+        name: "Actions for field /items/0/id"
+      })
+    );
     const dialog = screen.getByRole("dialog", { name: "Field actions · Baseline" });
     expect(
       within(dialog).getByRole("button", { name: "Jump to corresponding field" })
@@ -291,7 +307,7 @@ describe("Comparer panel actions", () => {
   it("reviews and selects a changed field, reveals its result, and exports the annotation", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
-    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
+    expectLineActionsUnavailable();
     fillInputs();
     await compare(user);
     const dialog = openPrice();
@@ -343,8 +359,10 @@ describe("Comparer panel actions", () => {
     await user.click(within(dialog).getByRole("button", { name: "Restore path" }));
     expect(TestWorker.instances.at(-1)?.request?.options.ignorePatterns).toEqual([]);
     act(() => TestWorker.instances.at(-1)!.complete());
+    // A full reset (rather than a live-recompared edit) is what still discards review state.
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expectLineActionsUnavailable();
     fillInputs();
-    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
     await compare(user);
     dialog = openPrice();
     await user.click(within(dialog).getByRole("button", { name: "Add a note" }));
@@ -366,7 +384,7 @@ describe("Comparer panel actions", () => {
     expect(screen.getByRole("searchbox", { name: "Filter by path" })).toHaveValue("");
   });
 
-  it("cancels stale worker results when editing or changing array mode", async () => {
+  it("discards a stale in-flight comparison and live-recompares the edited text instead", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
     fillInputs();
@@ -375,18 +393,37 @@ describe("Comparer panel actions", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
       target: { value: '{"newInput":1}' }
     });
-    expect(first.terminate).toHaveBeenCalled();
+    // The live recompare is only queued (debounced), not started yet — but first's response is
+    // still discarded on arrival because it no longer matches the current input.
+    expect(first.terminate).not.toHaveBeenCalled();
     act(() => first.complete());
     expect(screen.getByRole("textbox", { name: "JSON for Baseline" })).toHaveValue(
       '{"newInput":1}'
     );
     expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
-    await compare(user);
-    act(() => first.onerror?.());
+    // Once the debounce elapses, a fresh comparison runs automatically for the edited text.
+    await waitFor(() => expect(TestWorker.instances.at(-1)).not.toBe(first), { timeout: 2000 });
+    expect(first.terminate).toHaveBeenCalled();
+    const second = TestWorker.instances.at(-1)!;
+    expect(second.request?.textA).toBe('{"newInput":1}');
+    act(() => second.complete());
     expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+  });
+
+  it("clears results and disables line actions when array mode changes after a compare", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await compare(user);
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+    const stale = TestWorker.instances.at(-1)!;
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
-    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
+    // A superseded worker's own error callback firing late must not resurrect stale results
+    // or clobber the "inputs changed" status with a spurious worker-crash message.
+    act(() => stale.onerror?.());
+    expectLineActionsUnavailable();
     expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Inputs changed");
   });
 
   it("mirrors the current line onto the other panel and clears both on an outside click", async () => {

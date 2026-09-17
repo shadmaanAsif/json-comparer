@@ -25,38 +25,45 @@ correctness corners — every requirement in `.agents/CONSTITUTION.md` still app
 If the table doesn't name a doc for your question, you probably don't need to open one —
 read the code instead.
 
-## Verification: fast checks by default, expensive checks opt-in
+## Verification: scoped tests by default, everything else opt-in
 
 Split verification into two tiers, for every agent, interactive or autonomous — not just
 live sessions where someone's watching:
 
-**May run by default** — fast, local, non-compiling:
+**May run by default** — only the test file(s) that directly cover the change:
 ```bash
-pnpm test          # scoped to what you touched; full suite per the Testing rules below
-pnpm lint          # prefer targeting changed files where supported
-pnpm format:check
-pnpm standards:check
+pnpm exec vitest run <path/to/the/specific/test/file.test.ts>
 ```
+Nothing else runs unasked — not the full `pnpm test` suite, not `pnpm lint`,
+`pnpm format:check`, or `pnpm standards:check`.
 
 **Opt-in only — run when the user explicitly asks:**
 ```bash
+pnpm test          # full suite
+pnpm lint
+pnpm format:check
+pnpm standards:check
 pnpm typecheck
 pnpm build
 ```
 Plus: starting a dev server, navigating, or screenshotting to manually verify a UI change
 in a browser.
 
-Make the change, report exactly what changed, run the default tier if useful, and stop.
-Don't reach for `typecheck`, `build`, or a browser check unless asked for it (or for "the
-full gate sequence" / "verify this").
+Make the change, run the scoped test(s) covering it, report exactly what changed, and
+stop. Don't reach for the full suite, lint, format, standards, `typecheck`, `build`, or a
+browser check unless asked for it (or for "the full gate sequence" / "verify this").
 
-This is a deliberate tradeoff (see `docs/decisions/ADR-003-opt-in-verification.md`): a type
-error, a broken production build, or a UI regression only visible in the browser can sit
-unnoticed until someone explicitly checks. Coverage requirements are otherwise unchanged —
-write the tests a behavior change calls for.
+This is a deliberate tradeoff (see `docs/decisions/ADR-003-opt-in-verification.md`, refined
+by `docs/decisions/ADR-004-scoped-tests-only-by-default.md`): lint errors, formatting
+drift, standards-audit violations, a type error, a broken production build, or a UI
+regression only visible in the browser can all sit unnoticed until someone explicitly
+checks or a wider gate (e.g. CI on a pull request) catches them. Coverage requirements are
+otherwise unchanged — write the tests a behavior change calls for.
 
-A narrower ask ("run the tests for this file") means running only that. If a gate can't
-run, say so with the exact blocker. Never claim a gate passed without running it.
+A narrower ask ("run the tests for this file") means running only that; a broader one ("run
+everything," "the full gate sequence," "verify this") means running the opt-in tier too. If
+a gate can't run, say so with the exact blocker. Never claim a gate passed without running
+it.
 
 ## Commits and PR descriptions
 
@@ -87,13 +94,10 @@ narrowly* something runs, not *whether* an opt-in gate is authorized.
 
 ### Testing
 
-- Test only the changed code and directly affected functionality by default.
-- Run targeted unit/component tests first.
-- Do not run the full test suite unless:
-  - the change is cross-cutting,
-  - shared/core functionality is modified,
-  - targeted tests are insufficient, or
-  - explicitly requested.
+- Run only the specific test file(s) that cover the changed code by default.
+- Do not run the full test suite unless explicitly requested — not even for a
+  cross-cutting or shared/core change; flag the risk in the report instead and let the
+  user decide whether to ask for the full suite.
 - Do not repeatedly run the same tests after unrelated changes.
 
 ### Build
@@ -105,8 +109,8 @@ narrowly* something runs, not *whether* an opt-in gate is authorized.
 
 ### Lint / Type Check
 
-- Run lint/type checks only when relevant to the changed files.
-- Prefer targeted checks where supported.
+- Do not run lint or type checks by default — both are opt-in; run them only when
+  explicitly requested.
 
 ### Documentation / Source
 

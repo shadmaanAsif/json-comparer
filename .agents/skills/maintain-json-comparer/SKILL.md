@@ -41,4 +41,4 @@ description: Safely analyze, implement, refactor, test, review, or document chan
 
 Add focused accessibility, performance, or security tests when a change affects those surfaces — coverage requirements are unchanged. Report changed behavior, files touched, and residual risk, then stop.
 
-Verification is split (`.agents/CONSTITUTION.md` Article VII.4, `.agents/EFFICIENCY.md`): `test`, `lint`, `format:check`, and `standards:check` may run by default; `typecheck`, `build`, and a manual browser check are opt-in — run them only when explicitly asked. Never claim a gate passed when it did not run.
+Verification is split (`.agents/CONSTITUTION.md` Article VII.4, `.agents/EFFICIENCY.md`): only `test`, scoped to the specific test file(s) covering the change, may run by default. The full suite, `lint`, `format:check`, `standards:check`, `typecheck`, `build`, and a manual browser check are all opt-in — run them only when explicitly asked. Never claim a gate passed when it did not run.

@@ -112,9 +112,9 @@ button:disabled {
   opacity: 0.45;
 }
 main {
-  width: min(1500px, 100%);
+  width: min(1620px, 100%);
   margin: 0 auto;
-  padding: 42px clamp(18px, 4vw, 64px) 24px;
+  padding: 20px clamp(16px, 3vw, 48px) 24px;
 }
 
 .fatal-error {

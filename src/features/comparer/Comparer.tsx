@@ -11,10 +11,12 @@ import { AddDataModal } from "./components/AddDataModal";
 import { ComparisonControls } from "./components/ComparisonControls";
 import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
+import { WorkspaceFindingNav } from "./components/FindingNavigation";
 import { JsonInputPane } from "./components/JsonInputPane";
 import { OnboardingTour } from "./components/OnboardingTour";
 import {
   APP_AUTHOR,
+  LIVE_COMPARE_DEBOUNCE_MS,
   MAX_DOCUMENT_BYTES,
   SAMPLE_A,
   SAMPLE_B,
@@ -66,7 +68,9 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [notes, setNotes] = useState<Record<string, ReviewNote>>({});
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [jsonPanelsExpanded, setJsonPanelsExpanded] = useState(false);
+  const [jsonPanelsExpanded, setJsonPanelsExpanded] = useState(true);
+  // JSON/Tree view is shared so both panels always show the same mode (switching one switches both).
+  const [panelView, setPanelView] = useState<"json" | "tree">("json");
   const [highlightToggles, setHighlightToggles] = useState({
     missing: true,
     structure: true,
@@ -75,7 +79,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [expandedSections, setExpandedSections] = useState({
     missing: true,
     structure: true,
-    differences: false
+    differences: true
   });
   const workerRef = useRef<Worker | null>(null);
   const activeJobRef = useRef<string | null>(null);
@@ -86,6 +90,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     },
     []
   );
+  // Mirrors textA/textB after every commit so an in-flight worker's onmessage (a stale closure)
+  // can tell whether the user has typed more since this job was sent — see runComparison.
+  const latestTextRef = useRef({ a: textA, b: textB });
+  useEffect(() => {
+    latestTextRef.current = { a: textA, b: textB };
+  }, [textA, textB]);
   const { registerEditor, synchronizeScroll } = useSynchronizedEditors();
   const panels = usePanelInteractions({
     textA,
@@ -147,10 +157,32 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     invalidateComparison();
   };
 
+  // Once a comparison has run, further typing re-compares live after a short pause instead of
+  // requiring another manual click — isActivelyComparing survives a transient parse error mid-edit
+  // (which nulls `result`) so live retries keep working while the user finishes typing valid JSON.
+  const [isActivelyComparing, setIsActivelyComparing] = useState(false);
+  const liveCompareTimerRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (liveCompareTimerRef.current !== null) window.clearTimeout(liveCompareTimerRef.current);
+    },
+    []
+  );
+
   const updateTypedInput = (side: ResponseSide, raw: string) => {
+    const nextTextA = side === "A" ? raw : textA;
+    const nextTextB = side === "B" ? raw : textB;
     if (side === "A") setTextA(raw);
     else setTextB(raw);
-    invalidateComparison();
+    if (!isActivelyComparing) {
+      invalidateComparison();
+      return;
+    }
+    if (liveCompareTimerRef.current !== null) window.clearTimeout(liveCompareTimerRef.current);
+    liveCompareTimerRef.current = window.setTimeout(() => {
+      liveCompareTimerRef.current = null;
+      runComparison(undefined, nextTextA, nextTextB);
+    }, LIVE_COMPARE_DEBOUNCE_MS);
   };
 
   const resultProjection = useMemo(
@@ -176,6 +208,44 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     () => createLineHighlights(resultProjection, textA, textB, highlightToggles, displayLineMaps),
     [displayLineMaps, highlightToggles, resultProjection, textA, textB]
   );
+  // One finding navigator shared by both panels. The panels are line-aligned, so a single
+  // ordered list of every highlighted line across both sides drives navigation for both.
+  const findingLines = useMemo(() => {
+    const lines = new Set<number>();
+    for (const key of Object.keys(lineHighlights.a)) lines.add(Number(key));
+    for (const key of Object.keys(lineHighlights.b)) lines.add(Number(key));
+    return [...lines].sort((first, second) => first - second);
+  }, [lineHighlights]);
+  const findingCategories = useMemo(() => {
+    const present = new Set<string>();
+    for (const highlight of Object.values(lineHighlights.a)) present.add(highlight.category);
+    for (const highlight of Object.values(lineHighlights.b)) present.add(highlight.category);
+    return (["missing", "structure", "differences", "invalid"] as const).filter((category) =>
+      present.has(category)
+    );
+  }, [lineHighlights]);
+  const [findingCursor, setFindingCursor] = useState(0);
+  // Reset the cursor when the finding list itself changes, adjusted during render (React's
+  // documented alternative to an effect) rather than after a commit, avoiding an extra render.
+  const [findingLinesForCursor, setFindingLinesForCursor] = useState(findingLines);
+  if (findingLines !== findingLinesForCursor) {
+    setFindingLinesForCursor(findingLines);
+    setFindingCursor(0);
+  }
+  const stepFinding = (direction: 1 | -1) => {
+    if (!findingLines.length) return;
+    const nextCursor = (findingCursor + direction + findingLines.length) % findingLines.length;
+    setFindingCursor(nextCursor);
+    const line = findingLines[nextCursor]!;
+    const pointerA = panels.indexes?.A?.byLine.get(line)?.pointer;
+    const pointerB = panels.indexes?.B?.byLine.get(line)?.pointer;
+    if (pointerA !== undefined) panels.navigate("A", pointerA);
+    if (pointerB !== undefined) panels.navigate("B", pointerB);
+  };
+  const scrollToComparisonOutput = () =>
+    document
+      .getElementById("comparison-output")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   const displayedStatus = useMemo<WorkspaceStatus>(
     () =>
       status.source === "comparison" && resultProjection && comparisonDurationMs !== null
@@ -209,6 +279,11 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
 
   const invalidateComparison = () => {
     stopWorker();
+    if (liveCompareTimerRef.current !== null) {
+      window.clearTimeout(liveCompareTimerRef.current);
+      liveCompareTimerRef.current = null;
+    }
+    setIsActivelyComparing(false);
     setResult(null);
     setDisplayLineMaps(null);
     setComparisonDurationMs(null);
@@ -219,10 +294,17 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setStatus({ tone: "idle", message: "Inputs changed. Compare again to enable line actions." });
   };
 
-  const runComparison = (overrideIgnorePaths?: string[]) => {
+  const runComparison = (
+    overrideIgnorePaths?: string[],
+    overrideTextA?: string,
+    overrideTextB?: string
+  ) => {
     stopWorker();
+    setIsActivelyComparing(true);
     const jobId = crypto.randomUUID();
     activeJobRef.current = jobId;
+    const sentTextA = overrideTextA ?? textA;
+    const sentTextB = overrideTextB ?? textB;
     setBusy(true);
     setStatus({ tone: "idle", message: "Comparing responses…" });
     reports.clearPreview();
@@ -235,6 +317,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       worker.terminate();
       workerRef.current = null;
       activeJobRef.current = null;
+      // A live re-compare can still be catching up to typing that continued after this job was
+      // sent — a newer debounced run is already queued, so drop this stale response rather than
+      // clobbering what the user has typed since.
+      const isStale =
+        latestTextRef.current.a !== sentTextA || latestTextRef.current.b !== sentTextB;
+      if (isStale) return;
       if (!event.data.ok) {
         setResult(null);
         setDisplayLineMaps(null);
@@ -265,8 +353,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     };
     worker.postMessage({
       jobId,
-      textA,
-      textB,
+      textA: sentTextA,
+      textB: sentTextB,
       options: overrideIgnorePaths
         ? {
             ...options,
@@ -488,10 +576,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             onLoadDemoData={loadTourDemo}
             onRunComparison={() => runComparison()}
             onClearWorkspace={clearWorkspace}
-            isDifferencesExpanded={expandedSections.differences}
-            onSetDifferencesExpanded={(expanded) =>
-              setExpandedSections((current) => ({ ...current, differences: expanded }))
-            }
           />
           <button
             className="secondary-button"
@@ -507,15 +591,44 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       <section className="workspace" aria-label="JSON comparison workspace">
         <div className="panel-layout-toolbar">
           <span>JSON response panels</span>
-          <button
-            className="secondary-button"
-            type="button"
-            aria-expanded={jsonPanelsExpanded}
-            aria-controls="json-input-panels"
-            onClick={() => setJsonPanelsExpanded((current) => !current)}
-          >
-            {jsonPanelsExpanded ? "Collapse panels" : "Expand panels"}
-          </button>
+          <WorkspaceFindingNav
+            categories={findingCategories}
+            current={findingCursor + 1}
+            total={findingLines.length}
+            onPrevious={() => stepFinding(-1)}
+            onNext={() => stepFinding(1)}
+            onScrollToOutput={scrollToComparisonOutput}
+          />
+          <div className="panel-toolbar-actions" data-tour="primary-actions">
+            <button
+              className="primary-button"
+              type="button"
+              disabled={busy}
+              onClick={() => runComparison()}
+            >
+              {busy ? "Comparing…" : "Compare responses"}
+            </button>
+            {busy && (
+              <button className="secondary-button" type="button" onClick={cancelComparison}>
+                Cancel
+              </button>
+            )}
+            <button className="secondary-button" type="button" onClick={loadSample}>
+              Load sample
+            </button>
+            <button className="secondary-button" type="button" onClick={clearWorkspace}>
+              Clear all
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              aria-expanded={jsonPanelsExpanded}
+              aria-controls="json-input-panels"
+              onClick={() => setJsonPanelsExpanded((current) => !current)}
+            >
+              {jsonPanelsExpanded ? "Collapse panels" : "Expand panels"}
+            </button>
+          </div>
         </div>
         <div
           id="json-input-panels"
@@ -544,6 +657,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             onOpenActions={(request) => panels.openActions("A", request)}
             mirroredLine={activeLine?.side === "B" ? activeLine.line : null}
             onActiveLineChange={onActiveLineChangeA}
+            view={panelView}
+            onViewChange={setPanelView}
           />
           <JsonInputPane
             side="B"
@@ -566,6 +681,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             onOpenActions={(request) => panels.openActions("B", request)}
             mirroredLine={activeLine?.side === "A" ? activeLine.line : null}
             onActiveLineChange={onActiveLineChangeB}
+            view={panelView}
+            onViewChange={setPanelView}
           />
         </div>
 
@@ -583,10 +700,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={(paths) => runComparison(paths)}
           onHighlightVisibilityChange={setHighlightToggles}
-          onCompare={() => runComparison()}
-          onCancel={cancelComparison}
-          onLoadSample={loadSample}
-          onClear={clearWorkspace}
         />
       </section>
 

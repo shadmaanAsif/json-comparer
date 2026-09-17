@@ -21,10 +21,6 @@ function renderControls(overrides: Partial<ComparisonControlsProps> = {}) {
     onIgnorePathsChange: vi.fn(),
     onApplyIgnorePaths: vi.fn(),
     onHighlightVisibilityChange: vi.fn(),
-    onCompare: vi.fn(),
-    onCancel: vi.fn(),
-    onLoadSample: vi.fn(),
-    onClear: vi.fn(),
     ...overrides
   };
 
@@ -80,10 +76,6 @@ describe("ComparisonControls", () => {
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={onApplyIgnorePaths}
           onHighlightVisibilityChange={vi.fn()}
-          onCompare={vi.fn()}
-          onCancel={vi.fn()}
-          onLoadSample={vi.fn()}
-          onClear={vi.fn()}
         />
       );
     }
@@ -146,10 +138,6 @@ describe("ComparisonControls", () => {
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={vi.fn()}
           onHighlightVisibilityChange={vi.fn()}
-          onCompare={vi.fn()}
-          onCancel={vi.fn()}
-          onLoadSample={vi.fn()}
-          onClear={vi.fn()}
         />
       );
     }
@@ -194,10 +182,6 @@ describe("ComparisonControls", () => {
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={onApplyIgnorePaths}
           onHighlightVisibilityChange={vi.fn()}
-          onCompare={vi.fn()}
-          onCancel={vi.fn()}
-          onLoadSample={vi.fn()}
-          onClear={vi.fn()}
         />
       );
     }

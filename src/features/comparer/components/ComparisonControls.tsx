@@ -23,10 +23,6 @@ export interface ComparisonControlsProps {
   onIgnorePathsChange: (paths: string[]) => void;
   onApplyIgnorePaths: (paths: string[]) => void;
   onHighlightVisibilityChange: (value: HighlightVisibility) => void;
-  onCompare: () => void;
-  onCancel: () => void;
-  onLoadSample: () => void;
-  onClear: () => void;
 }
 
 export function ComparisonControls({
@@ -39,11 +35,7 @@ export function ComparisonControls({
   onArrayModeChange,
   onIgnorePathsChange,
   onApplyIgnorePaths,
-  onHighlightVisibilityChange,
-  onCompare,
-  onCancel,
-  onLoadSample,
-  onClear
+  onHighlightVisibilityChange
 }: ComparisonControlsProps) {
   const toggleHighlight = (category: keyof HighlightVisibility) => {
     onHighlightVisibilityChange({
@@ -54,21 +46,7 @@ export function ComparisonControls({
 
   return (
     <>
-      <div className="primary-actions" data-tour="primary-actions">
-        <button className="primary-button" type="button" disabled={isComparing} onClick={onCompare}>
-          {isComparing ? "Comparing…" : "Compare responses"}
-        </button>
-        {isComparing && (
-          <button className="secondary-button" type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        )}
-        <button className="secondary-button" type="button" onClick={onLoadSample}>
-          Load sample
-        </button>
-        <button className="secondary-button" type="button" onClick={onClear}>
-          Clear all
-        </button>
+      <div className="primary-actions">
         <p className={`status ${status.tone}`} role="status" aria-live="polite">
           {status.message}
         </p>

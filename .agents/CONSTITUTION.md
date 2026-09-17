@@ -1,6 +1,6 @@
 # CompareFiles Constitution
 
-Version: 3.0.1
+Version: 3.1.0
 Ratified: 2026-08-21
 Applies to: humans, coding agents, automated agents, repository-local skills, and generated changes.
 
@@ -85,7 +85,7 @@ Accounts, sharing, and cloud persistence additionally require explicit tenancy, 
 1. Domain invariants receive unit and property-style coverage: identity, object-key order independence, duplicate multiset behavior, path escaping, ignore consistency, and limits.
 2. User workflows receive component or end-to-end coverage appropriate to their risk.
 3. Security controls receive adversarial integration tests; accessibility receives automated and manual checks.
-4. Fast local checks — tests, linting, formatting, and the standards audit — may run by default after a change, for interactive and autonomous agents alike. Type checking, the production build, and a manual browser/preview check are opt-in: run only when the user explicitly asks. Make the change, report exactly what changed, and stop when broader verification isn't requested; the full command list lives in `.agents/EFFICIENCY.md`. This defers *when* full evidence is produced; it does not excuse skipping tests required by clauses 1–3 once verification is actually requested or performed.
+4. Tests scoped to the specific file(s) covering a change may run by default, for interactive and autonomous agents alike. The full test suite, linting, formatting, the standards audit, type checking, the production build, and a manual browser/preview check are all opt-in: run only when the user explicitly asks. Make the change, run the scoped test(s), report exactly what changed, and stop when broader verification isn't requested; the full command list lives in `.agents/EFFICIENCY.md`. This defers *when* full evidence is produced; it does not excuse skipping tests required by clauses 1–3 once verification is actually requested or performed.
 5. Agents report actual commands and outcomes. They do not weaken tests, limits, type safety, or lint rules merely to pass a gate.
 
 ## Article VIII — Minimal scope and reversible evolution
@@ -121,6 +121,7 @@ Every amendment includes rationale, affected requirements/architecture/tests, mi
 
 ## Amendment record
 
+- 3.1.0 (2026-09-17): With explicit user approval, narrows the default verification tier from ADR-003's "tests, lint, format, standards audit" to scoped tests only — the specific test file(s) covering the change. The full suite, lint, format, and the standards audit join type checking, the build, and browser checks as opt-in. Coverage requirements (Article VII.1-3) and the prohibition on weakening tests to pass a gate (VII.5) are unchanged. See `docs/decisions/ADR-004-scoped-tests-only-by-default.md`.
 - 3.0.1 (2026-09-16): Renamed the project and product from JSON Comparer to CompareFiles with explicit user approval. This naming-only amendment changes no behavior, privacy, security, architecture, or rollout requirements.
 - 3.0.0 (2026-09-09): With explicit user approval, splits verification into fast local checks (tests, lint, format, standards audit) that may run by default, and opt-in checks (type checking, the production build, a manual browser/preview check) that run only when explicitly asked — for interactive and autonomous agents alike. Coverage requirements (Article VII.1-3) and the prohibition on weakening tests to pass a gate (VII.5) are unchanged. See `docs/decisions/ADR-003-opt-in-verification.md`.
 - 2.1.0 (2026-08-26): With explicit user approval, permits an opt-in local-development exception for HTTP/HTTPS loopback APIs. Production, non-loopback app origins, private LAN, metadata, deceptive DNS, and public HTTP remain prohibited. See `docs/decisions/ADR-002-localhost-fetch.md`.

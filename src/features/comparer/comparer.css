@@ -12,12 +12,12 @@
   justify-content: space-between;
   gap: 32px;
   align-items: flex-start;
-  margin-bottom: 30px;
+  margin-bottom: 14px;
 }
 .hero > div:first-child {
   position: relative;
   padding-left: 62px;
-  max-width: 820px;
+  max-width: 1000px;
 }
 .brand-mark {
   position: absolute;
@@ -36,8 +36,8 @@
 }
 .hero h1 {
   margin: 2px 0 0;
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  letter-spacing: -0.045em;
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  letter-spacing: -0.03em;
   line-height: 1;
 }
 .hero-title-row {
@@ -45,17 +45,17 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 .hero p:not(.eyebrow) {
   margin: 0;
-  max-width: 680px;
+  max-width: 900px;
   color: var(--muted);
   font-size: 1.02rem;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 .eyebrow {
-  margin: 0 0 8px;
+  margin: 0 0 5px;
   color: var(--accent);
   text-transform: uppercase;
   font-size: 0.72rem;
@@ -93,9 +93,10 @@
 .panel-layout-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 22px;
+  gap: 10px 16px;
+  padding: 10px 22px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-2) 72%, transparent);
 }
@@ -106,20 +107,28 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+/* The primary workflow actions, grouped beside the panel Collapse/Expand toggle so they read
+   as one cluster at the top of the workspace instead of a separate row below the panels. */
+.panel-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .input-grid {
-  --json-panel-height: 360px;
+  --json-panel-height: 520px;
   --json-line-height: 22.4px;
-  --json-editor-padding: 15px;
+  --json-editor-padding: 14px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .input-grid.panels-expanded {
-  --json-panel-height: min(86vh, 980px);
+  --json-panel-height: min(88vh, 1040px);
 }
 .input-panel {
   position: relative;
   min-width: 0;
-  padding: 22px;
+  padding: 8px 14px;
 }
 .input-panel.has-json-error {
   background: linear-gradient(
@@ -143,10 +152,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 15px;
+  margin-bottom: 4px;
 }
 .panel-heading {
-  min-height: 74px;
   align-items: flex-start;
 }
 .panel-heading h2,
@@ -535,6 +543,75 @@
   background: var(--accent-dark);
   color: var(--accent);
 }
+/* The single finding navigator shared by both panels. It lives in the panel toolbar above them
+   (a normal flex/grid child, never overlapping the panels) so its purpose reads as one sentence:
+   dots for what kind of finding, Previous/Next to step through them, a count, and a plain-text
+   way down to the results. */
+.workspace-finding-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.workspace-finding-nav .chip-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 4px;
+}
+.workspace-finding-nav .finding-nav-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 9px;
+  /* A lighter highlight than .finding-nav-output's solid accent color — enough to read as
+     interactive at rest, without competing with View results for attention. */
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+.workspace-finding-nav .finding-nav-step:hover,
+.workspace-finding-nav .finding-nav-step:focus-visible {
+  background: var(--accent-dark);
+  color: var(--accent);
+}
+.workspace-finding-nav .finding-nav-count {
+  min-width: 92px;
+  text-align: center;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.workspace-finding-nav .finding-nav-output {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  padding: 5px 0 5px 10px;
+  margin-left: 4px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.workspace-finding-nav .finding-nav-output:hover,
+.workspace-finding-nav .finding-nav-output:focus-visible {
+  text-decoration: underline;
+}
 [data-theme="light"] .input-panel textarea,
 [data-theme="light"] input,
 [data-theme="light"] select,
@@ -545,7 +622,7 @@
 .panel-tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 8px;
+  margin-bottom: 3px;
 }
 .panel-tabs button {
   border: 1px solid var(--border);
@@ -864,7 +941,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 17px 22px;
+  padding: 10px 22px;
   border-top: 1px solid var(--border);
 }
 .primary-button,
@@ -892,7 +969,7 @@
   border-color: var(--control-hover-border);
 }
 .status {
-  margin: 0 0 0 auto;
+  margin: 0;
   color: var(--muted);
   font-size: 0.8rem;
 }
@@ -904,8 +981,8 @@
 }
 
 .results {
-  margin-top: 22px;
-  padding: 22px;
+  margin-top: 16px;
+  padding: 18px;
 }
 .summary-row {
   display: flex;
@@ -1402,6 +1479,23 @@ footer {
   .privacy-badge {
     display: inline-block;
     margin: 20px 0 0 62px;
+  }
+  .panel-layout-toolbar {
+    justify-content: center;
+  }
+  .panel-toolbar-actions {
+    justify-content: center;
+  }
+  .workspace-finding-nav {
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    white-space: normal;
+  }
+  .workspace-finding-nav .finding-nav-output {
+    border-left: 0;
+    margin-left: 0;
+    padding-left: 9px;
   }
   .input-grid {
     grid-template-columns: 1fr;

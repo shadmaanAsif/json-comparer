@@ -11,11 +11,12 @@ Before changing the project:
 
 ## Verification is split into default and opt-in
 
-Fast local checks — `test`, `lint`, `format:check`, `standards:check` — may run by default
-after a change, for every agent, interactive or autonomous. `typecheck`, `build`, and a
-manual browser/preview check are opt-in: run only when the user explicitly asks. Either
-way, report exactly what changed. See [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for
-the exact command list and rationale.
+Only `test`, scoped to the specific test file(s) covering a change, may run by default —
+for every agent, interactive or autonomous. The full test suite, `lint`, `format:check`,
+`standards:check`, `typecheck`, `build`, and a manual browser/preview check are all
+opt-in: run only when the user explicitly asks. Either way, report exactly what changed.
+See [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for the exact command list and
+rationale.
 
 If asked to verify and a command cannot run, report the exact blocker. Do not claim
 verification that did not occur.

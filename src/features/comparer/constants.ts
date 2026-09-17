@@ -45,6 +45,9 @@ export const MAX_DOCUMENT_BYTES = Number(
 
 export const APP_AUTHOR = (process.env.NEXT_PUBLIC_APP_AUTHOR ?? "").trim();
 
+/** Pause after the last keystroke before a live comparison re-runs automatically. */
+export const LIVE_COMPARE_DEBOUNCE_MS = 500;
+
 /**
  * Display names for the two comparison roles. `A`/`B` remain the internal
  * identity for sides, editors, and finding kinds; only presentation uses these.

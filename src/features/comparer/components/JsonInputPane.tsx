@@ -8,13 +8,12 @@ import type { PanelIndex } from "../utils/panel-context";
 import type { HighlightCategory, LineHighlight, ResponseSide } from "../types";
 import {
   DEFAULT_EDITOR_VIEWPORT_METRICS,
-  navigationTargetLine,
   scrollOffsetForLine,
   visibleLineRange,
   type EditorViewportMetrics
 } from "../utils/editor-navigation";
 import { getJsonSyntaxIssue } from "../utils/json-validation";
-import { CategoryDots, FindingStepper } from "./FindingNavigation";
+import { CategoryDots } from "./FindingNavigation";
 import { JsonTree } from "./JsonTree";
 import { JsonLineGutter } from "./JsonLineGutter";
 
@@ -42,6 +41,10 @@ export interface JsonInputPaneProps {
   mirroredLine?: number | null;
   /** Reports this panel's own current line up so the partner panel can mirror it. */
   onActiveLineChange?: (line: number | null) => void;
+  /** Shared JSON/Tree mode: when the workspace supplies both, switching one panel switches the
+   *  other. Optional so the pane still works standalone with its own local view. */
+  view?: "json" | "tree";
+  onViewChange?: (view: "json" | "tree") => void;
 }
 
 export function JsonInputPane({
@@ -64,12 +67,26 @@ export function JsonInputPane({
   panelNavigation,
   onOpenActions,
   mirroredLine = null,
-  onActiveLineChange
+  onActiveLineChange,
+  view,
+  onViewChange
 }: JsonInputPaneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const paneRef = useRef<HTMLElement>(null);
-  const [activeView, setActiveView] = useState<"json" | "tree">("json");
+  // Local view state kept in sync with the optional shared `view`, so the pane works both
+  // standalone and as one of two panels the workspace keeps on the same mode. Adjusted during
+  // render (React's documented alternative to an effect) rather than after a commit.
+  const [activeView, setActiveViewLocal] = useState<"json" | "tree">(view ?? "json");
+  const [prevView, setPrevView] = useState(view);
+  if (view !== undefined && view !== prevView) {
+    setPrevView(view);
+    setActiveViewLocal(view);
+  }
+  const setActiveView = (next: "json" | "tree") => {
+    setActiveViewLocal(next);
+    onViewChange?.(next);
+  };
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [findText, setFindText] = useState("");
   const [findIndex, setFindIndex] = useState(0);
@@ -173,9 +190,6 @@ export function JsonInputPane({
     activeNavigationLine !== null && effectiveLineHighlights[activeNavigationLine]
       ? activeNavigationLine
       : null;
-  const activeNavigationIndex =
-    selectedNavigationLine === null ? -1 : highlightedLines.indexOf(selectedNavigationLine);
-  const safeNavigationIndex = activeNavigationIndex >= 0 ? activeNavigationIndex : 0;
   const { first: firstVisibleLine, last: lastVisibleLine } = visibleLineRange(
     scrollTop,
     totalLines,
@@ -203,14 +217,6 @@ export function JsonInputPane({
   const previousError =
     highlightedLines.filter((line) => line < firstVisibleLine).at(-1) ?? highlightedLines.at(-1);
   const nextError = highlightedLines.find((line) => line > lastVisibleLine) ?? highlightedLines[0];
-
-  const navigateError = (direction: 1 | -1) => {
-    const targetLine = navigationTargetLine(highlightedLines, direction, selectedNavigationLine, {
-      first: firstVisibleLine,
-      last: lastVisibleLine
-    });
-    if (targetLine !== null) jumpToLine(targetLine);
-  };
 
   const matches = useMemo(() => {
     const output: number[] = [];
@@ -251,6 +257,7 @@ export function JsonInputPane({
       className={`input-panel${showsJsonError ? " has-json-error" : ""}`}
       data-side={side}
       data-json-state={jsonError ? "invalid" : value.trim() ? "valid" : "empty"}
+      data-tour={side === "A" ? "panel-actions" : undefined}
       aria-labelledby={`response-${side}-heading`}
     >
       <div className="panel-heading">
@@ -322,32 +329,6 @@ export function JsonInputPane({
           onClick={() => setActiveView("tree")}
         >
           Tree
-        </button>
-      </div>
-
-      <div className="panel-line-toolbar" data-tour={side === "A" ? "panel-actions" : undefined}>
-        <span id={"panel-actions-help-" + side}>
-          {panelIndex
-            ? activeView === "json"
-              ? "Click ⋯ beside a line for actions · or Shift+F10"
-              : "Click ⋯ beside a field for actions · or Shift+F10"
-            : `Compare to enable ${activeView === "tree" ? "field" : "line"} actions`}
-        </span>
-        <button
-          type="button"
-          className="text-button"
-          disabled={!panelIndex}
-          aria-label={
-            (activeView === "tree" ? "Field" : "Line") + " actions for " + SIDE_LABELS[side]
-          }
-          aria-haspopup="dialog"
-          onClick={(event) => {
-            const rect = event.currentTarget.getBoundingClientRect();
-            panelActions.openSelected({ x: rect.left, y: rect.bottom });
-          }}
-        >
-          <span aria-hidden="true">⋯ </span>
-          {activeView === "tree" ? "Field" : "Line"} actions
         </button>
       </div>
 
@@ -507,9 +488,7 @@ export function JsonInputPane({
                 side === "A" ? '{"status":"ok","amount":100}' : '{"status":"ok","amount":150}'
               }
               aria-invalid={jsonError ? "true" : "false"}
-              aria-describedby={
-                jsonError ? `response-${side}-json-error` : "panel-actions-help-" + side
-              }
+              aria-describedby={jsonError ? `response-${side}-json-error` : undefined}
               spellCheck={false}
               wrap="off"
               onScroll={(event) => {
@@ -548,14 +527,6 @@ export function JsonInputPane({
                 onClick={() => nextError && jumpToLine(nextError)}
               />
             )}
-            <FindingStepper
-              label={SIDE_LABELS[side]}
-              categories={categoriesFor(highlightedLines)}
-              current={safeNavigationIndex + 1}
-              total={highlightedLines.length}
-              onPrevious={() => navigateError(-1)}
-              onNext={() => navigateError(1)}
-            />
           </div>
           <aside className="json-minimap" aria-label={`${SIDE_LABELS[side]} highlighted lines`}>
             {highlightedLines.map((line) => (
@@ -580,6 +551,7 @@ export function JsonInputPane({
           side={side}
           raw={value}
           lineHighlights={effectiveLineHighlights}
+          mirroredLine={mirroredLine}
           collapsedPointers={panelActions.collapsed}
           onExpandedChange={panelActions.onTreeToggle}
           parentRequest={panelActions.treeRequest}

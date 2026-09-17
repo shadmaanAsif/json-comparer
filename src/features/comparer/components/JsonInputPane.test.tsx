@@ -47,7 +47,6 @@ describe("JsonInputPane validation state", () => {
     expect(button).toHaveTextContent("⋯");
     expect(button).toHaveAttribute("aria-haspopup", "dialog");
     expect(button).toHaveAttribute("title", expect.stringContaining("copy, ignore, review"));
-    expect(screen.getByText("Click ⋯ beside a line for actions · or Shift+F10")).toBeVisible();
     await user.hover(button);
     expect(container.querySelector(".line-action-hover")).toBeInTheDocument();
     await user.click(button);
@@ -96,7 +95,6 @@ describe("JsonInputPane validation state", () => {
   });
 
   it("opens exact line actions by keyboard and folds the parent without modifying JSON", async () => {
-    const user = userEvent.setup();
     const display = formatAlignedForDisplay({ config: { code: 1 } }, { config: { code: 2 } });
     const panelIndex = buildPanelIndex(
       display.textA,
@@ -122,16 +120,15 @@ describe("JsonInputPane validation state", () => {
       )
     );
     expect(props.onChange).not.toHaveBeenCalled();
-    // Folding focuses the parent; ignore-only reruns preserve that Tree selection.
+    // Folding focuses the parent; ignore-only reruns (a fresh PanelIndex object, same content)
+    // preserve that Tree selection by pointer value rather than by object identity.
     rerender(
       <JsonInputPane
         {...props}
         panelIndex={buildPanelIndex(display.textA, display.lineMapA, display.placeholderLineMapA)}
       />
     );
-    await user.click(screen.getByRole("button", { name: "Field actions for Baseline" }));
-    expect(vi.mocked(props.onOpenActions!).mock.lastCall?.[0].branchExpanded).toBe(false);
-    expect(vi.mocked(props.onOpenActions!).mock.lastCall?.[0].field.pointer).toBe("/config");
+    expect(container.querySelector('[data-tree-row="/config"]')).toHaveClass("tree-field-selected");
   });
 
   it("does not expose stale line actions once the comparison index is invalidated", async () => {
@@ -142,11 +139,16 @@ describe("JsonInputPane validation state", () => {
       display.lineMapA,
       display.placeholderLineMapA
     );
-    const { props, rerender } = renderPane(display.textA, { panelIndex, onOpenActions: vi.fn() });
-    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeEnabled();
+    const { props, container, rerender } = renderPane(display.textA, {
+      panelIndex,
+      onOpenActions: vi.fn()
+    });
+    expect(screen.getByRole("button", { name: "Actions for line 1" })).toBeInTheDocument();
     rerender(<JsonInputPane {...props} value="{" panelIndex={null} />);
-    expect(screen.getByRole("button", { name: "Line actions for Baseline" })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Line actions for Baseline" }));
+    expect(screen.queryByRole("button", { name: "Actions for line 1" })).not.toBeInTheDocument();
+    // The gutter is aria-hidden without a comparison index, so query the DOM directly for the
+    // now-inert line button rather than by role.
+    await user.click(container.querySelector(".line-gutter button")!);
     expect(props.onOpenActions).not.toHaveBeenCalled();
   });
 
@@ -246,14 +248,15 @@ describe("JsonInputPane validation state", () => {
     act(() => vi.mocked(props.onOpenActions!).mock.lastCall?.[0].onToggleBranch?.());
     await waitFor(() => expect(branch).toHaveAttribute("open"));
     await user.click(screen.getByRole("button", { name: "Actions for field /a~1b/~0key" }));
-    await user.click(screen.getByRole("button", { name: "Field actions for Baseline" }));
     expect(vi.mocked(props.onOpenActions!).mock.lastCall?.[0].field.pointer).toBe("/a~1b/~0key");
     expect(props.onChange).not.toHaveBeenCalled();
     rerender(<JsonInputPane {...props} panelIndex={null} />);
     expect(
       screen.queryByRole("button", { name: "Actions for field /empty" })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Field actions for Baseline" })).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Actions for field /a~1b/~0key" })
+    ).not.toBeInTheDocument();
   });
 
   it("supports context-menu keys on Tree fields and does not open a menu on ordinary leaf clicks", async () => {
@@ -355,16 +358,8 @@ describe("JsonInputPane validation state", () => {
     expect(screen.getByText("Changed")).toBeVisible();
     expect(screen.getByText("Missing")).toBeVisible();
 
-    const nextFinding = screen.getByRole("button", { name: "Next highlighted finding" });
-    expect(screen.getByLabelText("Tree finding navigation")).toBeVisible();
-    expect(screen.getByText("1/2")).toBeVisible();
-
-    await user.click(nextFinding);
-    expect(screen.getByText("changed").closest(".tree-leaf")).toHaveClass("is-active");
-
-    await user.click(nextFinding);
-    expect(screen.getByText("phone").closest(".tree-leaf")).toHaveClass("is-active");
-    expect(screen.getByText("2/2")).toBeVisible();
+    // The finding stepper now lives once between the panels (in Comparer), not per panel/view.
+    expect(screen.queryByLabelText("Tree finding navigation")).not.toBeInTheDocument();
   });
 
   it("highlights the invalid JSON line and panel only in the JSON view", async () => {
@@ -433,7 +428,9 @@ describe("JsonInputPane validation state", () => {
       scrollHeight: { configurable: true, value: 2200 }
     });
 
-    await user.click(screen.getByRole("button", { name: "Next highlighted finding" }));
+    // The finding stepper moved to the shared workspace nav; the minimap still centers a finding
+    // through the same pane geometry, so it exercises the centering math here.
+    await user.click(screen.getByRole("button", { name: "Go to highlighted line 40" }));
 
     expect(editor.scrollTop).toBeCloseTo(719.8);
     const activeHighlight = container.querySelector<HTMLElement>(".full-line-highlight.is-active");
@@ -441,7 +438,7 @@ describe("JsonInputPane validation state", () => {
     expect(activeHighlight).toHaveStyle({ height: "22.4px" });
     expect(synchronizeScroll).toHaveBeenLastCalledWith("A", editor);
 
-    await user.click(screen.getByRole("button", { name: "Next highlighted finding" }));
+    await user.click(screen.getByRole("button", { name: "Go to highlighted line 80" }));
 
     expect(editor.scrollTop).toBeCloseTo(1615.8);
   });
@@ -456,7 +453,6 @@ describe("JsonInputPane validation state", () => {
     });
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(2);
-    expect(screen.getByLabelText("Baseline finding navigation")).toHaveTextContent("1/2");
 
     rerender(
       <JsonInputPane
@@ -466,12 +462,10 @@ describe("JsonInputPane validation state", () => {
     );
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(1);
-    expect(screen.getByLabelText("Baseline finding navigation")).toHaveTextContent("1/1");
 
     rerender(<JsonInputPane {...props} lineHighlights={{}} />);
 
     expect(container.querySelectorAll(".json-minimap .minimap-marker")).toHaveLength(0);
-    expect(screen.queryByLabelText("Baseline finding navigation")).not.toBeInTheDocument();
   });
 
   it("dims an ignored highlight in the gutter, full-line overlay, and minimap alike", () => {

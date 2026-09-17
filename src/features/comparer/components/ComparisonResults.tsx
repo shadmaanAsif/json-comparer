@@ -136,7 +136,7 @@ export function ComparisonResults({
     });
 
   return (
-    <section className="results" aria-labelledby="results-heading">
+    <section id="comparison-output" className="results" aria-labelledby="results-heading">
       {/* Anchored to this overview block, not the whole (often page-length) section, so the
           tour popover has somewhere sane to render — and it stretches down through the
           filter row since that's where the counts/chips the popover describes actually live. */}

@@ -13,14 +13,8 @@ export interface OnboardingTourProps {
   onRunComparison: () => void;
   /** Resets the workspace; called only to remove a demo the tour itself introduced. */
   onClearWorkspace: () => void;
-  /** Current expanded state of the Differences section, which defaults to collapsed. */
-  isDifferencesExpanded: boolean;
-  /** Expands Differences while its tour step is active; collapses it again once the tour
-   *  moves on — but only if the tour itself was the one that opened it. */
-  onSetDifferencesExpanded: (expanded: boolean) => void;
 }
 
-/** Differences starts collapsed by default, unlike the other two result sections. */
 const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
 
 /** Bump TOUR_VERSION whenever the tour's steps or triggers change meaningfully — it makes
@@ -28,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v4";
+const TOUR_VERSION = "v7";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -155,9 +149,26 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       popover: {
         title: "Compare or practise with the sample",
         description:
-          "Load sample is the fastest safe way to explore. When both responses are ready, run Compare responses. Clear all resets the workspace.",
-        side: "top",
+          "Load sample is the fastest safe way to explore. When both responses are ready, run Compare responses. Clear all resets the workspace, and the panel-size toggle next to it expands or collapses both JSON panels together.",
+        side: "bottom",
         align: "start"
+      }
+    },
+    // Right after primary-actions, not after panel-actions: this shares the same toolbar
+    // row as primary-actions, so visiting them back to back avoids bouncing the tour
+    // between the toolbar and the panels.
+    {
+      element: hasResults ? '[data-tour="finding-nav"]' : undefined,
+      data: {
+        example: hasResults ? undefined : "Finding 3 of 8 · Previous · Next · View results"
+      },
+      popover: {
+        title: "Step through every finding",
+        description: hasResults
+          ? "Once you compare, this same toolbar grows a navigator that walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
+          : "Once you compare, this same toolbar grows a navigator to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
+        side: "bottom",
+        align: "center"
       }
     },
     {
@@ -186,8 +197,8 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       popover: {
         title: "Review and export the findings",
         description: hasResults
-          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Schema Compare, Missing Fields, and Differences."
-          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Schema Compare, Missing Fields, and Differences — each covered next. Replay this tour after comparing to see them highlighted.",
+          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Schema Compare, Missing Fields, and Differences — all open by default, so collapse or expand any of them as you like."
+          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Schema Compare, Missing Fields, and Differences — each open by default and covered next. Replay this tour after comparing to see them highlighted.",
         side: "top",
         align: "center"
       }
@@ -246,9 +257,7 @@ export function OnboardingTour({
   isWorkspaceEmpty,
   onLoadDemoData,
   onRunComparison,
-  onClearWorkspace,
-  isDifferencesExpanded,
-  onSetDifferencesExpanded
+  onClearWorkspace
 }: OnboardingTourProps) {
   const tourRef = useRef<Driver | null>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -257,15 +266,11 @@ export function OnboardingTour({
   const onLoadDemoDataRef = useRef(onLoadDemoData);
   const onRunComparisonRef = useRef(onRunComparison);
   const onClearWorkspaceRef = useRef(onClearWorkspace);
-  const isDifferencesExpandedRef = useRef(isDifferencesExpanded);
-  const onSetDifferencesExpandedRef = useRef(onSetDifferencesExpanded);
   const hasStartedRef = useRef(false);
   /** True once this tour session has filled the panels with its own demo data. */
   const demoInjectedRef = useRef(false);
   /** Guards against a second demo run while one is already animating. */
   const isRunningDemoRef = useRef(false);
-  /** True only while the tour itself is holding Differences open for its own step. */
-  const expandedDifferencesForTourRef = useRef(false);
 
   useEffect(() => {
     hasResultsRef.current = hasResults;
@@ -273,17 +278,7 @@ export function OnboardingTour({
     onLoadDemoDataRef.current = onLoadDemoData;
     onRunComparisonRef.current = onRunComparison;
     onClearWorkspaceRef.current = onClearWorkspace;
-    isDifferencesExpandedRef.current = isDifferencesExpanded;
-    onSetDifferencesExpandedRef.current = onSetDifferencesExpanded;
-  }, [
-    hasResults,
-    isWorkspaceEmpty,
-    onLoadDemoData,
-    onRunComparison,
-    onClearWorkspace,
-    isDifferencesExpanded,
-    onSetDifferencesExpanded
-  ]);
+  }, [hasResults, isWorkspaceEmpty, onLoadDemoData, onRunComparison, onClearWorkspace]);
 
   /**
    * Announces the demo, loads the pair, pauses so it's visible landing in the panels, runs
@@ -291,15 +286,23 @@ export function OnboardingTour({
    * panel-actions shows the results sections happening live instead of jumping straight
    * to description-only fallback text.
    *
-   * `resultSteps` are the last 4 steps of THIS running tour's own steps array, built while
-   * hasResults was still false (so their `element` is undefined and their `data.example` is
-   * the illustrative fallback text). driver.js reads that array by live reference on every
-   * navigation, not just once at drive() time, so mutating `.element`/`.popover`/`.data` on
-   * these same objects — once real results exist — is enough to make the next navigation
-   * highlight the real DOM, with real copy, instead of the no-element fallback.
+   * `resultSteps` are whichever steps of THIS running tour's own steps array have
+   * `element === undefined`, built while hasResults was still false — wherever they sit in
+   * the array (they don't have to be contiguous or trailing). `resultStepIndexes` records
+   * their original positions so the upgrade below can look up each one's real counterpart
+   * by index rather than assuming a fixed offset from the end. driver.js reads the steps
+   * array by live reference on every navigation, not just once at drive() time, so mutating
+   * `.element`/`.popover`/`.data` on these same objects — once real results exist — is
+   * enough to make the next navigation highlight the real DOM, with real copy, instead of
+   * the no-element fallback.
    */
   const runLiveDemo = useCallback(
-    async (activeTour: Driver, reduceMotion: boolean, resultSteps: DriveStep[]) => {
+    async (
+      activeTour: Driver,
+      reduceMotion: boolean,
+      resultSteps: DriveStep[],
+      resultStepIndexes: number[]
+    ) => {
       // highlight() re-renders the current popover in place (it doesn't touch step-index
       // navigation state), so the panel-actions target and side/align stay put and only the
       // copy changes — telling the viewer what's about to happen before the panels do.
@@ -347,9 +350,9 @@ export function OnboardingTour({
         if (!isRunningDemoRef.current) return;
       }
       if (hasResultsRef.current) {
-        const liveResultSteps = buildOnboardingSteps(true).slice(-resultSteps.length);
+        const liveSteps = buildOnboardingSteps(true);
         resultSteps.forEach((step, index) => {
-          const live = liveResultSteps[index];
+          const live = liveSteps[resultStepIndexes[index]!];
           if (!live) return;
           step.element = live.element;
           step.popover = { ...step.popover, description: live.popover?.description };
@@ -375,9 +378,15 @@ export function OnboardingTour({
 
     const steps = buildOnboardingSteps(hasResultsRef.current);
     const panelActionsStep = steps.find((step) => step.element === '[data-tour="panel-actions"]');
-    // The 4 steps after panel-actions all describe results that don't exist yet on a first
-    // visit — see runLiveDemo for how they get upgraded to real highlights in place.
-    const resultSteps = steps.slice(-4);
+    // Steps whose element depends on hasResults (finding-nav plus the three result
+    // sections) describe results that don't exist yet on a first visit — see runLiveDemo
+    // for how they get upgraded to real highlights in place. Found by index rather than a
+    // fixed offset from the end, since finding-nav now sits earlier in the array (next to
+    // primary-actions) and isn't contiguous with the result-section steps.
+    const resultStepIndexes = steps
+      .map((step, index) => (step.element === undefined ? index : -1))
+      .filter((index) => index >= 0);
+    const resultSteps = resultStepIndexes.map((index) => steps[index]!);
     if (panelActionsStep) {
       panelActionsStep.popover = {
         ...panelActionsStep.popover,
@@ -389,7 +398,7 @@ export function OnboardingTour({
           }
           isRunningDemoRef.current = true;
           demoInjectedRef.current = true;
-          void runLiveDemo(activeTour, reduceMotion, resultSteps);
+          void runLiveDemo(activeTour, reduceMotion, resultSteps, resultStepIndexes);
         }
       };
     }
@@ -430,21 +439,6 @@ export function OnboardingTour({
         exampleCode.textContent = exampleText;
         example.append(exampleLabel, exampleCode);
         popover.description.after(example);
-      },
-      // Differences defaults to collapsed, so its step would otherwise highlight an empty
-      // shell. Open it only while that step is active, and only if the tour is the one that
-      // opened it — never collapse it out from under a viewer who had it open already.
-      onHighlightStarted: (_element, step) => {
-        if (step?.element !== RESULT_DIFFERENCES_SELECTOR || isDifferencesExpandedRef.current)
-          return;
-        expandedDifferencesForTourRef.current = true;
-        onSetDifferencesExpandedRef.current(true);
-      },
-      onDeselected: (_element, step) => {
-        if (step?.element !== RESULT_DIFFERENCES_SELECTOR || !expandedDifferencesForTourRef.current)
-          return;
-        expandedDifferencesForTourRef.current = false;
-        onSetDifferencesExpandedRef.current(false);
       },
       onDestroyStarted: (_element, _step, { driver: activeTour }) => {
         activeTour.destroy();

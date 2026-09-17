@@ -19,6 +19,7 @@ interface JsonTreeNodeProps {
   path: PathSegment[];
   highlights: Record<string, LineHighlight>;
   activePointer: string | null;
+  mirroredPointer: string | null;
   registerNode: (pointer: string, node: HTMLElement | null) => void;
   collapsedPointers?: ReadonlySet<string>;
   onExpandedChange?: (pointer: string, expanded: boolean) => void;
@@ -38,6 +39,7 @@ export function JsonTreeNode({
   path,
   highlights,
   activePointer,
+  mirroredPointer,
   registerNode,
   collapsedPointers,
   onExpandedChange,
@@ -48,7 +50,7 @@ export function JsonTreeNode({
   const highlight = highlights[pointer];
   const category = highlight?.category;
   const canAct = !!actions.index?.byPointer.has(pointer);
-  const classes = `${category ? ` tree-highlight tree-highlight-${category}` : ""}${highlight?.ignored ? " is-ignored" : ""}${pointer === activePointer ? " is-active" : ""}${canAct && pointer === actions.selectedPointer ? " tree-field-selected" : ""}`;
+  const classes = `${category ? ` tree-highlight tree-highlight-${category}` : ""}${highlight?.ignored ? " is-ignored" : ""}${pointer === activePointer ? " is-active" : ""}${pointer === mirroredPointer ? " tree-row-mirror" : ""}${canAct && pointer === actions.selectedPointer ? " tree-field-selected" : ""}`;
   const select = () => {
     if (canAct) actions.onSelect(pointer);
   };
@@ -133,6 +135,7 @@ export function JsonTreeNode({
                 path={[...path, Array.isArray(value) ? Number(key) : key]}
                 highlights={highlights}
                 activePointer={activePointer}
+                mirroredPointer={mirroredPointer}
                 registerNode={registerNode}
                 collapsedPointers={collapsedPointers}
                 onExpandedChange={onExpandedChange}

@@ -102,7 +102,7 @@ Keep these boundaries unless a measured responsibility change justifies moving t
 1. Inspect existing ownership and nearby tests before editing.
 2. Add a regression test for behavior changes at the lowest responsible boundary.
 3. Make the smallest coherent change and update affected imports/docs.
-4. Formatting, lint, the standards audit, and tests may run by default. Type checking, the build, and a manual browser check are opt-in — run them only when explicitly asked. See [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for the exact split and command list.
+4. Only tests scoped to the specific file(s) covering the change may run by default. The full test suite, formatting, lint, the standards audit, type checking, the build, and a manual browser check are all opt-in — run them only when explicitly asked. See [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for the exact split and command list.
 5. Report exactly what changed, then stop. Document any gate that could not run and its exact blocker.
 6. When asked to commit or open a PR, keep the commit message and PR description concise — see [`.agents/EFFICIENCY.md`](.agents/EFFICIENCY.md) for the exact guidance.
 

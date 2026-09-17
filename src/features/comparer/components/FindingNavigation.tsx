@@ -1,5 +1,45 @@
 import type { HighlightCategory } from "../types";
 
+/**
+ * The single finding navigator shared by both panels, living in the panel toolbar above them
+ * (not floating over the panels themselves). Previous/Next step through every highlighted line
+ * across the aligned panels; the last button jumps the page to the comparison output below.
+ */
+export function WorkspaceFindingNav({
+  categories,
+  current,
+  total,
+  onPrevious,
+  onNext,
+  onScrollToOutput
+}: {
+  categories: HighlightCategory[];
+  current: number;
+  total: number;
+  onPrevious: () => void;
+  onNext: () => void;
+  onScrollToOutput: () => void;
+}) {
+  if (!total) return null;
+  return (
+    <div className="workspace-finding-nav" data-tour="finding-nav" aria-label="Finding navigation">
+      <CategoryDots categories={categories} />
+      <button type="button" className="finding-nav-step" onClick={onPrevious}>
+        <span aria-hidden="true">↑</span> Previous
+      </button>
+      <span className="finding-nav-count" aria-live="polite">
+        Finding {current} of {total}
+      </span>
+      <button type="button" className="finding-nav-step" onClick={onNext}>
+        Next <span aria-hidden="true">↓</span>
+      </button>
+      <button type="button" className="finding-nav-output" onClick={onScrollToOutput}>
+        View results <span aria-hidden="true">⤓</span>
+      </button>
+    </div>
+  );
+}
+
 export function CategoryDots({ categories }: { categories: HighlightCategory[] }) {
   return (
     <span className="chip-dots" aria-hidden="true">

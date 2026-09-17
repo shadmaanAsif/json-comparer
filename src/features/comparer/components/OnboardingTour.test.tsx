@@ -36,8 +36,6 @@ function renderTour(overrides: Partial<OnboardingTourProps> = {}) {
     onLoadDemoData: vi.fn(),
     onRunComparison: vi.fn(),
     onClearWorkspace: vi.fn(),
-    isDifferencesExpanded: false,
-    onSetDifferencesExpanded: vi.fn(),
     ...overrides
   };
   return { ...render(<OnboardingTour {...props} />), props };
@@ -73,6 +71,9 @@ describe("OnboardingTour", () => {
       '[data-tour="ignore-paths"]',
       '[data-tour="highlight-controls"]',
       '[data-tour="primary-actions"]',
+      // finding-nav: undefined until a comparison has run — see the "anchors the results
+      // overview" test below for its real anchor once hasResults is true.
+      undefined,
       '[data-tour="panel-actions"]',
       undefined,
       undefined,
@@ -81,8 +82,8 @@ describe("OnboardingTour", () => {
     ]);
     expect(config.steps?.[2]?.popover?.description).toContain("selected by default");
     expect(config.steps?.[2]?.data?.example).toContain("Default: Ordered");
-    expect(config.steps?.[6]?.popover?.description).toContain("Shift+F10");
-    expect(config.steps?.[6]?.data?.example).toContain("Copy value");
+    expect(config.steps?.[7]?.popover?.description).toContain("Shift+F10");
+    expect(config.steps?.[7]?.data?.example).toContain("Copy value");
   });
 
   it("opens automatically once and remembers when the first tour is dismissed", async () => {
@@ -146,15 +147,26 @@ describe("OnboardingTour", () => {
     await user.click(screen.getByRole("button", { name: "Guided tour" }));
 
     const config = driverMock.mock.calls[0]?.[0] as Config;
-    expect(config.steps?.slice(-4).map((step) => step.element)).toEqual([
-      '[data-tour="results"]',
-      '[data-tour="result-structure"]',
-      '[data-tour="result-missing"]',
-      '[data-tour="result-differences"]'
-    ]);
-    expect(config.steps?.at(-3)?.popover?.description).toContain("structurally missing");
-    expect(config.steps?.at(-2)?.popover?.description).toContain("review note");
-    expect(config.steps?.at(-1)?.popover?.description).toContain("Baseline and Candidate values");
+    // finding-nav sits right after primary-actions (same toolbar row), not after the other
+    // result-section steps — assert each by selector rather than by position.
+    expect(findStep(config, '[data-tour="finding-nav"]').popover?.description).toContain(
+      "Previous and Next"
+    );
+    expect(findStep(config, '[data-tour="finding-nav"]').popover?.description).toContain(
+      "View results"
+    );
+    expect(findStep(config, '[data-tour="results"]').popover?.description).toContain(
+      "open by default"
+    );
+    expect(findStep(config, '[data-tour="result-structure"]').popover?.description).toContain(
+      "structurally missing"
+    );
+    expect(findStep(config, '[data-tour="result-missing"]').popover?.description).toContain(
+      "review note"
+    );
+    expect(findStep(config, '[data-tour="result-differences"]').popover?.description).toContain(
+      "Baseline and Candidate values"
+    );
   });
 
   it("never closes or advances on an overlay click — only the close button or Done does", async () => {
@@ -278,15 +290,19 @@ describe("OnboardingTour", () => {
       });
 
       expect(moveNext).toHaveBeenCalledOnce();
-      expect(config.steps?.slice(-4).map((step) => step.element)).toEqual([
-        '[data-tour="results"]',
-        '[data-tour="result-structure"]',
-        '[data-tour="result-missing"]',
-        '[data-tour="result-differences"]'
-      ]);
+      // finding-nav sits earlier in the array (next to primary-actions), not contiguous
+      // with the result-section steps — look each one up by its now-real selector rather
+      // than assuming a fixed position.
+      const upgradedSteps = [
+        findStep(config, '[data-tour="finding-nav"]'),
+        findStep(config, '[data-tour="results"]'),
+        findStep(config, '[data-tour="result-structure"]'),
+        findStep(config, '[data-tour="result-missing"]'),
+        findStep(config, '[data-tour="result-differences"]')
+      ];
       // The canned example text is redundant once the real thing is highlighted behind the
       // popover, so it should be cleared along with the element/description upgrade.
-      expect(config.steps?.slice(-4).every((step) => step.data?.example === undefined)).toBe(true);
+      expect(upgradedSteps.every((step) => step.data?.example === undefined)).toBe(true);
     });
 
     it("never loads a demo over the user's own typed input or an existing comparison", async () => {
@@ -345,65 +361,6 @@ describe("OnboardingTour", () => {
       );
 
       expect(onClearWorkspace).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("Differences section expansion", () => {
-    it("expands Differences only while its step is active, then restores it on deselection", async () => {
-      const onSetDifferencesExpanded = vi.fn();
-      const user = userEvent.setup();
-      renderTour({
-        hasResults: true,
-        isWorkspaceEmpty: false,
-        isDifferencesExpanded: false,
-        onSetDifferencesExpanded
-      });
-
-      await user.click(screen.getByRole("button", { name: "Guided tour" }));
-      const config = driverMock.mock.calls[0]?.[0] as Config;
-      const differencesStep = findStep(config, '[data-tour="result-differences"]');
-
-      config.onHighlightStarted?.(undefined, differencesStep, {} as never);
-      expect(onSetDifferencesExpanded).toHaveBeenCalledOnce();
-      expect(onSetDifferencesExpanded).toHaveBeenCalledWith(true);
-
-      config.onDeselected?.(undefined, differencesStep, {} as never);
-      expect(onSetDifferencesExpanded).toHaveBeenLastCalledWith(false);
-    });
-
-    it("leaves Differences alone if it was already expanded before the tour reached that step", async () => {
-      const onSetDifferencesExpanded = vi.fn();
-      const user = userEvent.setup();
-      renderTour({
-        hasResults: true,
-        isWorkspaceEmpty: false,
-        isDifferencesExpanded: true,
-        onSetDifferencesExpanded
-      });
-
-      await user.click(screen.getByRole("button", { name: "Guided tour" }));
-      const config = driverMock.mock.calls[0]?.[0] as Config;
-      const differencesStep = findStep(config, '[data-tour="result-differences"]');
-
-      config.onHighlightStarted?.(undefined, differencesStep, {} as never);
-      config.onDeselected?.(undefined, differencesStep, {} as never);
-
-      expect(onSetDifferencesExpanded).not.toHaveBeenCalled();
-    });
-
-    it("ignores highlight/deselect events for every other step", async () => {
-      const onSetDifferencesExpanded = vi.fn();
-      const user = userEvent.setup();
-      renderTour({ hasResults: true, isWorkspaceEmpty: false, onSetDifferencesExpanded });
-
-      await user.click(screen.getByRole("button", { name: "Guided tour" }));
-      const config = driverMock.mock.calls[0]?.[0] as Config;
-      const otherStep = findStep(config, '[data-tour="result-missing"]');
-
-      config.onHighlightStarted?.(undefined, otherStep, {} as never);
-      config.onDeselected?.(undefined, otherStep, {} as never);
-
-      expect(onSetDifferencesExpanded).not.toHaveBeenCalled();
     });
   });
 });

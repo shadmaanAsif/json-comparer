@@ -128,16 +128,6 @@ export function usePanelEditorActions({
   };
   const openPointer = (pointer: string, anchor: { x: number; y: number }) =>
     openField(index?.byPointer.get(pointer), anchor, "tree");
-  const openSelected = (anchor: { x: number; y: number }) => {
-    if (activeView === "json") {
-      openLine(selectedLine ?? (editorRef.current ? caretLine(editorRef.current) : 1), anchor);
-      return;
-    }
-    let field = index?.byPointer.get(selectedPointer ?? "");
-    while (field?.placeholder && field.parentPointer !== null)
-      field = index?.byPointer.get(field.parentPointer);
-    openField(field, anchor, "tree");
-  };
   const onTreeToggle = (pointer: string, expanded: boolean) =>
     setCollapsed((current) => {
       if (current.has(pointer) === !expanded) return current;
@@ -146,6 +136,14 @@ export function usePanelEditorActions({
       else next.add(pointer);
       return next;
     });
+  // Switching into the Tree view expands every branch by default, so a toggle always starts
+  // from a fully open tree regardless of what was collapsed in a previous Tree session.
+  const previousView = useRef(activeView);
+  useEffect(() => {
+    if (activeView === "tree" && previousView.current !== "tree" && collapsed.size)
+      setCollapsed(new Set());
+    previousView.current = activeView;
+  }, [activeView, collapsed.size]);
   useEffect(() => {
     // A pointer landing outside this panel (the other panel, the results section, the page
     // background) clears its current-line indicator; the "Line actions" dialog lives outside
@@ -224,7 +222,6 @@ export function usePanelEditorActions({
     caretLine,
     openLine,
     openPointer,
-    openSelected,
     collapsed,
     onTreeToggle,
     treeRequest: treeRequest?.text === value ? treeRequest : undefined,

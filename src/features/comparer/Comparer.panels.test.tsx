@@ -264,7 +264,8 @@ describe("Comparer panel actions", () => {
       target: { value: '{"items":[{"id":"b"}]}' }
     });
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
-    await compare(user);
+    // Switching array mode now compares automatically — no separate Compare responses click.
+    act(() => TestWorker.instances.at(-1)!.complete());
     await user.click(
       within(screen.getByRole("region", { name: "Baseline" })).getByRole("tab", { name: "Tree" })
     );
@@ -293,7 +294,8 @@ describe("Comparer panel actions", () => {
       target: { value: '{"items":[{"id":2},{"id":1}]}' }
     });
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
-    await compare(user);
+    // Switching array mode now compares automatically — no separate Compare responses click.
+    act(() => TestWorker.instances.at(-1)!.complete());
     const source = screen.getByRole("region", { name: "Baseline" });
     const target = screen.getByRole("region", { name: "Candidate" });
     await user.click(within(source).getByRole("tab", { name: "Tree" }));
@@ -410,20 +412,44 @@ describe("Comparer panel actions", () => {
     expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
   });
 
-  it("clears results and disables line actions when array mode changes after a compare", async () => {
+  it("re-runs the comparison automatically when array mode changes after a compare", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
     fillInputs();
     await compare(user);
     expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
     const stale = TestWorker.instances.at(-1)!;
+
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
-    // A superseded worker's own error callback firing late must not resurrect stale results
-    // or clobber the "inputs changed" status with a spurious worker-crash message.
+    const rerun = TestWorker.instances.at(-1)!;
+    expect(rerun).not.toBe(stale);
+    expect(rerun.request?.options.arrayMode).toBe("unordered");
+    // A superseded worker's own error callback firing late must not clobber the rerun already
+    // in flight for the new array mode.
     act(() => stale.onerror?.());
-    expectLineActionsUnavailable();
-    expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Inputs changed");
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+
+    act(() => rerun.complete());
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+    openPrice();
+    expect(screen.getByRole("dialog", { name: "Line actions · Baseline" })).toBeInTheDocument();
+  });
+
+  it("shows the highlight legend only once a comparison has run, and hides it again on Clear all", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    expect(
+      screen.queryByRole("group", { name: "Highlight in JSON panels" })
+    ).not.toBeInTheDocument();
+
+    fillInputs();
+    await compare(user);
+    expect(screen.getByRole("group", { name: "Highlight in JSON panels" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expect(
+      screen.queryByRole("group", { name: "Highlight in JSON panels" })
+    ).not.toBeInTheDocument();
   });
 
   it("mirrors the current line onto the other panel and clears both on an outside click", async () => {

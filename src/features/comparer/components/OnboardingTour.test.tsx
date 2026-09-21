@@ -69,10 +69,11 @@ describe("OnboardingTour", () => {
       '[data-tour="json-inputs"]',
       '[data-tour="array-mode"]',
       '[data-tour="ignore-paths"]',
-      '[data-tour="highlight-controls"]',
       '[data-tour="primary-actions"]',
-      // finding-nav: undefined until a comparison has run — see the "anchors the results
-      // overview" test below for its real anchor once hasResults is true.
+      // finding-nav and highlight-controls: undefined until a comparison has run — see the
+      // "anchors the results overview" test below for their real anchors once hasResults is
+      // true.
+      undefined,
       undefined,
       '[data-tour="panel-actions"]',
       undefined,
@@ -154,6 +155,9 @@ describe("OnboardingTour", () => {
     );
     expect(findStep(config, '[data-tour="finding-nav"]').popover?.description).toContain(
       "View results"
+    );
+    expect(findStep(config, '[data-tour="highlight-controls"]').popover?.description).toContain(
+      "Toggle missing fields"
     );
     expect(findStep(config, '[data-tour="results"]').popover?.description).toContain(
       "open by default"

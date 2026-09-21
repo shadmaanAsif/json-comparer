@@ -14,13 +14,11 @@ function renderControls(overrides: Partial<ComparisonControlsProps> = {}) {
     arrayMode: "ordered",
     ignorePaths: ["meta.timestamp"],
     ignorePathSuggestions: ["meta.timestamp", "data.amount", "data.currency"],
-    highlightVisibility: { missing: true, structure: true, differences: true },
     isComparing: false,
     status: { tone: "idle", message: "Ready to compare." },
     onArrayModeChange: vi.fn(),
     onIgnorePathsChange: vi.fn(),
     onApplyIgnorePaths: vi.fn(),
-    onHighlightVisibilityChange: vi.fn(),
     ...overrides
   };
 
@@ -29,26 +27,6 @@ function renderControls(overrides: Partial<ComparisonControlsProps> = {}) {
 }
 
 describe("ComparisonControls", () => {
-  it("keeps the missing-fields highlight toggle simple, moving the Baseline/Candidate color legend to a hover detail", async () => {
-    const user = userEvent.setup();
-    renderControls();
-
-    const toggle = screen.getByRole("button", { name: "Missing fields" });
-    expect(toggle).toBeVisible();
-    expect(toggle).not.toHaveTextContent("Only in Baseline");
-
-    const info = screen.getByRole("button", { name: "Missing-fields highlight colors" });
-    expect(info).toHaveAttribute(
-      "title",
-      "Only in Baseline is highlighted in red, Only in Candidate in green."
-    );
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
-    await user.hover(info);
-    expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Only in Baseline is highlighted in red, Only in Candidate in green."
-    );
-  });
-
   it("warns that ignore rules don't help unordered array items match, only in that mode", () => {
     renderControls({ arrayMode: "ordered" });
     expect(screen.queryByText(/don't help two array items match/)).not.toBeInTheDocument();
@@ -69,13 +47,11 @@ describe("ComparisonControls", () => {
           arrayMode="ordered"
           ignorePaths={ignorePaths}
           ignorePathSuggestions={["meta.timestamp", "data.amount", "data.currency"]}
-          highlightVisibility={{ missing: true, structure: true, differences: true }}
           isComparing={false}
           status={{ tone: "idle", message: "Ready to compare." }}
           onArrayModeChange={vi.fn()}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={onApplyIgnorePaths}
-          onHighlightVisibilityChange={vi.fn()}
         />
       );
     }
@@ -131,13 +107,11 @@ describe("ComparisonControls", () => {
           arrayMode="ordered"
           ignorePaths={ignorePaths}
           ignorePathSuggestions={[]}
-          highlightVisibility={{ missing: true, structure: true, differences: true }}
           isComparing={false}
           status={{ tone: "idle", message: "Ready to compare." }}
           onArrayModeChange={vi.fn()}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={vi.fn()}
-          onHighlightVisibilityChange={vi.fn()}
         />
       );
     }
@@ -175,13 +149,11 @@ describe("ComparisonControls", () => {
           arrayMode="ordered"
           ignorePaths={ignorePaths}
           ignorePathSuggestions={[]}
-          highlightVisibility={{ missing: true, structure: true, differences: true }}
           isComparing={false}
           status={{ tone: "idle", message: "Ready to compare." }}
           onArrayModeChange={vi.fn()}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={onApplyIgnorePaths}
-          onHighlightVisibilityChange={vi.fn()}
         />
       );
     }

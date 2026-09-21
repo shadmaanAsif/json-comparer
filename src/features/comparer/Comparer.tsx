@@ -12,6 +12,7 @@ import { ComparisonControls } from "./components/ComparisonControls";
 import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
 import { WorkspaceFindingNav } from "./components/FindingNavigation";
+import { HighlightControls } from "./components/HighlightControls";
 import { JsonInputPane } from "./components/JsonInputPane";
 import { OnboardingTour } from "./components/OnboardingTour";
 import {
@@ -76,6 +77,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     structure: true,
     differences: true
   });
+  // Hidden until a comparison has actually run, so the legend never explains highlights that
+  // aren't on screen yet. Stays visible through live re-compares and errors once shown; only
+  // Clear all hides it again.
+  const [highlightControlsVisible, setHighlightControlsVisible] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     missing: true,
     structure: true,
@@ -297,10 +302,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const runComparison = (
     overrideIgnorePaths?: string[],
     overrideTextA?: string,
-    overrideTextB?: string
+    overrideTextB?: string,
+    overrideArrayMode?: ArrayMode
   ) => {
     stopWorker();
     setIsActivelyComparing(true);
+    setHighlightControlsVisible(true);
     const jobId = crypto.randomUUID();
     activeJobRef.current = jobId;
     const sentTextA = overrideTextA ?? textA;
@@ -355,18 +362,21 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       jobId,
       textA: sentTextA,
       textB: sentTextB,
-      options: overrideIgnorePaths
-        ? {
-            ...options,
-            ignorePatterns: overrideIgnorePaths
-          }
-        : options,
+      options:
+        overrideIgnorePaths || overrideArrayMode
+          ? {
+              ...options,
+              ...(overrideIgnorePaths ? { ignorePatterns: overrideIgnorePaths } : {}),
+              ...(overrideArrayMode ? { arrayMode: overrideArrayMode } : {})
+            }
+          : options,
       maxBytes: MAX_DOCUMENT_BYTES
     } satisfies WorkerRequest);
   };
 
   const clearWorkspace = () => {
     invalidateComparison();
+    setHighlightControlsVisible(false);
     setTextA("");
     setTextB("");
     setCurlA(null);
@@ -630,6 +640,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             </button>
           </div>
         </div>
+
+        {highlightControlsVisible && (
+          <HighlightControls
+            highlightVisibility={highlightToggles}
+            onHighlightVisibilityChange={setHighlightToggles}
+          />
+        )}
+
         <div
           id="json-input-panels"
           className={`input-grid${jsonPanelsExpanded ? " panels-expanded" : ""}`}
@@ -690,16 +708,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           arrayMode={arrayMode}
           ignorePaths={ignorePaths}
           ignorePathSuggestions={ignorePathSuggestions}
-          highlightVisibility={highlightToggles}
           isComparing={busy}
           status={displayedStatus}
           onArrayModeChange={(mode) => {
             setArrayMode(mode);
-            invalidateComparison();
+            runComparison(undefined, undefined, undefined, mode);
           }}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={(paths) => runComparison(paths)}
-          onHighlightVisibilityChange={setHighlightToggles}
         />
       </section>
 

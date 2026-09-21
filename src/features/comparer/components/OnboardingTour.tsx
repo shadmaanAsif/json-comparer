@@ -22,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v7";
+const TOUR_VERSION = "v8";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -129,19 +129,6 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       }
     },
     {
-      element: '[data-tour="highlight-controls"]',
-      data: {
-        example: 'A: "amount": 100\nB: "amount": 150 → changed-value highlight'
-      },
-      popover: {
-        title: "Control the editor highlights",
-        description:
-          "Toggle missing fields, structure issues, or changed values in both JSON panels. These switches change the visual guidance only; they do not remove findings from the comparison.",
-        side: "bottom",
-        align: "start"
-      }
-    },
-    {
       element: '[data-tour="primary-actions"]',
       data: {
         example: "1. Load sample\n2. Choose array mode\n3. Compare responses"
@@ -169,6 +156,25 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
           : "Once you compare, this same toolbar grows a navigator to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
         side: "bottom",
         align: "center"
+      }
+    },
+    // The legend itself only renders once a comparison has run (Comparer hides it until then),
+    // so — like the result-section steps below — it has no element to anchor to on a first
+    // visit and falls back to description-only copy.
+    {
+      element: hasResults ? '[data-tour="highlight-controls"]' : undefined,
+      data: {
+        example: hasResults
+          ? undefined
+          : 'A: "amount": 100\nB: "amount": 150 → changed-value highlight'
+      },
+      popover: {
+        title: "Control the editor highlights",
+        description: hasResults
+          ? "Toggle missing fields, structure issues, or changed values in both JSON panels. These switches change the visual guidance only; they do not remove findings from the comparison."
+          : "Once you compare, this legend appears above the panels so you can toggle missing fields, structure issues, or changed-value highlights. Replay this tour after comparing to see it.",
+        side: "bottom",
+        align: "start"
       }
     },
     {

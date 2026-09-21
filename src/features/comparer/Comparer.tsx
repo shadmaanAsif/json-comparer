@@ -302,7 +302,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const runComparison = (
     overrideIgnorePaths?: string[],
     overrideTextA?: string,
-    overrideTextB?: string
+    overrideTextB?: string,
+    overrideArrayMode?: ArrayMode
   ) => {
     stopWorker();
     setIsActivelyComparing(true);
@@ -361,12 +362,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       jobId,
       textA: sentTextA,
       textB: sentTextB,
-      options: overrideIgnorePaths
-        ? {
-            ...options,
-            ignorePatterns: overrideIgnorePaths
-          }
-        : options,
+      options:
+        overrideIgnorePaths || overrideArrayMode
+          ? {
+              ...options,
+              ...(overrideIgnorePaths ? { ignorePatterns: overrideIgnorePaths } : {}),
+              ...(overrideArrayMode ? { arrayMode: overrideArrayMode } : {})
+            }
+          : options,
       maxBytes: MAX_DOCUMENT_BYTES
     } satisfies WorkerRequest);
   };
@@ -709,7 +712,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           status={displayedStatus}
           onArrayModeChange={(mode) => {
             setArrayMode(mode);
-            invalidateComparison();
+            runComparison(undefined, undefined, undefined, mode);
           }}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={(paths) => runComparison(paths)}

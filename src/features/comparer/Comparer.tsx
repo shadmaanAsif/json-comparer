@@ -77,6 +77,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     structure: true,
     differences: true
   });
+  // Hidden until a comparison has actually run, so the legend never explains highlights that
+  // aren't on screen yet. Stays visible through live re-compares and errors once shown; only
+  // Clear all hides it again.
+  const [highlightControlsVisible, setHighlightControlsVisible] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     missing: true,
     structure: true,
@@ -302,6 +306,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   ) => {
     stopWorker();
     setIsActivelyComparing(true);
+    setHighlightControlsVisible(true);
     const jobId = crypto.randomUUID();
     activeJobRef.current = jobId;
     const sentTextA = overrideTextA ?? textA;
@@ -368,6 +373,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
 
   const clearWorkspace = () => {
     invalidateComparison();
+    setHighlightControlsVisible(false);
     setTextA("");
     setTextB("");
     setCurlA(null);
@@ -632,10 +638,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           </div>
         </div>
 
-        <HighlightControls
-          highlightVisibility={highlightToggles}
-          onHighlightVisibilityChange={setHighlightToggles}
-        />
+        {highlightControlsVisible && (
+          <HighlightControls
+            highlightVisibility={highlightToggles}
+            onHighlightVisibilityChange={setHighlightToggles}
+          />
+        )}
 
         <div
           id="json-input-panels"

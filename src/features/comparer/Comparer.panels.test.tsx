@@ -426,6 +426,23 @@ describe("Comparer panel actions", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Inputs changed");
   });
 
+  it("shows the highlight legend only once a comparison has run, and hides it again on Clear all", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    expect(
+      screen.queryByRole("group", { name: "Highlight in JSON panels" })
+    ).not.toBeInTheDocument();
+
+    fillInputs();
+    await compare(user);
+    expect(screen.getByRole("group", { name: "Highlight in JSON panels" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expect(
+      screen.queryByRole("group", { name: "Highlight in JSON panels" })
+    ).not.toBeInTheDocument();
+  });
+
   it("mirrors the current line onto the other panel and clears both on an outside click", async () => {
     const user = userEvent.setup();
     const { container } = render(<Comparer />);

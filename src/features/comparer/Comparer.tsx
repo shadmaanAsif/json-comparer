@@ -12,6 +12,7 @@ import { ComparisonControls } from "./components/ComparisonControls";
 import { ComparisonResults } from "./components/ComparisonResults";
 import { ExportPreview } from "./components/ExportPreview";
 import { WorkspaceFindingNav } from "./components/FindingNavigation";
+import { HighlightControls } from "./components/HighlightControls";
 import { JsonInputPane } from "./components/JsonInputPane";
 import { OnboardingTour } from "./components/OnboardingTour";
 import {
@@ -630,6 +631,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             </button>
           </div>
         </div>
+
+        <HighlightControls
+          highlightVisibility={highlightToggles}
+          onHighlightVisibilityChange={setHighlightToggles}
+        />
+
         <div
           id="json-input-panels"
           className={`input-grid${jsonPanelsExpanded ? " panels-expanded" : ""}`}
@@ -690,7 +697,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           arrayMode={arrayMode}
           ignorePaths={ignorePaths}
           ignorePathSuggestions={ignorePathSuggestions}
-          highlightVisibility={highlightToggles}
           isComparing={busy}
           status={displayedStatus}
           onArrayModeChange={(mode) => {
@@ -699,7 +705,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           }}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={(paths) => runComparison(paths)}
-          onHighlightVisibilityChange={setHighlightToggles}
         />
       </section>
 

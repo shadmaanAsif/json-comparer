@@ -562,6 +562,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     focusElement("results-path-filter");
   };
 
+  const isWorkspaceEmpty = !textA.trim() && !textB.trim();
+
   return (
     <main>
       <header className="hero">
@@ -596,7 +598,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           </div>
           <OnboardingTour
             hasResults={result !== null}
-            isWorkspaceEmpty={!textA.trim() && !textB.trim()}
+            isWorkspaceEmpty={isWorkspaceEmpty}
             onLoadDemoData={loadTourDemo}
             onRunComparison={() => runComparison()}
             onClearWorkspace={clearWorkspace}
@@ -655,7 +657,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           id="json-input-panels"
           className={`input-grid${jsonPanelsExpanded ? " panels-expanded" : ""}${
             highlightControlsVisible ? " has-side-panel" : ""
-          }`}
+          }${isWorkspaceEmpty ? " panels-empty" : ""}`}
           aria-label="JSON response inputs"
           data-tour="json-inputs"
         >

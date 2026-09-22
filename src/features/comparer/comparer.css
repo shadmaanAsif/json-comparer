@@ -149,6 +149,13 @@
 .input-grid.panels-expanded {
   --json-panel-height: min(88vh, 1040px);
 }
+/* Wins over .panels-expanded (same specificity, declared later): while neither panel has JSON,
+   the designated 520px/88vh sizing has nothing to justify it, so both panels share the
+   viewport evenly instead. Any input restores the designated height (see clearWorkspace in
+   Comparer.tsx for the isWorkspaceEmpty check driving this class). */
+.input-grid.panels-empty {
+  --json-panel-height: 50vh;
+}
 .input-panel {
   position: relative;
   min-width: 0;
@@ -783,6 +790,16 @@
 }
 .tree-with-navigation {
   position: relative;
+}
+/* Scoped to .input-panel, not a bare .empty-state rule: that class is shared with
+   ComparisonResults' "no results yet" card, which must stay content-sized. JsonTree renders
+   plain .empty-state (no height) before any JSON is parsed, so without this the Tree tab
+   collapses to its padding instead of matching the JSON tab's panel height. */
+.input-panel .empty-state {
+  height: var(--json-panel-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 [data-theme="light"] .json-tree {
   background: var(--editor-bg);

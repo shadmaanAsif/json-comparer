@@ -67,13 +67,14 @@ it.
 
 ## Manual browser verification with large/real payloads
 
-Small hand-written fixtures (`samples/baseline.json`, `samples/candidate.json`) don't exercise
-scroll, virtualization, or line-mapping bugs that only show up with thousands of lines.
-`samples/ignore/*.json` holds full-size, real-world response pairs for exactly that — gitignored,
-so it's safe to keep large/real captures there without committing them.
+All of `samples/` is gitignored — nothing under it is committed, so it's safe to keep any
+fixture there without exposing payload content in the repo. Small hand-written fixtures
+(`samples/baseline.json`, `samples/candidate.json`, see `samples/README.md`) don't exercise
+scroll, virtualization, or line-mapping bugs that only show up with thousands of lines; for
+that, keep a full-size, real-world response pair in `samples/` instead.
 
 The JSON panels only accept paste, file upload, or a URL/cURL fetch — there's no way to script a
-native `<input type="file">` picker from browser automation. To load a `samples/ignore/*.json`
+native `<input type="file">` picker from browser automation. To load a `samples/*.json`
 file into a panel during a manual check:
 1. Copy it to `public/__diag_<name>.json` (temporary, gitignored path under the Next.js public dir).
 2. Use the panel's "Add" modal with `http://localhost:<port>/__diag_<name>.json` as the URL — the

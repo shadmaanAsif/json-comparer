@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "data": {
+    "id": 42,
+    "amount": 150,
+    "currency": "USD",
+    "tags": ["stable", "api"],
+    "discount": true,
+    "records": [
+      { "id": 1, "code": "A" },
+      { "id": 2 }
+    ]
+  },
+  "meta": { "version": "1" }
+}

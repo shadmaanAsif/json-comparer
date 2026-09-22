@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "data": {
+    "id": 42,
+    "amount": 100,
+    "currency": "USD",
+    "tags": ["api", "stable"],
+    "region": "eu-west",
+    "records": [
+      { "id": 1, "code": "A" },
+      { "id": 2 }
+    ]
+  },
+  "meta": { "version": 1 }
+}

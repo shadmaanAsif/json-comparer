@@ -26,7 +26,12 @@ export function HighlightControls({
   };
 
   return (
-    <fieldset className="highlight-controls" data-tour="highlight-controls">
+    <fieldset
+      id="workspace-highlight-controls"
+      className="highlight-controls"
+      data-tour="highlight-controls"
+      tabIndex={-1}
+    >
       <legend>Highlight in JSON panels</legend>
       <span className="select-chip missing-chip">
         <button

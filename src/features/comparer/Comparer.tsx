@@ -260,6 +260,11 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     document
       .getElementById("comparison-output")
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToHighlightControls = () => {
+    const target = document.getElementById("workspace-highlight-controls");
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    target?.focus({ preventScroll: true });
+  };
   const displayedStatus = useMemo<WorkspaceStatus>(
     () =>
       status.source === "comparison" && resultProjection && comparisonDurationMs !== null
@@ -610,6 +615,12 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       <section className="workspace" aria-label="JSON comparison workspace">
         <div className="panel-toolbar-actions" data-tour="primary-actions">
           <span>JSON response panels</span>
+          {highlightControlsVisible && (
+            <HighlightControls
+              highlightVisibility={highlightToggles}
+              onHighlightVisibilityChange={setHighlightToggles}
+            />
+          )}
           <button
             className="primary-button"
             type="button"
@@ -676,10 +687,13 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
 
           {highlightControlsVisible && (
             <div className="workspace-side-panel">
-              <HighlightControls
-                highlightVisibility={highlightToggles}
-                onHighlightVisibilityChange={setHighlightToggles}
-              />
+              <button
+                type="button"
+                className="highlight-scroll-button"
+                onClick={scrollToHighlightControls}
+              >
+                View highlights <span aria-hidden="true">⤒</span>
+              </button>
               <WorkspaceFindingNav
                 categories={findingCategories}
                 current={findingCursor + 1}

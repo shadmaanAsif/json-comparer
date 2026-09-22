@@ -92,7 +92,9 @@
 }
 /* Level-1 row of .workspace: the panel title plus every workflow action (highlight toggles,
    Compare, Load sample, Clear all, Expand/Collapse) read as one in-line cluster instead of being
-   split across a separate row shared with the finding navigator. */
+   split across a separate row shared with the finding navigator. Also carries the id
+   scrollToHighlightControls (Comparer.tsx) scrolls back up to from the narrow
+   workspace-side-panel column between the panels. */
 .panel-toolbar-actions {
   display: flex;
   align-items: center;
@@ -113,9 +115,12 @@
    .input-grid). Centered vertically in that column rather than stretched to the tall expanded
    panel's full height. Placed by name (grid-area), not DOM order: the wrapper is only rendered
    in Comparer.tsx while highlightControlsVisible, and auto-placement would otherwise shove side
-   B into this column whenever it's absent. Holds both HighlightControls and WorkspaceFindingNav
-   stacked, so the column is put to use as soon as a comparison is active, not only once it has
-   findings to navigate. */
+   B into this column whenever it's absent. Holds the compact "View highlights" scroll-shortcut
+   button (see .highlight-scroll-button) and WorkspaceFindingNav stacked, so the column is put to
+   use as soon as a comparison is active, not only once it has findings to navigate. The three
+   highlight chips themselves live inline in .panel-toolbar-actions, not here — their text
+   content ("Structure schema", etc.) doesn't fit this column's ~112-148px width; a card or a
+   floating popover placed here previously both overflowed onto the JSON panel beside it. */
 .input-grid > .workspace-side-panel {
   grid-area: nav;
   align-self: center;
@@ -809,37 +814,71 @@
   padding: 18px 22px;
   background: var(--panel-tint);
 }
-/* Its own card above WorkspaceFindingNav inside the shared .workspace-side-panel column (see
-   .input-grid), not a pill row in the toolbar. Chips stack one per row (full width, centered)
-   rather than wrapping inline, since the column is narrower than the old toolbar row. */
+/* Inline in .panel-toolbar-actions (see Comparer.tsx), the same row as Compare/Load sample/Clear
+   all — not the narrow workspace-side-panel column between the panels, where the three chips'
+   text content ("Structure schema", etc.) refuses to shrink below its own width: both a stacked
+   card and a floating popover anchored from that ~112-148px column overflowed onto the Candidate
+   panel beside it. Carries the id scrollToHighlightControls both scrolls to and focuses (tabIndex
+   -1: not in the normal tab order, only a programmatic landing target) — see
+   .highlight-scroll-button below, the shortcut back to it from the narrow column. */
 .highlight-controls {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
   margin: 0;
-  padding: 10px;
+  padding: 5px 12px;
+  /* scrollIntoView({ block: "start" }) respects this: without it, scrollToHighlightControls
+     lands the fieldset flush against the viewport's very top edge, jammed under the browser's
+     own chrome instead of leaving breathing room above it. */
+  scroll-margin-top: 16px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--surface-2) 92%, transparent);
 }
-.highlight-controls legend {
-  width: 100%;
-  margin: 0 0 2px;
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 800;
-  text-align: center;
+/* Plain :focus, not :focus-visible: this only ever fires from scrollToHighlightControls's own
+   focus({ preventScroll: true }) call after a mouse click, which most browsers' :focus-visible
+   heuristic would suppress — defeating the point of confirming where the click landed. */
+.highlight-controls:focus {
+  outline: 3px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 4px;
 }
-.highlight-controls .select-chip {
-  width: 100%;
-  justify-content: center;
+.highlight-controls legend {
+  float: left;
+  margin-right: 12px;
+  color: var(--muted);
+  font-size: 0.77rem;
+  font-weight: 800;
 }
 .highlight-controls i {
   display: inline-block;
   width: 9px;
   height: 9px;
   border-radius: 50%;
+}
+/* Jumps back up to and focuses the HighlightControls fieldset inline in .panel-toolbar-actions
+   (see Comparer.tsx's scrollToHighlightControls), rather than reproducing the chips here — see
+   .workspace-side-panel above for why they don't fit this column. Styled like
+   .workspace-finding-nav's own "View results" link (transparent, underline on hover) rather than
+   a Previous/Next pill, since it jumps away from this card instead of stepping within it. */
+.highlight-scroll-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+.highlight-scroll-button:hover,
+.highlight-scroll-button:focus-visible {
+  text-decoration: underline;
 }
 .legend-pair {
   display: inline-flex;
@@ -1531,6 +1570,10 @@ footer {
   }
   .panel-toolbar-actions {
     justify-content: center;
+  }
+  .highlight-controls legend {
+    width: 100%;
+    margin: 0 0 4px;
   }
   .input-grid {
     grid-template-columns: 1fr;

@@ -115,7 +115,7 @@
    .input-grid). Centered vertically in that column rather than stretched to the tall expanded
    panel's full height. Placed by name (grid-area), not DOM order: the wrapper is only rendered
    in Comparer.tsx while highlightControlsVisible, and auto-placement would otherwise shove side
-   B into this column whenever it's absent. Holds the compact "View highlights" scroll-shortcut
+   B into this column whenever it's absent. Holds the compact "Highlight Controls" scroll-shortcut
    button (see .highlight-scroll-button) and WorkspaceFindingNav stacked, so the column is put to
    use as soon as a comparison is active, not only once it has findings to navigate. The three
    highlight chips themselves live inline in .panel-toolbar-actions, not here — their text

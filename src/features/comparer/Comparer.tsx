@@ -692,7 +692,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
                 className="highlight-scroll-button"
                 onClick={scrollToHighlightControls}
               >
-                View highlights <span aria-hidden="true">⤒</span>
+                Highlight Controls <span aria-hidden="true">⤒</span>
               </button>
               <WorkspaceFindingNav
                 categories={findingCategories}

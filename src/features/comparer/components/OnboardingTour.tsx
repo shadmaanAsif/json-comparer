@@ -167,7 +167,7 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       }
     },
     // Right before panel-actions, not right after primary-actions: this navigator now lives
-    // between the two JSON panels, below the compact "Highlight" shortcut button that scrolls
+    // between the two JSON panels, below the compact "Highlight Controls" shortcut button that scrolls
     // back up to the toolbar's highlight toggles, in the same workspace-side-panel column, so
     // visiting it next to panel-actions — also inside the panels — avoids bouncing the tour
     // between the toolbar and the panels.

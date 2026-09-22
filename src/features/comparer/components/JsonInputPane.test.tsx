@@ -217,6 +217,46 @@ describe("JsonInputPane validation state", () => {
     expect(container.querySelector(".line-context")).toBeInTheDocument();
   });
 
+  it("brings the finding-nav toolbar into view instantly, not with a smooth animation", () => {
+    // Regression test: a `behavior: "smooth"` window scroll here left the target line's gutter
+    // "..." button drifting under the viewport for several hundred ms (the page also sets
+    // `scroll-behavior: smooth` globally), so a click made right after a Previous/Next navigation
+    // (the natural next action) could land on the wrong line or miss the button entirely.
+    const scrollSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const display = formatAlignedForDisplay({ a: 1, b: 2 }, { a: 1, b: 2 });
+    const panelIndex = buildPanelIndex(
+      display.textA,
+      display.lineMapA,
+      display.placeholderLineMapA
+    );
+    const { props, rerender } = renderPane(display.textA, { panelIndex });
+    const editor = screen.getByRole("textbox", { name: "JSON for Baseline" });
+    // jsdom lays nothing out, so the editor's rect is all zeros by default — that reads as
+    // "already fully in view", and `windowScrollTargetForRect` skips the scroll entirely. Push it
+    // below the viewport so this test exercises the same scroll the browser actually takes.
+    vi.spyOn(editor, "getBoundingClientRect").mockReturnValue({
+      top: 900,
+      bottom: 1400,
+      height: 500,
+      left: 0,
+      right: 0,
+      width: 0,
+      x: 0,
+      y: 900,
+      toJSON() {
+        return this;
+      }
+    });
+    rerender(
+      <JsonInputPane
+        {...props}
+        panelNavigation={{ field: panelIndex.byPointer.get("/b")!, index: panelIndex, token: 1 }}
+      />
+    );
+    expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: "instant" }));
+    scrollSpy.mockRestore();
+  });
+
   it.each([null, {}, []])(
     "offers root actions for %j without a nonexistent branch",
     async (value) => {

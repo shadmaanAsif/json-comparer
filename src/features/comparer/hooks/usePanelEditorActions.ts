@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { ResponseSide } from "../types";
 import {
   scrollOffsetForLine,
@@ -156,13 +156,14 @@ export function usePanelEditorActions({
     document.addEventListener("pointerdown", clearOnOutsideClick, true);
     return () => document.removeEventListener("pointerdown", clearOnOutsideClick, true);
   }, [paneRef]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!navigation || navigation.index !== index || lastNavigation.current === navigation) return;
-    // Navigate in the destination's current view, without switching tabs. This runs synchronously
-    // (not deferred to a requestAnimationFrame) so the selection/scroll commit in the same paint as
-    // the caller's own state update (e.g. the finding-nav counter) — deferring it a frame let the
-    // counter briefly show a new "Finding N of M" while the gutter, highlight, and scroll position
-    // still showed the previous line.
+    // useLayoutEffect, not useEffect: this must commit before the browser paints the caller's own
+    // state update (e.g. the finding-nav counter), not merely "soon after" it. A plain useEffect
+    // fires after paint, so there was a real (if brief) painted frame where "Finding N of M" and
+    // the active-line highlight already showed the new line while the gutter's scroll position —
+    // and thus its "..." button — still sat at the previous one. A click landing in that window
+    // (the natural next action after Previous/Next) opened the wrong line's actions, or none.
     if (activeView === "tree") {
       lastNavigation.current = navigation;
       setTreeNavigation({
@@ -203,7 +204,12 @@ export function usePanelEditorActions({
       ? { top: toolbarRect.top, bottom: editorRect.bottom, height: editorRect.bottom - toolbarRect.top }
       : editorRect;
     const scrollTarget = windowScrollTargetForRect(targetRect, window.innerHeight, window.scrollY);
-    if (scrollTarget !== null) window.scrollTo({ top: scrollTarget, behavior: "smooth" });
+    // Instant, not smooth: the page also sets `scroll-behavior: smooth` globally (globals.css),
+    // which would otherwise animate this over several hundred ms. A line's gutter "..." button
+    // sits underneath that moving viewport the whole time, so a click made right after this
+    // navigation (the natural next action) could land on the wrong line, or on a non-actionable
+    // one with no button at all — silently doing nothing.
+    if (scrollTarget !== null) window.scrollTo({ top: scrollTarget, behavior: "instant" });
   }, [
     navigation,
     index,

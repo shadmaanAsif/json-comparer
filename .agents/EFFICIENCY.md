@@ -65,6 +65,22 @@ everything," "the full gate sequence," "verify this") means running the opt-in t
 a gate can't run, say so with the exact blocker. Never claim a gate passed without running
 it.
 
+## Manual browser verification with large/real payloads
+
+Small hand-written fixtures (`samples/baseline.json`, `samples/candidate.json`) don't exercise
+scroll, virtualization, or line-mapping bugs that only show up with thousands of lines.
+`samples/ignore/*.json` holds full-size, real-world response pairs for exactly that — gitignored,
+so it's safe to keep large/real captures there without committing them.
+
+The JSON panels only accept paste, file upload, or a URL/cURL fetch — there's no way to script a
+native `<input type="file">` picker from browser automation. To load a `samples/ignore/*.json`
+file into a panel during a manual check:
+1. Copy it to `public/__diag_<name>.json` (temporary, gitignored path under the Next.js public dir).
+2. Use the panel's "Add" modal with `http://localhost:<port>/__diag_<name>.json` as the URL — the
+   dev server's local-development fetch exception allows plain HTTP to localhost.
+3. Delete the `public/__diag_*.json` files (and the now-empty `public/` dir if you created it)
+   once the content is loaded into the panel — they're a loading mechanism, not a fixture.
+
 ## Commits and PR descriptions
 
 Keep both concise by default:

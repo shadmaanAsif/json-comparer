@@ -22,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v9";
+const TOUR_VERSION = "v11";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -141,12 +141,15 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
         align: "start"
       }
     },
-    // Right after primary-actions, not after panel-actions: HighlightControls now renders
-    // inside that same toolbar row (it used to be its own section below it), so visiting
-    // them back to back is a zero-scroll transition. The legend itself only renders once a
-    // comparison has run (Comparer hides it until then), so — like the result-section steps
-    // below — it has no element to anchor to on a first visit and falls back to
-    // description-only copy.
+    // Right after primary-actions, not after panel-actions: HighlightControls renders inline in
+    // the same .panel-toolbar-actions row primary-actions already targets (a stacked card and a
+    // floating popover were both tried in the narrow workspace-side-panel column between the
+    // panels, and both overflowed onto the JSON panel beside it — the chips' text, "Structure
+    // schema" etc., doesn't fit that ~112-148px column). Visiting this step right after
+    // primary-actions is a zero-scroll transition since it's the same toolbar. The chips only
+    // render once a comparison is active (Comparer hides them until then), so — like the
+    // result-section steps below — this step has no element to anchor to on a first visit and
+    // falls back to description-only copy.
     {
       element: hasResults ? '[data-tour="highlight-controls"]' : undefined,
       data: {
@@ -157,16 +160,17 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       popover: {
         title: "Control the editor highlights",
         description: hasResults
-          ? "Toggle missing fields, structure issues, or changed values in both JSON panels. These switches change the visual guidance only; they do not remove findings from the comparison."
-          : "Once you compare, this legend appears above the panels so you can toggle missing fields, structure issues, or changed-value highlights. Replay this tour after comparing to see it.",
+          ? "Toggle missing fields, structure issues, or changed values in both JSON panels. These switches change the visual guidance only; they do not remove findings from the comparison. A shortcut between the two panels below jumps back up to this toolbar once it has scrolled out of view."
+          : "Once you compare, this appears in the toolbar so you can toggle missing fields, structure issues, or changed-value highlights. Replay this tour after comparing to see it.",
         side: "bottom",
         align: "start"
       }
     },
     // Right before panel-actions, not right after primary-actions: this navigator now lives
-    // between the two JSON panels (it used to share the toolbar row), so visiting it next to
-    // panel-actions — also inside the panels — avoids bouncing the tour between the toolbar
-    // and the panels.
+    // between the two JSON panels, below the compact "Highlight" shortcut button that scrolls
+    // back up to the toolbar's highlight toggles, in the same workspace-side-panel column, so
+    // visiting it next to panel-actions — also inside the panels — avoids bouncing the tour
+    // between the toolbar and the panels.
     {
       element: hasResults ? '[data-tour="finding-nav"]' : undefined,
       data: {

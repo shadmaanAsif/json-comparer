@@ -92,7 +92,9 @@
 }
 /* Level-1 row of .workspace: the panel title plus every workflow action (highlight toggles,
    Compare, Load sample, Clear all, Expand/Collapse) read as one in-line cluster instead of being
-   split across a separate row shared with the finding navigator. */
+   split across a separate row shared with the finding navigator. Also carries the id
+   scrollToHighlightControls (Comparer.tsx) scrolls back up to from the narrow
+   workspace-side-panel column between the panels. */
 .panel-toolbar-actions {
   display: flex;
   align-items: center;
@@ -111,17 +113,25 @@
 }
 /* A narrow grid column between the two JSON panels, not a full-width row above them (see
    .input-grid). Centered vertically in that column rather than stretched to the tall expanded
-   panel's full height. Placed by name (grid-area), not DOM order: WorkspaceFindingNav renders
-   null until there are findings, and auto-placement would otherwise shove side B into this
-   column whenever it's absent. */
-.input-grid > .workspace-finding-nav {
+   panel's full height. Placed by name (grid-area), not DOM order: the wrapper is only rendered
+   in Comparer.tsx while highlightControlsVisible, and auto-placement would otherwise shove side
+   B into this column whenever it's absent. Holds the compact "View highlights" scroll-shortcut
+   button (see .highlight-scroll-button) and WorkspaceFindingNav stacked, so the column is put to
+   use as soon as a comparison is active, not only once it has findings to navigate. The three
+   highlight chips themselves live inline in .panel-toolbar-actions, not here — their text
+   content ("Structure schema", etc.) doesn't fit this column's ~112-148px width; a card or a
+   floating popover placed here previously both overflowed onto the JSON panel beside it. */
+.input-grid > .workspace-side-panel {
   grid-area: nav;
   align-self: center;
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
 }
 /* No nav column by default: each panel gets full space and there's no dead gap between them
-   until a comparison actually has findings to navigate. has-finding-nav (toggled in Comparer.tsx
-   from the same findingLines.length WorkspaceFindingNav uses to decide whether to render) opens
+   until a comparison is active. has-side-panel (toggled in Comparer.tsx from the same
+   highlightControlsVisible flag that gates rendering the .workspace-side-panel wrapper) opens
    up the narrow middle column exactly when there's something to put in it. */
 .input-grid {
   --json-panel-height: 520px;
@@ -131,7 +141,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas: "paneA paneB";
 }
-.input-grid.has-finding-nav {
+.input-grid.has-side-panel {
   grid-template-columns: minmax(0, 1fr) minmax(112px, 148px) minmax(0, 1fr);
   grid-template-areas: "paneA nav paneB";
   gap: 0 10px;
@@ -161,7 +171,8 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 16%, transparent);
 }
 /* Targets side B directly rather than an adjacent-sibling selector, so the divider survives
-   WorkspaceFindingNav now sitting between the two panels in the DOM (see .input-grid). */
+   the workspace-side-panel wrapper now sitting between the two panels in the DOM (see
+   .input-grid). */
 .input-panel[data-side="B"] {
   grid-area: paneB;
   border-left: 1px solid var(--border);
@@ -567,12 +578,12 @@
   background: var(--accent-dark);
   color: var(--accent);
 }
-/* The single finding navigator shared by both panels, sitting in its own narrow grid column
-   between them (see .input-grid) rather than a full-width row above. Stacked into four fixed
-   lines — status, Previous, Next, View results — instead of left to wrap freely, so the column
-   stays narrow and centered with room to add more lines later without widening it. Animates in
-   on mount, which happens exactly when a comparison first has findings to show (see the
-   reduced-motion override at the end of this file). */
+/* The single finding navigator shared by both panels, stacked below HighlightControls inside the
+   shared .workspace-side-panel column between the two JSON panels (see .input-grid) rather than a
+   full-width row above. Stacked into four fixed lines — status, Previous, Next, View results —
+   instead of left to wrap freely, so the column stays narrow and centered with room to add more
+   lines later without widening it. Animates in on mount, which happens exactly when a comparison
+   first has findings to show (see the reduced-motion override at the end of this file). */
 .workspace-finding-nav {
   display: flex;
   flex-direction: column;
@@ -803,6 +814,13 @@
   padding: 18px 22px;
   background: var(--panel-tint);
 }
+/* Inline in .panel-toolbar-actions (see Comparer.tsx), the same row as Compare/Load sample/Clear
+   all — not the narrow workspace-side-panel column between the panels, where the three chips'
+   text content ("Structure schema", etc.) refuses to shrink below its own width: both a stacked
+   card and a floating popover anchored from that ~112-148px column overflowed onto the Candidate
+   panel beside it. Carries the id scrollToHighlightControls both scrolls to and focuses (tabIndex
+   -1: not in the normal tab order, only a programmatic landing target) — see
+   .highlight-scroll-button below, the shortcut back to it from the narrow column. */
 .highlight-controls {
   display: flex;
   gap: 9px;
@@ -810,9 +828,20 @@
   flex-wrap: wrap;
   margin: 0;
   padding: 5px 12px;
+  /* scrollIntoView({ block: "start" }) respects this: without it, scrollToHighlightControls
+     lands the fieldset flush against the viewport's very top edge, jammed under the browser's
+     own chrome instead of leaving breathing room above it. */
+  scroll-margin-top: 16px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+}
+/* Plain :focus, not :focus-visible: this only ever fires from scrollToHighlightControls's own
+   focus({ preventScroll: true }) call after a mouse click, which most browsers' :focus-visible
+   heuristic would suppress — defeating the point of confirming where the click landed. */
+.highlight-controls:focus {
+  outline: 3px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 4px;
 }
 .highlight-controls legend {
   float: left;
@@ -826,6 +855,30 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
+}
+/* Jumps back up to and focuses the HighlightControls fieldset inline in .panel-toolbar-actions
+   (see Comparer.tsx's scrollToHighlightControls), rather than reproducing the chips here — see
+   .workspace-side-panel above for why they don't fit this column. Styled like
+   .workspace-finding-nav's own "View results" link (transparent, underline on hover) rather than
+   a Previous/Next pill, since it jumps away from this card instead of stepping within it. */
+.highlight-scroll-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+.highlight-scroll-button:hover,
+.highlight-scroll-button:focus-visible {
+  text-decoration: underline;
 }
 .legend-pair {
   display: inline-flex;
@@ -1518,13 +1571,17 @@ footer {
   .panel-toolbar-actions {
     justify-content: center;
   }
+  .highlight-controls legend {
+    width: 100%;
+    margin: 0 0 4px;
+  }
   .input-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
       "paneA"
       "paneB";
   }
-  .input-grid.has-finding-nav {
+  .input-grid.has-side-panel {
     grid-template-areas:
       "paneA"
       "nav"
@@ -1556,10 +1613,6 @@ footer {
   }
   .hero-actions {
     margin-top: 18px;
-  }
-  .highlight-controls legend {
-    width: 100%;
-    margin: 0 0 4px;
   }
   .results-heading {
     align-items: flex-start;

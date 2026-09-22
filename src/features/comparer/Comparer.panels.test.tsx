@@ -452,6 +452,20 @@ describe("Comparer panel actions", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("scrolls to and focuses the toolbar's highlight toggles from the shortcut between the panels", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await compare(user);
+
+    const scrollSpy = vi.mocked(Element.prototype.scrollIntoView);
+    scrollSpy.mockClear();
+    await user.click(screen.getByRole("button", { name: "View highlights" }));
+
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(screen.getByRole("group", { name: "Highlight in JSON panels" })).toHaveFocus();
+  });
+
   it("mirrors the current line onto the other panel and clears both on an outside click", async () => {
     const user = userEvent.setup();
     const { container } = render(<Comparer />);

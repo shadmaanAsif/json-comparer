@@ -111,17 +111,22 @@
 }
 /* A narrow grid column between the two JSON panels, not a full-width row above them (see
    .input-grid). Centered vertically in that column rather than stretched to the tall expanded
-   panel's full height. Placed by name (grid-area), not DOM order: WorkspaceFindingNav renders
-   null until there are findings, and auto-placement would otherwise shove side B into this
-   column whenever it's absent. */
-.input-grid > .workspace-finding-nav {
+   panel's full height. Placed by name (grid-area), not DOM order: the wrapper is only rendered
+   in Comparer.tsx while highlightControlsVisible, and auto-placement would otherwise shove side
+   B into this column whenever it's absent. Holds both HighlightControls and WorkspaceFindingNav
+   stacked, so the column is put to use as soon as a comparison is active, not only once it has
+   findings to navigate. */
+.input-grid > .workspace-side-panel {
   grid-area: nav;
   align-self: center;
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
 }
 /* No nav column by default: each panel gets full space and there's no dead gap between them
-   until a comparison actually has findings to navigate. has-finding-nav (toggled in Comparer.tsx
-   from the same findingLines.length WorkspaceFindingNav uses to decide whether to render) opens
+   until a comparison is active. has-side-panel (toggled in Comparer.tsx from the same
+   highlightControlsVisible flag that gates rendering the .workspace-side-panel wrapper) opens
    up the narrow middle column exactly when there's something to put in it. */
 .input-grid {
   --json-panel-height: 520px;
@@ -131,7 +136,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas: "paneA paneB";
 }
-.input-grid.has-finding-nav {
+.input-grid.has-side-panel {
   grid-template-columns: minmax(0, 1fr) minmax(112px, 148px) minmax(0, 1fr);
   grid-template-areas: "paneA nav paneB";
   gap: 0 10px;
@@ -161,7 +166,8 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 16%, transparent);
 }
 /* Targets side B directly rather than an adjacent-sibling selector, so the divider survives
-   WorkspaceFindingNav now sitting between the two panels in the DOM (see .input-grid). */
+   the workspace-side-panel wrapper now sitting between the two panels in the DOM (see
+   .input-grid). */
 .input-panel[data-side="B"] {
   grid-area: paneB;
   border-left: 1px solid var(--border);
@@ -567,12 +573,12 @@
   background: var(--accent-dark);
   color: var(--accent);
 }
-/* The single finding navigator shared by both panels, sitting in its own narrow grid column
-   between them (see .input-grid) rather than a full-width row above. Stacked into four fixed
-   lines — status, Previous, Next, View results — instead of left to wrap freely, so the column
-   stays narrow and centered with room to add more lines later without widening it. Animates in
-   on mount, which happens exactly when a comparison first has findings to show (see the
-   reduced-motion override at the end of this file). */
+/* The single finding navigator shared by both panels, stacked below HighlightControls inside the
+   shared .workspace-side-panel column between the two JSON panels (see .input-grid) rather than a
+   full-width row above. Stacked into four fixed lines — status, Previous, Next, View results —
+   instead of left to wrap freely, so the column stays narrow and centered with room to add more
+   lines later without widening it. Animates in on mount, which happens exactly when a comparison
+   first has findings to show (see the reduced-motion override at the end of this file). */
 .workspace-finding-nav {
   display: flex;
   flex-direction: column;
@@ -803,23 +809,31 @@
   padding: 18px 22px;
   background: var(--panel-tint);
 }
+/* Its own card above WorkspaceFindingNav inside the shared .workspace-side-panel column (see
+   .input-grid), not a pill row in the toolbar. Chips stack one per row (full width, centered)
+   rather than wrapping inline, since the column is narrower than the old toolbar row. */
 .highlight-controls {
   display: flex;
-  gap: 9px;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   margin: 0;
-  padding: 5px 12px;
+  padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 14px;
   background: color-mix(in srgb, var(--surface-2) 92%, transparent);
 }
 .highlight-controls legend {
-  float: left;
-  margin-right: 12px;
+  width: 100%;
+  margin: 0 0 2px;
   color: var(--muted);
-  font-size: 0.77rem;
+  font-size: 0.74rem;
   font-weight: 800;
+  text-align: center;
+}
+.highlight-controls .select-chip {
+  width: 100%;
+  justify-content: center;
 }
 .highlight-controls i {
   display: inline-block;
@@ -1524,7 +1538,7 @@ footer {
       "paneA"
       "paneB";
   }
-  .input-grid.has-finding-nav {
+  .input-grid.has-side-panel {
     grid-template-areas:
       "paneA"
       "nav"
@@ -1556,10 +1570,6 @@ footer {
   }
   .hero-actions {
     margin-top: 18px;
-  }
-  .highlight-controls legend {
-    width: 100%;
-    margin: 0 0 4px;
   }
   .results-heading {
     align-items: flex-start;

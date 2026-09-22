@@ -22,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v9";
+const TOUR_VERSION = "v10";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -141,12 +141,12 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
         align: "start"
       }
     },
-    // Right after primary-actions, not after panel-actions: HighlightControls now renders
-    // inside that same toolbar row (it used to be its own section below it), so visiting
-    // them back to back is a zero-scroll transition. The legend itself only renders once a
-    // comparison has run (Comparer hides it until then), so — like the result-section steps
-    // below — it has no element to anchor to on a first visit and falls back to
-    // description-only copy.
+    // Right after primary-actions, not after panel-actions: HighlightControls now renders as its
+    // own card at the top of the workspace-side-panel column between the two JSON panels, right
+    // above WorkspaceFindingNav, so visiting them back to back is a zero-scroll transition. The
+    // card itself only renders once a comparison is active (Comparer hides it until then), so —
+    // like the result-section steps below — it has no element to anchor to on a first visit and
+    // falls back to description-only copy.
     {
       element: hasResults ? '[data-tour="highlight-controls"]' : undefined,
       data: {
@@ -158,15 +158,15 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
         title: "Control the editor highlights",
         description: hasResults
           ? "Toggle missing fields, structure issues, or changed values in both JSON panels. These switches change the visual guidance only; they do not remove findings from the comparison."
-          : "Once you compare, this legend appears above the panels so you can toggle missing fields, structure issues, or changed-value highlights. Replay this tour after comparing to see it.",
+          : "Once you compare, this card appears between the two panels so you can toggle missing fields, structure issues, or changed-value highlights. Replay this tour after comparing to see it.",
         side: "bottom",
         align: "start"
       }
     },
     // Right before panel-actions, not right after primary-actions: this navigator now lives
-    // between the two JSON panels (it used to share the toolbar row), so visiting it next to
-    // panel-actions — also inside the panels — avoids bouncing the tour between the toolbar
-    // and the panels.
+    // between the two JSON panels, stacked directly below HighlightControls in the same
+    // workspace-side-panel column, so visiting it next to panel-actions — also inside the
+    // panels — avoids bouncing the tour between the toolbar and the panels.
     {
       element: hasResults ? '[data-tour="finding-nav"]' : undefined,
       data: {
@@ -175,8 +175,8 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       popover: {
         title: "Step through every finding",
         description: hasResults
-          ? "Once you compare, this navigator appears between the two panels and walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
-          : "Once you compare, this navigator appears between the two panels to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
+          ? "Once you compare, this navigator appears between the two panels, below the highlight toggles, and walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
+          : "Once you compare, this navigator appears between the two panels, below the highlight toggles, to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
         side: "bottom",
         align: "center"
       }

@@ -610,12 +610,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       <section className="workspace" aria-label="JSON comparison workspace">
         <div className="panel-toolbar-actions" data-tour="primary-actions">
           <span>JSON response panels</span>
-          {highlightControlsVisible && (
-            <HighlightControls
-              highlightVisibility={highlightToggles}
-              onHighlightVisibilityChange={setHighlightToggles}
-            />
-          )}
           <button
             className="primary-button"
             type="button"
@@ -649,7 +643,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
         <div
           id="json-input-panels"
           className={`input-grid${jsonPanelsExpanded ? " panels-expanded" : ""}${
-            findingLines.length ? " has-finding-nav" : ""
+            highlightControlsVisible ? " has-side-panel" : ""
           }`}
           aria-label="JSON response inputs"
           data-tour="json-inputs"
@@ -680,14 +674,22 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             onViewChange={setPanelView}
           />
 
-          <WorkspaceFindingNav
-            categories={findingCategories}
-            current={findingCursor + 1}
-            total={findingLines.length}
-            onPrevious={() => stepFinding(-1)}
-            onNext={() => stepFinding(1)}
-            onScrollToOutput={scrollToComparisonOutput}
-          />
+          {highlightControlsVisible && (
+            <div className="workspace-side-panel">
+              <HighlightControls
+                highlightVisibility={highlightToggles}
+                onHighlightVisibilityChange={setHighlightToggles}
+              />
+              <WorkspaceFindingNav
+                categories={findingCategories}
+                current={findingCursor + 1}
+                total={findingLines.length}
+                onPrevious={() => stepFinding(-1)}
+                onNext={() => stepFinding(1)}
+                onScrollToOutput={scrollToComparisonOutput}
+              />
+            </div>
+          )}
 
           <JsonInputPane
             side="B"

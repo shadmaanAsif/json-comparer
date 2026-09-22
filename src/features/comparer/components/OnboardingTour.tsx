@@ -22,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v8";
+const TOUR_VERSION = "v9";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -141,9 +141,9 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
         align: "start"
       }
     },
-    // Right after primary-actions, not after panel-actions: this shares the same toolbar
-    // row as primary-actions, so visiting them back to back avoids bouncing the tour
-    // between the toolbar and the panels.
+    // Right after primary-actions, not after panel-actions: this appears the moment you
+    // compare, so visiting them back to back avoids bouncing the tour between the toolbar
+    // and the panels.
     {
       element: hasResults ? '[data-tour="finding-nav"]' : undefined,
       data: {
@@ -152,8 +152,8 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       popover: {
         title: "Step through every finding",
         description: hasResults
-          ? "Once you compare, this same toolbar grows a navigator that walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
-          : "Once you compare, this same toolbar grows a navigator to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
+          ? "Once you compare, this navigator appears between the two panels and walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
+          : "Once you compare, this navigator appears between the two panels to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
         side: "bottom",
         align: "center"
       }

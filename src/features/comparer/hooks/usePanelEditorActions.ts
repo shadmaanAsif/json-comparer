@@ -158,47 +158,52 @@ export function usePanelEditorActions({
   }, [paneRef]);
   useEffect(() => {
     if (!navigation || navigation.index !== index || lastNavigation.current === navigation) return;
-    // Navigate in the destination's current view, without switching tabs.
-    const frame = requestAnimationFrame(() => {
-      if (activeView === "tree") {
-        lastNavigation.current = navigation;
-        setTreeNavigation({
-          pointer: navigation.field.pointer,
-          placeholder: navigation.field.placeholder,
-          token: navigation.token,
-          index: navigation.index
-        });
-        return;
-      }
-      const editor = editorRef.current;
-      if (!editor) return;
+    // Navigate in the destination's current view, without switching tabs. This runs synchronously
+    // (not deferred to a requestAnimationFrame) so the selection/scroll commit in the same paint as
+    // the caller's own state update (e.g. the finding-nav counter) — deferring it a frame let the
+    // counter briefly show a new "Finding N of M" while the gutter, highlight, and scroll position
+    // still showed the previous line.
+    if (activeView === "tree") {
       lastNavigation.current = navigation;
-      setSelection({ line: navigation.field.line, pointer: navigation.field.pointer, text: value });
-      const start = value
-        .split("\n")
-        .slice(0, navigation.field.line - 1)
-        .reduce((n, line) => n + line.length + 1, 0);
-      editor.focus({ preventScroll: true });
-      editor.setSelectionRange(
-        start,
-        start + (value.split("\n")[navigation.field.line - 1]?.length ?? 0)
-      );
-      editor.scrollTop = scrollOffsetForLine(
-        navigation.field.line,
-        editor.scrollHeight,
-        metrics,
-        "center"
-      );
-      setScrollTop(editor.scrollTop);
-      synchronizeScroll(side, editor);
-      const scrollTarget = windowScrollTargetForRect(
-        editor.getBoundingClientRect(),
-        window.innerHeight,
-        window.scrollY
-      );
-      if (scrollTarget !== null) window.scrollTo({ top: scrollTarget, behavior: "smooth" });
-    });
-    return () => cancelAnimationFrame(frame);
+      setTreeNavigation({
+        pointer: navigation.field.pointer,
+        placeholder: navigation.field.placeholder,
+        token: navigation.token,
+        index: navigation.index
+      });
+      return;
+    }
+    const editor = editorRef.current;
+    if (!editor) return;
+    lastNavigation.current = navigation;
+    setSelection({ line: navigation.field.line, pointer: navigation.field.pointer, text: value });
+    const start = value
+      .split("\n")
+      .slice(0, navigation.field.line - 1)
+      .reduce((n, line) => n + line.length + 1, 0);
+    editor.focus({ preventScroll: true });
+    editor.setSelectionRange(
+      start,
+      start + (value.split("\n")[navigation.field.line - 1]?.length ?? 0)
+    );
+    editor.scrollTop = scrollOffsetForLine(
+      navigation.field.line,
+      editor.scrollHeight,
+      metrics,
+      "center"
+    );
+    setScrollTop(editor.scrollTop);
+    synchronizeScroll(side, editor);
+    // Bring the finding-nav toolbar along with the editor: without it, an editor taller than
+    // the remaining viewport gets centered on its own, pushing the toolbar (and its
+    // Previous/Next buttons) off the top of the screen after every navigation click.
+    const editorRect = editor.getBoundingClientRect();
+    const toolbarRect = document.querySelector(".workspace-finding-nav")?.getBoundingClientRect();
+    const targetRect = toolbarRect
+      ? { top: toolbarRect.top, bottom: editorRect.bottom, height: editorRect.bottom - toolbarRect.top }
+      : editorRect;
+    const scrollTarget = windowScrollTargetForRect(targetRect, window.innerHeight, window.scrollY);
+    if (scrollTarget !== null) window.scrollTo({ top: scrollTarget, behavior: "smooth" });
   }, [
     navigation,
     index,

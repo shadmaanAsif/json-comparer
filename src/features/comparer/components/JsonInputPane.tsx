@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MAX_DOCUMENT_BYTES, SIDE_LABELS } from "../constants";
 import { usePanelEditorActions } from "../hooks/usePanelEditorActions";
+import { useMeasuredLineOffsets } from "../hooks/useMeasuredLineOffsets";
 import type { PanelActionRequest, PanelNavigation } from "../hooks/usePanelInteractions";
 import type { PanelIndex } from "../utils/panel-context";
 import type { HighlightCategory, LineHighlight, ResponseSide } from "../types";
 import {
   DEFAULT_EDITOR_VIEWPORT_METRICS,
+  minimapMarkerPercent,
   scrollOffsetForLine,
   visibleLineRange,
   type EditorViewportMetrics
@@ -41,6 +43,9 @@ export interface JsonInputPaneProps {
   mirroredLine?: number | null;
   /** Reports this panel's own current line up so the partner panel can mirror it. */
   onActiveLineChange?: (line: number | null) => void;
+  /** Reports a line jumped to via this panel's own controls (the offscreen-finding chip, a
+   *  minimap marker) so the shared finding-nav cursor can stay in sync with Previous/Next. */
+  onJumpToLine?: (line: number) => void;
   /** Shared JSON/Tree mode: when the workspace supplies both, switching one panel switches the
    *  other. Optional so the pane still works standalone with its own local view. */
   view?: "json" | "tree";
@@ -68,6 +73,7 @@ export function JsonInputPane({
   onOpenActions,
   mirroredLine = null,
   onActiveLineChange,
+  onJumpToLine,
   view,
   onViewChange
 }: JsonInputPaneProps) {
@@ -179,6 +185,7 @@ export function JsonInputPane({
 
   const lines = value.split("\n");
   const totalLines = Math.max(1, lines.length);
+  const lineOffsets = useMeasuredLineOffsets(editorRef, value, editorMetrics);
   const highlightedLines = useMemo(
     () =>
       Object.keys(effectiveLineHighlights)
@@ -208,6 +215,7 @@ export function JsonInputPane({
     setActiveNavigationLine(effectiveLineHighlights[line] ? line : null);
     editor.focus({ preventScroll: true });
     synchronizeScroll(side, editor);
+    onJumpToLine?.(line);
   };
 
   const categoriesFor = (targetLines: number[]) =>
@@ -387,6 +395,7 @@ export function JsonInputPane({
             side={side}
             totalLines={totalLines}
             scrollTop={scrollTop}
+            lineTop={lineOffsets.lineTop}
             highlights={effectiveLineHighlights}
             activeLine={panelActions.selectedLine ?? selectedNavigationLine}
             hoveredLine={panelActions.hoveredLine}
@@ -401,10 +410,7 @@ export function JsonInputPane({
                 <span
                   className="full-line-highlight line-action-hover"
                   style={{
-                    top:
-                      editorMetrics.paddingTop +
-                      (panelActions.hoveredLine - 1) * editorMetrics.lineHeight -
-                      scrollTop,
+                    top: lineOffsets.lineTop(panelActions.hoveredLine) - scrollTop,
                     height: editorMetrics.lineHeight
                   }}
                 />
@@ -413,10 +419,7 @@ export function JsonInputPane({
                 <span
                   className="full-line-highlight line-context"
                   style={{
-                    top:
-                      editorMetrics.paddingTop +
-                      (panelActions.selectedLine - 1) * editorMetrics.lineHeight -
-                      scrollTop,
+                    top: lineOffsets.lineTop(panelActions.selectedLine) - scrollTop,
                     height: editorMetrics.lineHeight
                   }}
                 />
@@ -425,7 +428,7 @@ export function JsonInputPane({
                 <span
                   className="full-line-highlight line-context line-mirror"
                   style={{
-                    top: `${editorMetrics.paddingTop + (mirroredLine - 1) * editorMetrics.lineHeight - scrollTop}px`,
+                    top: `${lineOffsets.lineTop(mirroredLine) - scrollTop}px`,
                     height: `${editorMetrics.lineHeight}px`
                   }}
                 />
@@ -437,7 +440,7 @@ export function JsonInputPane({
                     effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
                   }${selectedNavigationLine === line ? " is-active" : ""}`}
                   style={{
-                    top: `${editorMetrics.paddingTop + (line - 1) * editorMetrics.lineHeight - scrollTop}px`,
+                    top: `${lineOffsets.lineTop(line) - scrollTop}px`,
                     height: `${editorMetrics.lineHeight}px`
                   }}
                 />
@@ -505,7 +508,7 @@ export function JsonInputPane({
                     key={line}
                     className="line-text-dim"
                     style={{
-                      top: `${editorMetrics.paddingTop + (line - 1) * editorMetrics.lineHeight - scrollTop}px`,
+                      top: `${lineOffsets.lineTop(line) - scrollTop}px`,
                       height: `${editorMetrics.lineHeight}px`
                     }}
                   />
@@ -536,7 +539,9 @@ export function JsonInputPane({
                 className={`minimap-marker line-${effectiveLineHighlights[line]!.category}${
                   effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
                 }${selectedNavigationLine === line ? " is-active" : ""}`}
-                style={{ top: `${totalLines === 1 ? 0 : ((line - 1) / (totalLines - 1)) * 100}%` }}
+                style={{
+                  top: `${minimapMarkerPercent(lineOffsets.lineTop(line), scrollTop, editorMetrics.clientHeight)}%`
+                }}
                 aria-label={`Go to highlighted line ${line}`}
                 title={`Line ${line} — ${effectiveLineHighlights[line]!.category}${
                   effectiveLineHighlights[line]!.ignored ? " (ignored)" : ""

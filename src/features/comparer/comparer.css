@@ -90,37 +90,51 @@
   box-shadow: 0 24px 80px var(--workspace-shadow);
   overflow: hidden;
 }
-.panel-layout-toolbar {
+/* Level-1 row of .workspace: the panel title plus every workflow action (highlight toggles,
+   Compare, Load sample, Clear all, Expand/Collapse) read as one in-line cluster instead of being
+   split across a separate row shared with the finding navigator. */
+.panel-toolbar-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  justify-content: space-between;
   gap: 10px 16px;
   padding: 10px 22px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-2) 72%, transparent);
 }
-.panel-layout-toolbar > span {
+.panel-toolbar-actions > span {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
-/* The primary workflow actions, grouped beside the panel Collapse/Expand toggle so they read
-   as one cluster at the top of the workspace instead of a separate row below the panels. */
-.panel-toolbar-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+/* A narrow grid column between the two JSON panels, not a full-width row above them (see
+   .input-grid). Centered vertically in that column rather than stretched to the tall expanded
+   panel's full height. Placed by name (grid-area), not DOM order: WorkspaceFindingNav renders
+   null until there are findings, and auto-placement would otherwise shove side B into this
+   column whenever it's absent. */
+.input-grid > .workspace-finding-nav {
+  grid-area: nav;
+  align-self: center;
+  margin: 0;
 }
+/* No nav column by default: each panel gets full space and there's no dead gap between them
+   until a comparison actually has findings to navigate. has-finding-nav (toggled in Comparer.tsx
+   from the same findingLines.length WorkspaceFindingNav uses to decide whether to render) opens
+   up the narrow middle column exactly when there's something to put in it. */
 .input-grid {
   --json-panel-height: 520px;
   --json-line-height: 22.4px;
   --json-editor-padding: 14px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "paneA paneB";
+}
+.input-grid.has-finding-nav {
+  grid-template-columns: minmax(0, 1fr) minmax(112px, 148px) minmax(0, 1fr);
+  grid-template-areas: "paneA nav paneB";
+  gap: 0 10px;
 }
 .input-grid.panels-expanded {
   --json-panel-height: min(88vh, 1040px);
@@ -129,6 +143,9 @@
   position: relative;
   min-width: 0;
   padding: 8px 14px;
+}
+.input-panel[data-side="A"] {
+  grid-area: paneA;
 }
 .input-panel.has-json-error {
   background: linear-gradient(
@@ -143,7 +160,10 @@
   border-color: var(--danger);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 16%, transparent);
 }
-.input-panel + .input-panel {
+/* Targets side B directly rather than an adjacent-sibling selector, so the divider survives
+   WorkspaceFindingNav now sitting between the two panels in the DOM (see .input-grid). */
+.input-panel[data-side="B"] {
+  grid-area: paneB;
   border-left: 1px solid var(--border);
 }
 .panel-heading,
@@ -341,13 +361,17 @@
   background: var(--surface);
 }
 .line-gutter > div {
-  padding-top: var(--json-editor-padding);
+  position: relative;
+  height: 100%;
   will-change: transform;
 }
 .line-gutter button {
-  display: block;
+  /* top/height are set inline per line from the same measured offsets the highlight layer and
+     minimap use (see `useMeasuredLineOffsets`), not stacked via normal flow — so a line number
+     can never drift from its highlight even if a line's real rendered height isn't uniform. */
+  position: absolute;
+  left: 0;
   width: 100%;
-  height: var(--json-line-height);
   border: 0;
   border-left: 4px solid transparent;
   padding: 0 7px 0 3px;
@@ -543,41 +567,63 @@
   background: var(--accent-dark);
   color: var(--accent);
 }
-/* The single finding navigator shared by both panels. It lives in the panel toolbar above them
-   (a normal flex/grid child, never overlapping the panels) so its purpose reads as one sentence:
-   dots for what kind of finding, Previous/Next to step through them, a count, and a plain-text
-   way down to the results. */
+/* The single finding navigator shared by both panels, sitting in its own narrow grid column
+   between them (see .input-grid) rather than a full-width row above. Stacked into four fixed
+   lines — status, Previous, Next, View results — instead of left to wrap freely, so the column
+   stays narrow and centered with room to add more lines later without widening it. Animates in
+   on mount, which happens exactly when a comparison first has findings to show (see the
+   reduced-motion override at the end of this file). */
 .workspace-finding-nav {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 14px;
   background: color-mix(in srgb, var(--surface-2) 92%, transparent);
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 800;
-  white-space: nowrap;
+  animation: workspace-finding-nav-in 0.2s ease-out;
+}
+@keyframes workspace-finding-nav-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.workspace-finding-nav .finding-nav-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .workspace-finding-nav .chip-dots {
   display: inline-flex;
   gap: 3px;
-  margin-right: 4px;
 }
-.workspace-finding-nav .finding-nav-step {
-  display: inline-flex;
+.workspace-finding-nav .finding-nav-step,
+.workspace-finding-nav .finding-nav-output {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   border: 0;
   border-radius: 999px;
   padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+.workspace-finding-nav .finding-nav-step {
   /* A lighter highlight than .finding-nav-output's solid accent color — enough to read as
      interactive at rest, without competing with View results for attention. */
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--text);
-  font: inherit;
-  cursor: pointer;
   transition:
     background 0.1s ease,
     color 0.1s ease;
@@ -588,25 +634,13 @@
   color: var(--accent);
 }
 .workspace-finding-nav .finding-nav-count {
-  min-width: 92px;
-  text-align: center;
   color: var(--text);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
 .workspace-finding-nav .finding-nav-output {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 0;
-  border-left: 1px solid var(--border);
-  border-radius: 0;
-  padding: 5px 0 5px 10px;
-  margin-left: 4px;
   background: transparent;
   color: var(--accent);
-  font: inherit;
-  cursor: pointer;
 }
 .workspace-finding-nav .finding-nav-output:hover,
 .workspace-finding-nav .finding-nav-output:focus-visible {
@@ -775,14 +809,15 @@
   align-items: center;
   flex-wrap: wrap;
   margin: 0;
-  padding: 12px 22px;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
 }
 .highlight-controls legend {
   float: left;
   margin-right: 12px;
+  color: var(--muted);
   font-size: 0.77rem;
   font-weight: 800;
 }
@@ -1480,27 +1515,22 @@ footer {
     display: inline-block;
     margin: 20px 0 0 62px;
   }
-  .panel-layout-toolbar {
-    justify-content: center;
-  }
   .panel-toolbar-actions {
     justify-content: center;
   }
-  .workspace-finding-nav {
-    max-width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-    white-space: normal;
-  }
-  .workspace-finding-nav .finding-nav-output {
-    border-left: 0;
-    margin-left: 0;
-    padding-left: 9px;
-  }
   .input-grid {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "paneA"
+      "paneB";
   }
-  .input-panel + .input-panel {
+  .input-grid.has-finding-nav {
+    grid-template-areas:
+      "paneA"
+      "nav"
+      "paneB";
+  }
+  .input-panel[data-side="B"] {
     border-left: 0;
     border-top: 1px solid var(--border);
   }
@@ -1581,5 +1611,8 @@ footer {
   }
   .result-section-arrow {
     transition: none;
+  }
+  .workspace-finding-nav {
+    animation: none;
   }
 }

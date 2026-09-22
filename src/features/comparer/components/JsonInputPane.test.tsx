@@ -194,6 +194,29 @@ describe("JsonInputPane validation state", () => {
     expect(container.querySelector(".line-context")).toBeInTheDocument();
   });
 
+  it("applies a JSON navigation the instant it commits, with no frame where the gutter/highlight still show the previous line", () => {
+    // Regression test: this effect used to defer its scroll/selection work to a
+    // requestAnimationFrame callback, so the caller's own state (e.g. the shared finding-nav
+    // counter, updated in the same event as this prop) could paint one frame before the gutter,
+    // highlight, and scroll position here caught up. Asserting with no `waitFor`/timer flush
+    // pins the fix: the line-context highlight must already be in the DOM synchronously.
+    const display = formatAlignedForDisplay({ a: 1, b: 2 }, { a: 1, b: 2 });
+    const panelIndex = buildPanelIndex(
+      display.textA,
+      display.lineMapA,
+      display.placeholderLineMapA
+    );
+    const { props, rerender, container } = renderPane(display.textA, { panelIndex });
+    rerender(
+      <JsonInputPane
+        {...props}
+        panelNavigation={{ field: panelIndex.byPointer.get("/b")!, index: panelIndex, token: 1 }}
+      />
+    );
+    expect(screen.getByRole("textbox", { name: "JSON for Baseline" })).toHaveFocus();
+    expect(container.querySelector(".line-context")).toBeInTheDocument();
+  });
+
   it.each([null, {}, []])(
     "offers root actions for %j without a nonexistent branch",
     async (value) => {

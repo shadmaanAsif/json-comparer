@@ -55,6 +55,33 @@ export function compareStructure(
       );
     }
     if (Array.isArray(job.valueA) && Array.isArray(job.valueB)) {
+      // A root-level array is commonly a heterogeneous log or mixed-record collection (e.g.
+      // analytics events), not one record type repeated — using item 0 as an implied schema
+      // for every item produces false "inconsistent" noise. Compare each item only against
+      // its own positional counterpart instead, matching how ordered-array value comparison
+      // already pairs items by index (see engine.ts).
+      if (job.path.length === 0) {
+        if (arrayMode === "unordered") {
+          if (job.valueA.length) {
+            compareArrayItemUnion(job.valueA, job.valueB, job.path, addFinding, false);
+          }
+          continue;
+        }
+        const pairCount = Math.min(job.valueA.length, job.valueB.length);
+        for (let index = 0; index < pairCount; index += 1) {
+          compareObjectKeys(
+            job.valueA[index]!,
+            job.valueB[index]!,
+            [...job.path, index],
+            "missing-in-b",
+            addFinding,
+            jobs,
+            job.depth,
+            true
+          );
+        }
+        continue;
+      }
       if (!job.valueA.length && job.valueB.length) {
         addFinding(
           "a-empty-array",
@@ -64,7 +91,7 @@ export function compareStructure(
       }
       if (arrayMode === "unordered") {
         if (job.valueA.length) {
-          compareArrayItemUnion(job.valueA, job.valueB, job.path, addFinding);
+          compareArrayItemUnion(job.valueA, job.valueB, job.path, addFinding, true);
         }
         continue;
       }
@@ -227,19 +254,23 @@ function compareArrayItemUnion(
   itemsA: JsonValue[],
   itemsB: JsonValue[],
   path: PathSegment[],
-  addFinding: AddStructureFinding
+  addFinding: AddStructureFinding,
+  /** Root-level arrays skip this: see the root-array branch in compareStructure. */
+  includeSelfCheck = true
 ) {
   const unionA = collectUnionKeys(itemsA);
   const unionB = collectUnionKeys(itemsB);
 
-  for (const [key, index] of unionA) {
-    const presentOnEveryItem = itemsA.every((item) => isJsonObject(item) && key in item);
-    if (!presentOnEveryItem) {
-      addFinding(
-        "inconsistent-in-a",
-        [...path, index, key],
-        "This field is not present on every Baseline item."
-      );
+  if (includeSelfCheck) {
+    for (const [key, index] of unionA) {
+      const presentOnEveryItem = itemsA.every((item) => isJsonObject(item) && key in item);
+      if (!presentOnEveryItem) {
+        addFinding(
+          "inconsistent-in-a",
+          [...path, index, key],
+          "This field is not present on every Baseline item."
+        );
+      }
     }
   }
   for (const [key, index] of unionA) {

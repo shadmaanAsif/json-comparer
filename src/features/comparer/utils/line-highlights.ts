@@ -1,4 +1,8 @@
-import { formatAlignedForDisplay, type DisplayLineMaps } from "@/domain/comparison/display-format";
+import {
+  formatAlignedForDisplay,
+  type AlignedDisplayText,
+  type DisplayLineMaps
+} from "@/domain/comparison/display-format";
 import { buildLineMap, nearestMappedLine } from "@/domain/comparison/line-map";
 import type { JsonValue } from "@/domain/comparison/types";
 import type { HighlightCategory, LineHighlight } from "../types";
@@ -25,9 +29,15 @@ const HIGHLIGHT_PRIORITY: Record<HighlightCategory, number> = {
 function resolveDisplayLineMaps(
   textA: string,
   textB: string,
-  exactLineMaps?: DisplayLineMaps | null
+  exactLineMaps?: AlignedDisplayText | null
 ): DisplayLineMaps {
-  if (exactLineMaps) return exactLineMaps;
+  // exactLineMaps is worker output tied to the text it was aligned against. Once the user keeps
+  // typing (a live re-compare is debounced, not instant — see updateTypedInput), textA/textB can
+  // shift line numbers before that recompute lands; trusting a stale map here would misplace
+  // every highlight below the edit by however many lines shifted. Recomputing from the current
+  // text below is the same safe fallback already used when no exact map exists at all.
+  if (exactLineMaps && exactLineMaps.textA === textA && exactLineMaps.textB === textB)
+    return exactLineMaps;
   const fallback = {
     lineMapA: buildLineMap(textA),
     lineMapB: buildLineMap(textB),
@@ -50,7 +60,7 @@ export function createLineHighlights(
   textA: string,
   textB: string,
   toggles: HighlightToggles,
-  exactLineMaps?: DisplayLineMaps | null
+  exactLineMaps?: AlignedDisplayText | null
 ): LineHighlights {
   const a: Record<number, LineHighlight> = {};
   const b: Record<number, LineHighlight> = {};

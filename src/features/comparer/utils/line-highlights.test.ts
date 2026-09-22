@@ -127,12 +127,16 @@ describe("createLineHighlights", () => {
     );
     const pointer = "/showGeo/showMediaMentions";
     const exactLine = 5_710;
+    const textA = "{}";
+    const textB = "{}";
     const highlights = createLineHighlights(
       result,
-      "{}",
-      "{}",
+      textA,
+      textB,
       { missing: false, structure: true, differences: false },
       {
+        textA,
+        textB,
         lineMapA: { "": 1 },
         lineMapB: { "": 1, [pointer]: exactLine },
         placeholderLineMapA: { [pointer]: exactLine },
@@ -142,6 +146,33 @@ describe("createLineHighlights", () => {
 
     expect(highlights.a[exactLine]).toEqual({ category: "structure", ignored: false });
     expect(highlights.b[exactLine]).toEqual({ category: "structure", ignored: false });
+  });
+
+  it("falls back to recomputing line maps once the worker's exact maps go stale", () => {
+    // Mirrors a real sequence: Compare runs once (exact maps arrive tied to that text), then the
+    // user keeps typing while a live re-compare is still debouncing. Until that recompute lands,
+    // textA/textB have moved on but the exact maps haven't — trusting them would misplace every
+    // highlight below the edit by however many lines shifted (reproduced against a real ~5,200
+    // line payload: a one-line insert above a "changed" finding left its highlight one line above
+    // the field it was supposed to mark).
+    const a = { social: { facebook: "x", twitter: "y" }, flag: true };
+    const b = { social: { facebook: "x", twitter: "y" }, flag: false };
+    const aligned = formatAlignedForDisplay(a, b);
+    const flagLine = aligned.lineMapA["/flag"]!;
+    const result = project(compareJson(a, b));
+
+    // Simulate a line inserted above "/flag" since the exact maps were computed: the live text
+    // now disagrees with aligned.textA on line count/content, so aligned's maps are stale.
+    const editedTextA = aligned.textA.replace('"social": {', '"extra": 1,\n  "social": {');
+    const editedTextB = aligned.textB.replace('"social": {', '"extra": 1,\n  "social": {');
+
+    const highlights = createLineHighlights(result, editedTextA, editedTextB, toggles, aligned);
+
+    // The stale map's line for "/flag" must NOT be trusted against the edited text.
+    expect(highlights.a[flagLine]).toBeUndefined();
+    // The recomputed-from-current-text line (one lower, matching the inserted line) is used
+    // instead.
+    expect(highlights.a[flagLine + 1]).toEqual({ category: "differences", ignored: false });
   });
 
   it("uses the filtered projection for ignored, source, path, and category highlights", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  minimapMarkerPercent,
   navigationTargetLine,
   scrollOffsetForLine,
   visibleLineRange,
@@ -68,5 +69,29 @@ describe("editor navigation geometry", () => {
   it("never targets a negative scroll position", () => {
     const target = windowScrollTargetForRect({ top: -10, bottom: 348, height: 358 }, 720, 5);
     expect(target).toBe(0);
+  });
+
+  it("aligns an oversized rect to the top of the viewport instead of centering it off-screen", () => {
+    // A rect taller than the viewport (e.g. a finding-nav toolbar unioned with a tall expanded
+    // editor) would have its bottom pushed below the viewport by naive centering. Aligning its
+    // top to 0 instead keeps whatever sits at that top edge (the toolbar) fully visible.
+    const target = windowScrollTargetForRect({ top: 200, bottom: 1400, height: 1200 }, 720, 100);
+    expect(target).toBe(300);
+  });
+
+  it("places an onscreen minimap marker at the same on-screen fraction as its highlight", () => {
+    // Line 1 sits at pixel 15 (paddingTop) in the editor; the minimap is the same clientHeight,
+    // so its marker should land at 15/360 of the way down the strip, not 0% (its whole-document
+    // fraction) or any other value disconnected from where the highlight actually renders.
+    expect(minimapMarkerPercent(15, 0, 360)).toBeCloseTo((15 / 360) * 100);
+    expect(minimapMarkerPercent(15 + 9 * 22.4, 0, 360)).toBeCloseTo(((15 + 9 * 22.4) / 360) * 100);
+  });
+
+  it("pins a minimap marker to the top edge once its line scrolls above the viewport", () => {
+    expect(minimapMarkerPercent(15, 5000, 360)).toBe(0);
+  });
+
+  it("pins a minimap marker to the bottom edge once its line scrolls below the viewport", () => {
+    expect(minimapMarkerPercent(15 + 999 * 22.4, 0, 360)).toBe(100);
   });
 });

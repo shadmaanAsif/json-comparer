@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import { compareJson } from "../domain/comparison/engine";
-import { formatAlignedForDisplay, type DisplayLineMaps } from "../domain/comparison/display-format";
+import { formatAlignedForDisplay, type AlignedDisplayText } from "../domain/comparison/display-format";
 import { JsonParseError, parseJson } from "../domain/comparison/parse";
 import type { ComparisonOptions, ComparisonResult } from "../domain/comparison/types";
 
@@ -19,7 +19,7 @@ export type WorkerResponse =
       ok: true;
       formattedA: string;
       formattedB: string;
-      lineMaps: DisplayLineMaps;
+      lineMaps: AlignedDisplayText;
       result: ComparisonResult;
       durationMs: number;
     }
@@ -37,12 +37,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
       ok: true,
       formattedA: aligned.textA,
       formattedB: aligned.textB,
-      lineMaps: {
-        lineMapA: aligned.lineMapA,
-        lineMapB: aligned.lineMapB,
-        placeholderLineMapA: aligned.placeholderLineMapA,
-        placeholderLineMapB: aligned.placeholderLineMapB
-      },
+      lineMaps: aligned,
       result,
       durationMs: performance.now() - started
     } satisfies WorkerResponse);

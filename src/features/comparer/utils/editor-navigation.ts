@@ -56,6 +56,13 @@ export function scrollOffsetForLine(
  * native `scrollIntoView` ancestor walk from ever reaching the window, so a caller scrolled far
  * from the editor (e.g. a result row) sees no scroll at all. This bypasses that by targeting
  * the window directly from the element's viewport-relative rect.
+ *
+ * When `rect` is taller than the viewport, this settles on aligning its top edge to the top of
+ * the viewport rather than centering (centering would run its bottom off-screen with nothing
+ * gained). Callers that need a fixed header to stay visible above the scrolled content (e.g. the
+ * finding-nav toolbar) rely on this: passing a rect that spans from the header's own top down to
+ * the content's bottom naturally keeps the header in view, because `position: sticky` isn't an
+ * option here — it doesn't work inside `.workspace`'s `overflow: hidden` (verified in-browser).
  */
 export function windowScrollTargetForRect(
   rect: { top: number; bottom: number; height: number },
@@ -64,6 +71,23 @@ export function windowScrollTargetForRect(
 ): number | null {
   if (rect.top >= 0 && rect.bottom <= viewportHeight) return null;
   return Math.max(0, currentScrollY + rect.top - Math.max(0, (viewportHeight - rect.height) / 2));
+}
+
+/**
+ * Vertical position (0-100) for a minimap marker, expressed as a percentage of the editor's
+ * own viewport height. Takes the line's already-measured top (see `useMeasuredLineOffsets`)
+ * rather than deriving it from paddingTop/lineHeight itself — the gutter and highlight layer
+ * consume that same measured value, so a marker for a currently visible line lands at the same
+ * on-screen height as its highlight, and a marker for an offscreen line pins to the nearest edge
+ * instead of landing at an unrelated spot.
+ */
+export function minimapMarkerPercent(
+  lineTopPx: number,
+  scrollTop: number,
+  clientHeight: number
+): number {
+  if (clientHeight <= 0) return 0;
+  return clamp(((lineTopPx - scrollTop) / clientHeight) * 100, 0, 100);
 }
 
 export function navigationTargetLine(

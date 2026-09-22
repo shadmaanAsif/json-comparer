@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DisplayLineMaps } from "@/domain/comparison/display-format";
+import type { AlignedDisplayText } from "@/domain/comparison/display-format";
 import { displayPath } from "@/domain/comparison/path";
 import type { ArrayMode, ComparisonOptions, ComparisonResult } from "@/domain/comparison/types";
 import { PanelActions } from "./components/PanelActions";
@@ -50,7 +50,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [arrayMode, setArrayMode] = useState<ArrayMode>("ordered");
   const [ignorePaths, setIgnorePaths] = useState<string[]>([]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
-  const [displayLineMaps, setDisplayLineMaps] = useState<DisplayLineMaps | null>(null);
+  const [displayLineMaps, setDisplayLineMaps] = useState<AlignedDisplayText | null>(null);
   const [comparisonDurationMs, setComparisonDurationMs] = useState<number | null>(null);
   const [status, setStatus] = useState<WorkspaceStatus>({
     tone: "idle",
@@ -246,6 +246,15 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     const pointerB = panels.indexes?.B?.byLine.get(line)?.pointer;
     if (pointerA !== undefined) panels.navigate("A", pointerA);
     if (pointerB !== undefined) panels.navigate("B", pointerB);
+  };
+  // A panel's own offscreen-finding chip or minimap marker (JsonInputPane's jumpToLine) can
+  // move the editors without going through stepFinding, leaving findingCursor stuck at its old
+  // index — the next Previous/Next click would then jump from that stale position instead of
+  // from the line the user is actually looking at. Re-sync whenever such a jump lands on a line
+  // stepFinding also knows about.
+  const onFindingLineJump = (line: number) => {
+    const index = findingLines.indexOf(line);
+    if (index !== -1) setFindingCursor(index);
   };
   const scrollToComparisonOutput = () =>
     document
@@ -599,58 +608,49 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       </header>
 
       <section className="workspace" aria-label="JSON comparison workspace">
-        <div className="panel-layout-toolbar">
+        <div className="panel-toolbar-actions" data-tour="primary-actions">
           <span>JSON response panels</span>
-          <WorkspaceFindingNav
-            categories={findingCategories}
-            current={findingCursor + 1}
-            total={findingLines.length}
-            onPrevious={() => stepFinding(-1)}
-            onNext={() => stepFinding(1)}
-            onScrollToOutput={scrollToComparisonOutput}
-          />
-          <div className="panel-toolbar-actions" data-tour="primary-actions">
-            <button
-              className="primary-button"
-              type="button"
-              disabled={busy}
-              onClick={() => runComparison()}
-            >
-              {busy ? "Comparing…" : "Compare responses"}
+          {highlightControlsVisible && (
+            <HighlightControls
+              highlightVisibility={highlightToggles}
+              onHighlightVisibilityChange={setHighlightToggles}
+            />
+          )}
+          <button
+            className="primary-button"
+            type="button"
+            disabled={busy}
+            onClick={() => runComparison()}
+          >
+            {busy ? "Comparing…" : "Compare responses"}
+          </button>
+          {busy && (
+            <button className="secondary-button" type="button" onClick={cancelComparison}>
+              Cancel
             </button>
-            {busy && (
-              <button className="secondary-button" type="button" onClick={cancelComparison}>
-                Cancel
-              </button>
-            )}
-            <button className="secondary-button" type="button" onClick={loadSample}>
-              Load sample
-            </button>
-            <button className="secondary-button" type="button" onClick={clearWorkspace}>
-              Clear all
-            </button>
-            <button
-              className="secondary-button"
-              type="button"
-              aria-expanded={jsonPanelsExpanded}
-              aria-controls="json-input-panels"
-              onClick={() => setJsonPanelsExpanded((current) => !current)}
-            >
-              {jsonPanelsExpanded ? "Collapse panels" : "Expand panels"}
-            </button>
-          </div>
+          )}
+          <button className="secondary-button" type="button" onClick={loadSample}>
+            Load sample
+          </button>
+          <button className="secondary-button" type="button" onClick={clearWorkspace}>
+            Clear all
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            aria-expanded={jsonPanelsExpanded}
+            aria-controls="json-input-panels"
+            onClick={() => setJsonPanelsExpanded((current) => !current)}
+          >
+            {jsonPanelsExpanded ? "Collapse panels" : "Expand panels"}
+          </button>
         </div>
-
-        {highlightControlsVisible && (
-          <HighlightControls
-            highlightVisibility={highlightToggles}
-            onHighlightVisibilityChange={setHighlightToggles}
-          />
-        )}
 
         <div
           id="json-input-panels"
-          className={`input-grid${jsonPanelsExpanded ? " panels-expanded" : ""}`}
+          className={`input-grid${jsonPanelsExpanded ? " panels-expanded" : ""}${
+            findingLines.length ? " has-finding-nav" : ""
+          }`}
           aria-label="JSON response inputs"
           data-tour="json-inputs"
         >
@@ -675,9 +675,20 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             onOpenActions={(request) => panels.openActions("A", request)}
             mirroredLine={activeLine?.side === "B" ? activeLine.line : null}
             onActiveLineChange={onActiveLineChangeA}
+            onJumpToLine={onFindingLineJump}
             view={panelView}
             onViewChange={setPanelView}
           />
+
+          <WorkspaceFindingNav
+            categories={findingCategories}
+            current={findingCursor + 1}
+            total={findingLines.length}
+            onPrevious={() => stepFinding(-1)}
+            onNext={() => stepFinding(1)}
+            onScrollToOutput={scrollToComparisonOutput}
+          />
+
           <JsonInputPane
             side="B"
             value={textB}
@@ -699,6 +710,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             onOpenActions={(request) => panels.openActions("B", request)}
             mirroredLine={activeLine?.side === "A" ? activeLine.line : null}
             onActiveLineChange={onActiveLineChangeB}
+            onJumpToLine={onFindingLineJump}
             view={panelView}
             onViewChange={setPanelView}
           />

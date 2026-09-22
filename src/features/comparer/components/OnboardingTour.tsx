@@ -22,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v8";
+const TOUR_VERSION = "v9";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -141,26 +141,12 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
         align: "start"
       }
     },
-    // Right after primary-actions, not after panel-actions: this shares the same toolbar
-    // row as primary-actions, so visiting them back to back avoids bouncing the tour
-    // between the toolbar and the panels.
-    {
-      element: hasResults ? '[data-tour="finding-nav"]' : undefined,
-      data: {
-        example: hasResults ? undefined : "Finding 3 of 8 · Previous · Next · View results"
-      },
-      popover: {
-        title: "Step through every finding",
-        description: hasResults
-          ? "Once you compare, this same toolbar grows a navigator that walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
-          : "Once you compare, this same toolbar grows a navigator to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
-        side: "bottom",
-        align: "center"
-      }
-    },
-    // The legend itself only renders once a comparison has run (Comparer hides it until then),
-    // so — like the result-section steps below — it has no element to anchor to on a first
-    // visit and falls back to description-only copy.
+    // Right after primary-actions, not after panel-actions: HighlightControls now renders
+    // inside that same toolbar row (it used to be its own section below it), so visiting
+    // them back to back is a zero-scroll transition. The legend itself only renders once a
+    // comparison has run (Comparer hides it until then), so — like the result-section steps
+    // below — it has no element to anchor to on a first visit and falls back to
+    // description-only copy.
     {
       element: hasResults ? '[data-tour="highlight-controls"]' : undefined,
       data: {
@@ -175,6 +161,24 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
           : "Once you compare, this legend appears above the panels so you can toggle missing fields, structure issues, or changed-value highlights. Replay this tour after comparing to see it.",
         side: "bottom",
         align: "start"
+      }
+    },
+    // Right before panel-actions, not right after primary-actions: this navigator now lives
+    // between the two JSON panels (it used to share the toolbar row), so visiting it next to
+    // panel-actions — also inside the panels — avoids bouncing the tour between the toolbar
+    // and the panels.
+    {
+      element: hasResults ? '[data-tour="finding-nav"]' : undefined,
+      data: {
+        example: hasResults ? undefined : "Finding 3 of 8 · Previous · Next · View results"
+      },
+      popover: {
+        title: "Step through every finding",
+        description: hasResults
+          ? "Once you compare, this navigator appears between the two panels and walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
+          : "Once you compare, this navigator appears between the two panels to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
+        side: "bottom",
+        align: "center"
       }
     },
     {
@@ -384,11 +388,11 @@ export function OnboardingTour({
 
     const steps = buildOnboardingSteps(hasResultsRef.current);
     const panelActionsStep = steps.find((step) => step.element === '[data-tour="panel-actions"]');
-    // Steps whose element depends on hasResults (finding-nav plus the three result
-    // sections) describe results that don't exist yet on a first visit — see runLiveDemo
-    // for how they get upgraded to real highlights in place. Found by index rather than a
-    // fixed offset from the end, since finding-nav now sits earlier in the array (next to
-    // primary-actions) and isn't contiguous with the result-section steps.
+    // Steps whose element depends on hasResults (highlight-controls, finding-nav, plus the
+    // three result sections) describe results that don't exist yet on a first visit — see
+    // runLiveDemo for how they get upgraded to real highlights in place. Found by index
+    // rather than a fixed offset from the end, since none of these are contiguous with each
+    // other or with the result-section steps.
     const resultStepIndexes = steps
       .map((step, index) => (step.element === undefined ? index : -1))
       .filter((index) => index >= 0);

@@ -9,6 +9,7 @@ export function JsonLineGutter({
   side,
   totalLines,
   scrollTop,
+  lineTop,
   highlights,
   activeLine,
   hoveredLine,
@@ -20,6 +21,10 @@ export function JsonLineGutter({
   side: ResponseSide;
   totalLines: number;
   scrollTop: number;
+  /** Each line's real rendered top offset (see `useMeasuredLineOffsets`), so a line number sits
+   *  at the exact same height as its highlight bar and minimap marker instead of an assumed
+   *  uniform `lineHeight` stack. */
+  lineTop: (line: number) => number;
   highlights: Record<number, LineHighlight>;
   activeLine: number | null;
   hoveredLine: number | null;
@@ -74,11 +79,14 @@ export function JsonLineGutter({
           ]
             .filter(Boolean)
             .join(" ");
+          const top = lineTop(line);
+          const height = lineTop(line + 1) - top;
           return (
             <button
               key={line}
               type="button"
               className={classes}
+              style={{ top: `${top}px`, height: `${height}px` }}
               ref={(node) => {
                 if (node) buttons.current.set(line, node);
                 else buttons.current.delete(line);

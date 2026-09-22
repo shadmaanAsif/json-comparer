@@ -402,6 +402,109 @@ describe("JsonInputPane validation state", () => {
     expect(container.querySelector(".full-line-highlight.line-invalid")).not.toBeInTheDocument();
   });
 
+  it("loads a dropped JSON file and shows the drop-zone overlay only while dragging a file over it", () => {
+    const onFileLoad = vi.fn();
+    const { container } = renderPane("", { onFileLoad });
+    const panel = container.querySelector(".input-panel")!;
+    // jsdom's File lacks a working .text(), so stand in a File-shaped object with the
+    // one method/property loadFile() actually reads.
+    const file = { size: 17, text: () => Promise.resolve('{"dropped":true}') } as unknown as File;
+    const fileDataTransfer = { types: ["Files"], files: [file], dropEffect: "" };
+
+    fireEvent.dragEnter(panel, { dataTransfer: fileDataTransfer });
+    expect(container.querySelector(".drop-zone-overlay")).toBeInTheDocument();
+    expect(panel).toHaveClass("is-drag-over");
+
+    fireEvent.drop(panel, { dataTransfer: fileDataTransfer });
+    expect(container.querySelector(".drop-zone-overlay")).not.toBeInTheDocument();
+    expect(panel).not.toHaveClass("is-drag-over");
+    return waitFor(() => expect(onFileLoad).toHaveBeenCalledWith('{"dropped":true}'));
+  });
+
+  it("loads a dropped file's content even when the browser withholds dataTransfer.types until drop (Safari)", () => {
+    // Safari doesn't list "Files" in dataTransfer.types during dragenter/dragover, only at
+    // drop. The drop zone must still claim the drag (preventDefault) up front, or the browser
+    // falls back to its native text-field default of inserting the file's name instead of
+    // letting loadFile() read its content.
+    const onFileLoad = vi.fn();
+    const { container } = renderPane("", { onFileLoad });
+    const panel = container.querySelector(".input-panel")!;
+    const file = { size: 17, text: () => Promise.resolve('{"dropped":true}') } as unknown as File;
+    const withheldDataTransfer = { types: [], files: [], dropEffect: "" };
+    const fileDataTransfer = { types: ["Files"], files: [file], dropEffect: "" };
+
+    const dragOverEvent = fireEvent.dragOver(panel, { dataTransfer: withheldDataTransfer });
+    expect(dragOverEvent).toBe(false); // false return means preventDefault() was called
+
+    fireEvent.drop(panel, { dataTransfer: fileDataTransfer });
+    return waitFor(() => expect(onFileLoad).toHaveBeenCalledWith('{"dropped":true}'));
+  });
+
+  it("ignores a non-file drag (such as dragging selected text) without opening the overlay", () => {
+    const onFileLoad = vi.fn();
+    const { container } = renderPane("", { onFileLoad });
+    const panel = container.querySelector(".input-panel")!;
+    const textDataTransfer = { types: ["text/plain"], files: [], dropEffect: "" };
+
+    fireEvent.dragEnter(panel, { dataTransfer: textDataTransfer });
+    expect(container.querySelector(".drop-zone-overlay")).not.toBeInTheDocument();
+
+    // No .items either, matching a real plain-text DataTransfer shape — must not throw, and
+    // must leave the drop unprevented so the browser's native text-insertion still runs.
+    const dropEvent = fireEvent.drop(panel, { dataTransfer: textDataTransfer });
+    expect(onFileLoad).not.toHaveBeenCalled();
+    expect(dropEvent).toBe(true); // true return means preventDefault() was NOT called
+  });
+
+  it("loads a dropped file's content even when dataTransfer.types omits Files at drop (real-world Chrome report)", () => {
+    // A real report showed dataTransfer.types missing "Files" even in the drop event itself in
+    // stock Chrome, which previously made handleDrop bail out before calling preventDefault(),
+    // letting the browser navigate the tab to the dropped file instead ("about:blank#blocked").
+    // The fix reads dataTransfer.files/.items directly rather than trusting the .types hint.
+    const onFileLoad = vi.fn();
+    const { container } = renderPane("", { onFileLoad });
+    const panel = container.querySelector(".input-panel")!;
+    const file = { size: 17, text: () => Promise.resolve('{"dropped":true}') } as unknown as File;
+    const typesOmittingFiles = { types: [], files: [file], dropEffect: "" };
+
+    const dropEvent = fireEvent.drop(panel, { dataTransfer: typesOmittingFiles });
+    expect(dropEvent).toBe(false); // false return means preventDefault() was called
+    return waitFor(() => expect(onFileLoad).toHaveBeenCalledWith('{"dropped":true}'));
+  });
+
+  it("shows the empty-state hint only when the panel is empty, hiding it while a file is dragged over", () => {
+    const { container, rerender } = renderPane("");
+    expect(container.querySelector(".editor-empty-hint")).toBeInTheDocument();
+    expect(screen.getByText("No JSON loaded")).toBeInTheDocument();
+
+    const panel = container.querySelector(".input-panel")!;
+    const file = { size: 17, text: () => Promise.resolve('{"dropped":true}') } as unknown as File;
+    fireEvent.dragEnter(panel, { dataTransfer: { types: ["Files"], files: [file], dropEffect: "" } });
+    expect(container.querySelector(".editor-empty-hint")).not.toBeInTheDocument();
+
+    fireEvent.dragLeave(panel);
+    rerender(
+      <JsonInputPane
+        side="A"
+        value='{"loaded":true}'
+        onChange={vi.fn()}
+        onPaste={vi.fn()}
+        onFileLoad={vi.fn()}
+        onAdd={vi.fn()}
+        onPrettify={vi.fn()}
+        curlCommand={null}
+        onCurlCommandChange={vi.fn()}
+        onCurlRun={vi.fn()}
+        onCurlClose={vi.fn()}
+        isFetching={false}
+        lineHighlights={{}}
+        registerEditor={vi.fn()}
+        synchronizeScroll={vi.fn()}
+      />
+    );
+    expect(container.querySelector(".editor-empty-hint")).not.toBeInTheDocument();
+  });
+
   it("keeps valid and empty panels neutral", () => {
     const { container, rerender } = renderPane('{"valid":true}');
 

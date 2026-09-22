@@ -460,7 +460,7 @@ describe("Comparer panel actions", () => {
 
     const scrollSpy = vi.mocked(Element.prototype.scrollIntoView);
     scrollSpy.mockClear();
-    await user.click(screen.getByRole("button", { name: "View highlights" }));
+    await user.click(screen.getByRole("button", { name: "Highlight Controls" }));
 
     expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
     expect(screen.getByRole("group", { name: "Highlight in JSON panels" })).toHaveFocus();

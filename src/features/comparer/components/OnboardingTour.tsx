@@ -22,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v11";
+const TOUR_VERSION = "v12";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -97,7 +97,7 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       popover: {
         title: "Add a baseline and candidate",
         description:
-          "Put the expected response in Baseline and the response you are checking in Candidate. Paste JSON directly, use Add for a file or URL/cURL import, or use Quick upload. Prettify, Find, and Tree help you inspect each side.",
+          "Put the expected response in Baseline and the response you are checking in Candidate. Paste JSON directly, drag and drop a file, use Add for a URL/cURL import, or use Quick upload. Prettify, Find, and Tree help you inspect each side.",
         side: "bottom",
         align: "center"
       }
@@ -167,7 +167,7 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       }
     },
     // Right before panel-actions, not right after primary-actions: this navigator now lives
-    // between the two JSON panels, below the compact "Highlight" shortcut button that scrolls
+    // between the two JSON panels, below the compact "Highlight Controls" shortcut button that scrolls
     // back up to the toolbar's highlight toggles, in the same workspace-side-panel column, so
     // visiting it next to panel-actions — also inside the panels — avoids bouncing the tour
     // between the toolbar and the panels.

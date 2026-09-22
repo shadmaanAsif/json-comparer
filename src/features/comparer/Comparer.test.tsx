@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { Comparer } from "./Comparer";
@@ -49,5 +49,21 @@ describe("Comparer JSON panel layout", () => {
       "aria-expanded",
       "false"
     );
+  });
+
+  it("shrinks panels to half the viewport while both are empty, and restores the designated height once either has content", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    const panels = screen.getByLabelText("JSON response inputs");
+
+    expect(panels).toHaveClass("panels-empty");
+
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
+      target: { value: "{}" }
+    });
+    expect(panels).not.toHaveClass("panels-empty");
+
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expect(panels).toHaveClass("panels-empty");
   });
 });

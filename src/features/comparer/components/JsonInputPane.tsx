@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { MAX_DOCUMENT_BYTES, SIDE_LABELS } from "../constants";
 import { usePanelEditorActions } from "../hooks/usePanelEditorActions";
 import { useMeasuredLineOffsets } from "../hooks/useMeasuredLineOffsets";
@@ -16,6 +16,7 @@ import {
 } from "../utils/editor-navigation";
 import { getJsonSyntaxIssue } from "../utils/json-validation";
 import { CategoryDots } from "./FindingNavigation";
+import { InfoTooltipButton } from "./InfoTooltipButton";
 import { JsonTree } from "./JsonTree";
 import { JsonLineGutter } from "./JsonLineGutter";
 
@@ -80,6 +81,8 @@ export function JsonInputPane({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const paneRef = useRef<HTMLElement>(null);
+  const dragDepthRef = useRef(0);
+  const [isDragOver, setIsDragOver] = useState(false);
   // Local view state kept in sync with the optional shared `view`, so the pane works both
   // standalone and as one of two panels the workspace keeps on the same mode. Adjusted during
   // render (React's documented alternative to an effect) rather than after a commit.
@@ -183,6 +186,8 @@ export function JsonInputPane({
     };
   }, [activeView]);
 
+  const showsEmptyHint = !value.trim() && !isDragOver;
+
   const lines = value.split("\n");
   const totalLines = Math.max(1, lines.length);
   const lineOffsets = useMeasuredLineOffsets(editorRef, value, editorMetrics);
@@ -259,21 +264,91 @@ export function JsonInputPane({
     onFileLoad(await file.text());
   };
 
+  // dataTransfer.types is only a hint, and its "Files" entry is unreliable across browsers
+  // (absent during dragenter/dragover in some, and — per a real report — sometimes absent even
+  // at drop). dataTransfer.items carries file-kind metadata during the whole drag without
+  // exposing file content, so prefer it and fall back to types only when items is unavailable.
+  const isFileDrag = (event: DragEvent<HTMLElement>) => {
+    const { dataTransfer } = event;
+    if (dataTransfer.items && dataTransfer.items.length > 0) {
+      return Array.from(dataTransfer.items).some((item) => item.kind === "file");
+    }
+    return Array.from(dataTransfer.types).includes("Files");
+  };
+
+  const fileFromDrop = (event: DragEvent<HTMLElement>) =>
+    event.dataTransfer.files[0] ??
+    Array.from(event.dataTransfer.items ?? [])
+      .find((item) => item.kind === "file")
+      ?.getAsFile() ??
+    undefined;
+
+  // Some browsers don't populate dataTransfer.types with "Files" until the drop itself, so
+  // dragenter/dragover must always claim the drop zone rather than gating on isFileDrag here —
+  // otherwise the browser falls back to its native text-field default of inserting the dropped
+  // file's name instead of letting our onDrop read its content.
+  const handleDragEnter = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    dragDepthRef.current += 1;
+    if (isFileDrag(event)) setIsDragOver(true);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (isFileDrag(event)) event.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDragLeave = () => {
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragOver(false);
+  };
+
+  // Gate on the actual file (dataTransfer.files / .items), not the .types hint: a real report
+  // showed dataTransfer.types omitting "Files" even at drop in stock Chrome, which skipped
+  // preventDefault() and let the browser navigate the tab to the dropped file
+  // ("about:blank#blocked") instead of reading its content. Only preventDefault when a file is
+  // actually found, so dragging plain text still inserts natively.
+  const handleDrop = (event: DragEvent<HTMLElement>) => {
+    dragDepthRef.current = 0;
+    setIsDragOver(false);
+    const file = fileFromDrop(event);
+    if (!file) return;
+    event.preventDefault();
+    void loadFile(file);
+  };
+
   return (
     <section
       ref={paneRef}
-      className={`input-panel${showsJsonError ? " has-json-error" : ""}`}
+      className={`input-panel${showsJsonError ? " has-json-error" : ""}${
+        isDragOver ? " is-drag-over" : ""
+      }`}
       data-side={side}
       data-json-state={jsonError ? "invalid" : value.trim() ? "valid" : "empty"}
       data-tour={side === "A" ? "panel-actions" : undefined}
       aria-labelledby={`response-${side}-heading`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
+      {isDragOver && (
+        <div className="drop-zone-overlay" aria-hidden="true">
+          <span>Drop JSON file to load into {SIDE_LABELS[side]}</span>
+        </div>
+      )}
       <div className="panel-heading">
         <div>
           <span className="eyebrow">
             {side === "A" ? "Expected response" : "Response under test"}
           </span>
-          <h2 id={`response-${side}-heading`}>{SIDE_LABELS[side]}</h2>
+          <div className="panel-title-row">
+            <h2 id={`response-${side}-heading`}>{SIDE_LABELS[side]}</h2>
+            <InfoTooltipButton
+              label={`How to load data into ${SIDE_LABELS[side]}`}
+              detail="Drag and drop a JSON file anywhere on this panel, or use Add to load a URL, cURL command, or file."
+            />
+          </div>
           {showsJsonError && (
             <span
               id={`response-${side}-json-error`}
@@ -405,6 +480,18 @@ export function JsonInputPane({
             onOpenLine={panelActions.openLine}
           />
           <div className="editor-main">
+            {showsEmptyHint && (
+              <div className="editor-empty-hint" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <rect className="empty-hint-frame" x="3" y="3" width="18" height="18" rx="4" />
+                  <path className="empty-hint-arrow" d="M12 8v7m0 0-3-3m3 3 3-3" />
+                </svg>
+                <span className="editor-empty-hint-title">No JSON loaded</span>
+                <span className="editor-empty-hint-detail">
+                  Type or paste JSON, drag and drop a file, or use Add / Quick upload above.
+                </span>
+              </div>
+            )}
             <div className="line-highlight-layer" aria-hidden="true">
               {panelActions.hoveredLine !== null && (
                 <span
@@ -487,9 +574,7 @@ export function JsonInputPane({
                 const pasted = event.clipboardData.getData("text");
                 onPaste(`${value.slice(0, start)}${pasted}${value.slice(end)}`);
               }}
-              placeholder={
-                side === "A" ? '{"status":"ok","amount":100}' : '{"status":"ok","amount":150}'
-              }
+              placeholder="Paste or drop JSON here"
               aria-invalid={jsonError ? "true" : "false"}
               aria-describedby={jsonError ? `response-${side}-json-error` : undefined}
               spellCheck={false}

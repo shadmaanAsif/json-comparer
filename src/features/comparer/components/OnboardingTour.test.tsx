@@ -148,8 +148,9 @@ describe("OnboardingTour", () => {
     await user.click(screen.getByRole("button", { name: "Guided tour" }));
 
     const config = driverMock.mock.calls[0]?.[0] as Config;
-    // finding-nav is visited right after primary-actions, not after the other result-section
-    // steps — assert each by selector rather than by position.
+    // highlight-controls and finding-nav are visited right after primary-actions and right
+    // before panel-actions respectively, not grouped with the other result-section steps —
+    // assert each by selector rather than by position.
     expect(findStep(config, '[data-tour="finding-nav"]').popover?.description).toContain(
       "Previous and Next"
     );
@@ -294,9 +295,9 @@ describe("OnboardingTour", () => {
       });
 
       expect(moveNext).toHaveBeenCalledOnce();
-      // finding-nav sits earlier in the array (next to primary-actions), not contiguous
-      // with the result-section steps — look each one up by its now-real selector rather
-      // than assuming a fixed position.
+      // finding-nav sits next to panel-actions, not contiguous with the result-section
+      // steps — look each one up by its now-real selector rather than assuming a fixed
+      // position.
       const upgradedSteps = [
         findStep(config, '[data-tour="finding-nav"]'),
         findStep(config, '[data-tour="results"]'),

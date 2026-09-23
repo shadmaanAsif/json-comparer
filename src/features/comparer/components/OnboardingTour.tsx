@@ -22,7 +22,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v12";
+const TOUR_VERSION = "v13";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -147,9 +147,12 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
     // panels, and both overflowed onto the JSON panel beside it — the chips' text, "Structure
     // schema" etc., doesn't fit that ~112-148px column). Visiting this step right after
     // primary-actions is a zero-scroll transition since it's the same toolbar. The chips only
-    // render once a comparison is active (Comparer hides them until then), so — like the
-    // result-section steps below — this step has no element to anchor to on a first visit and
-    // falls back to description-only copy.
+    // render once a comparison is active (Comparer hides them until then), so this step starts
+    // with no element to anchor to — but the live demo (see runLiveDemo) triggers from
+    // primary-actions, the step immediately before this one, and upgrades it to the real
+    // highlight before a first-time visitor ever sees it. Only a visitor who already has real
+    // results, or brought their own unsaved input into the tour, skips the demo and can still
+    // land here on the description-only fallback.
     {
       element: hasResults ? '[data-tour="highlight-controls"]' : undefined,
       data: {
@@ -297,8 +300,8 @@ export function OnboardingTour({
   /**
    * Announces the demo, loads the pair, pauses so it's visible landing in the panels, runs
    * the real comparison, and waits for it to resolve before advancing — so "Next" out of
-   * panel-actions shows the results sections happening live instead of jumping straight
-   * to description-only fallback text.
+   * primary-actions shows highlight-controls, finding-nav, and the results sections
+   * happening live instead of jumping straight to description-only fallback text.
    *
    * `resultSteps` are whichever steps of THIS running tour's own steps array have
    * `element === undefined`, built while hasResults was still false — wherever they sit in
@@ -318,10 +321,10 @@ export function OnboardingTour({
       resultStepIndexes: number[]
     ) => {
       // highlight() re-renders the current popover in place (it doesn't touch step-index
-      // navigation state), so the panel-actions target and side/align stay put and only the
+      // navigation state), so the primary-actions target and side/align stay put and only the
       // copy changes — telling the viewer what's about to happen before the panels do.
       activeTour.highlight({
-        element: '[data-tour="panel-actions"]',
+        element: '[data-tour="primary-actions"]',
         popover: {
           title: "Loading a live example…",
           description:
@@ -391,7 +394,13 @@ export function OnboardingTour({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const steps = buildOnboardingSteps(hasResultsRef.current);
-    const panelActionsStep = steps.find((step) => step.element === '[data-tour="panel-actions"]');
+    // The live demo triggers on primary-actions' own "Next" click, not panel-actions' — it must
+    // resolve BEFORE highlight-controls and finding-nav (the next two steps) so a first-time
+    // visitor sees those upgraded to their real highlights instead of description-only
+    // fallback text. See runLiveDemo and the comment above the highlight-controls step.
+    const primaryActionsStep = steps.find(
+      (step) => step.element === '[data-tour="primary-actions"]'
+    );
     // Steps whose element depends on hasResults (highlight-controls, finding-nav, plus the
     // three result sections) describe results that don't exist yet on a first visit — see
     // runLiveDemo for how they get upgraded to real highlights in place. Found by index
@@ -401,9 +410,9 @@ export function OnboardingTour({
       .map((step, index) => (step.element === undefined ? index : -1))
       .filter((index) => index >= 0);
     const resultSteps = resultStepIndexes.map((index) => steps[index]!);
-    if (panelActionsStep) {
-      panelActionsStep.popover = {
-        ...panelActionsStep.popover,
+    if (primaryActionsStep) {
+      primaryActionsStep.popover = {
+        ...primaryActionsStep.popover,
         onNextClick: (_element, _step, { driver: activeTour }) => {
           if (isRunningDemoRef.current) return;
           if (hasResultsRef.current || !isWorkspaceEmptyRef.current) {

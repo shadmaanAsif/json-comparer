@@ -259,13 +259,13 @@ describe("OnboardingTour", () => {
 
       await user.click(screen.getByRole("button", { name: "Guided tour" }));
       const config = driverMock.mock.calls[0]?.[0] as Config;
-      const panelActionsStep = findStep(config, '[data-tour="panel-actions"]');
+      const primaryActionsStep = findStep(config, '[data-tour="primary-actions"]');
       const moveNext = vi.fn();
 
       // Fake timers only from here — the click above needs real ones for userEvent.
       vi.useFakeTimers();
       const highlight = vi.fn();
-      panelActionsStep.popover?.onNextClick?.(undefined, panelActionsStep, {
+      primaryActionsStep.popover?.onNextClick?.(undefined, primaryActionsStep, {
         driver: { moveNext, highlight } as never
       } as never);
 
@@ -295,10 +295,13 @@ describe("OnboardingTour", () => {
       });
 
       expect(moveNext).toHaveBeenCalledOnce();
-      // finding-nav sits next to panel-actions, not contiguous with the result-section
-      // steps — look each one up by its now-real selector rather than assuming a fixed
-      // position.
+      // highlight-controls and finding-nav are the two steps right after primary-actions —
+      // the exact ones a first-time visitor would otherwise see with no results yet, since
+      // the demo resolves before moveNext() advances past primary-actions into them. Not
+      // contiguous with the result-section steps — look each one up by its now-real selector
+      // rather than assuming a fixed position.
       const upgradedSteps = [
+        findStep(config, '[data-tour="highlight-controls"]'),
         findStep(config, '[data-tour="finding-nav"]'),
         findStep(config, '[data-tour="results"]'),
         findStep(config, '[data-tour="result-structure"]'),
@@ -318,10 +321,10 @@ describe("OnboardingTour", () => {
 
       await user.click(screen.getByRole("button", { name: "Guided tour" }));
       const config = driverMock.mock.calls[0]?.[0] as Config;
-      const panelActionsStep = findStep(config, '[data-tour="panel-actions"]');
+      const primaryActionsStep = findStep(config, '[data-tour="primary-actions"]');
       const moveNext = vi.fn();
 
-      panelActionsStep.popover?.onNextClick?.(undefined, panelActionsStep, {
+      primaryActionsStep.popover?.onNextClick?.(undefined, primaryActionsStep, {
         driver: { moveNext } as never
       } as never);
 
@@ -337,8 +340,8 @@ describe("OnboardingTour", () => {
 
       await user.click(screen.getByRole("button", { name: "Guided tour" }));
       const config = driverMock.mock.calls[0]?.[0] as Config;
-      const panelActionsStep = findStep(config, '[data-tour="panel-actions"]');
-      panelActionsStep.popover?.onNextClick?.(undefined, panelActionsStep, {
+      const primaryActionsStep = findStep(config, '[data-tour="primary-actions"]');
+      primaryActionsStep.popover?.onNextClick?.(undefined, primaryActionsStep, {
         driver: { moveNext: vi.fn(), highlight: vi.fn() } as never
       } as never);
 

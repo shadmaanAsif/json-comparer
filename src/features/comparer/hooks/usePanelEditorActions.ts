@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import type { ResponseSide } from "../types";
 import {
+  centerRectInWindow,
   scrollOffsetForLine,
-  windowScrollTargetForRect,
   type EditorViewportMetrics
 } from "../utils/editor-navigation";
 import type { PanelField, PanelIndex } from "../utils/panel-context";
@@ -23,7 +22,6 @@ export interface TreeNavigationRequest {
 }
 
 export function usePanelEditorActions({
-  side,
   value,
   index,
   navigation,
@@ -33,10 +31,8 @@ export function usePanelEditorActions({
   activeView,
   setActiveView,
   setScrollTop,
-  synchronizeScroll,
   onOpenActions
 }: {
-  side: ResponseSide;
   value: string;
   index?: PanelIndex | null;
   navigation?: PanelNavigation;
@@ -46,7 +42,6 @@ export function usePanelEditorActions({
   activeView: "json" | "tree";
   setActiveView: (view: "json" | "tree") => void;
   setScrollTop: (top: number) => void;
-  synchronizeScroll: (side: ResponseSide, editor: HTMLTextAreaElement) => void;
   onOpenActions?: (request: PanelActionRequest) => void;
 }) {
   const [selection, setSelection] = useState<{
@@ -194,34 +189,35 @@ export function usePanelEditorActions({
       "center"
     );
     setScrollTop(editor.scrollTop);
-    synchronizeScroll(side, editor);
-    // Bring the finding-nav toolbar along with the editor: without it, an editor taller than
-    // the remaining viewport gets centered on its own, pushing the toolbar (and its
-    // Previous/Next buttons) off the top of the screen after every navigation click.
+    // No synchronizeScroll() call here: Previous/Next can navigate both panels in one commit, each
+    // setting its own scrollTop directly, so they're already in sync. Cross-writing the other
+    // editor's scrollTop from here raced with its own write — the two could ping-pong through native
+    // scroll events and useSynchronizedEditors' requestAnimationFrame-timed guard until React's
+    // nested-update limit threw. The textarea's own onScroll still syncs a genuine user scroll.
+    // Center the navigated-to line itself in the window viewport, not the editor/toolbar as a
+    // whole: the old rect-visibility check top-aligned a tall editor instead, which could leave
+    // the actual highlighted line anywhere from just below the toolbar to off the bottom of the
+    // screen. Deriving the line's on-page top from the editor's rect and its just-applied
+    // scrollTop (rather than assuming it landed at the editor's own vertical center) keeps this
+    // correct even when scrollOffsetForLine clamped at the start/end of the document.
     const editorRect = editor.getBoundingClientRect();
-    const toolbarRect = document.querySelector(".workspace-finding-nav")?.getBoundingClientRect();
-    const targetRect = toolbarRect
-      ? { top: toolbarRect.top, bottom: editorRect.bottom, height: editorRect.bottom - toolbarRect.top }
-      : editorRect;
-    const scrollTarget = windowScrollTargetForRect(targetRect, window.innerHeight, window.scrollY);
+    const lineTopOnPage =
+      editorRect.top +
+      metrics.paddingTop +
+      (navigation.field.line - 1) * metrics.lineHeight -
+      editor.scrollTop;
+    const scrollTarget = centerRectInWindow(
+      { top: lineTopOnPage, height: metrics.lineHeight },
+      window.innerHeight,
+      window.scrollY
+    );
     // Instant, not smooth: the page also sets `scroll-behavior: smooth` globally (globals.css),
     // which would otherwise animate this over several hundred ms. A line's gutter "..." button
     // sits underneath that moving viewport the whole time, so a click made right after this
     // navigation (the natural next action) could land on the wrong line, or on a non-actionable
     // one with no button at all — silently doing nothing.
-    if (scrollTarget !== null) window.scrollTo({ top: scrollTarget, behavior: "instant" });
-  }, [
-    navigation,
-    index,
-    activeView,
-    editorRef,
-    metrics,
-    setActiveView,
-    setScrollTop,
-    side,
-    synchronizeScroll,
-    value
-  ]);
+    window.scrollTo({ top: scrollTarget, behavior: "instant" });
+  }, [navigation, index, activeView, editorRef, metrics, setActiveView, setScrollTop, value]);
   return {
     hoveredLine,
     hoverLine,

@@ -58,6 +58,35 @@ describe("JsonInputPane validation state", () => {
     expect(container.querySelector(".line-action-hover")).not.toBeInTheDocument();
   });
 
+  it('only re-scrolls a line\'s "..." click when the line isn\'t already visible', async () => {
+    // Regression test: the gutter's click handler used to call jumpToLine(line, "upper")
+    // unconditionally, so clicking "..." on a line Previous/Next had just centered would
+    // immediately relocate it near the top of the editor, before the popup even opened.
+    const user = userEvent.setup();
+    const fields = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [`k${i}`, i]));
+    const display = formatAlignedForDisplay(fields, fields);
+    const panelIndex = buildPanelIndex(
+      display.textA,
+      display.lineMapA,
+      display.placeholderLineMapA
+    );
+    const { props } = renderPane(display.textA, { panelIndex, onOpenActions: vi.fn() });
+    const editor = screen.getByRole("textbox", {
+      name: "JSON for Baseline"
+    }) as HTMLTextAreaElement;
+    // jsdom never lays anything out, so give the editor a real scrollHeight to compute against —
+    // otherwise scrollOffsetForLine's clamp forces every result to 0, masking this assertion.
+    Object.defineProperty(editor, "scrollHeight", { value: 900, configurable: true });
+
+    // jsdom's default (unmeasured) clientHeight of 360px treats lines 1-16 as already visible.
+    await user.click(screen.getByRole("button", { name: "Actions for line 2" }));
+    expect(editor.scrollTop).toBe(0);
+    expect(vi.mocked(props.onOpenActions!)).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Actions for line 20" }));
+    expect(editor.scrollTop).toBeGreaterThan(0);
+  });
+
   it("tracks the hovered JSON row while leaving normal text clicks editable", () => {
     const display = formatAlignedForDisplay({ price: 10 }, { price: 12 });
     const panelIndex = buildPanelIndex(
@@ -217,7 +246,7 @@ describe("JsonInputPane validation state", () => {
     expect(container.querySelector(".line-context")).toBeInTheDocument();
   });
 
-  it("brings the finding-nav toolbar into view instantly, not with a smooth animation", () => {
+  it("brings the navigated-to line into view instantly, not with a smooth animation", () => {
     // Regression test: a `behavior: "smooth"` window scroll here left the target line's gutter
     // "..." button drifting under the viewport for several hundred ms (the page also sets
     // `scroll-behavior: smooth` globally), so a click made right after a Previous/Next navigation
@@ -231,9 +260,8 @@ describe("JsonInputPane validation state", () => {
     );
     const { props, rerender } = renderPane(display.textA, { panelIndex });
     const editor = screen.getByRole("textbox", { name: "JSON for Baseline" });
-    // jsdom lays nothing out, so the editor's rect is all zeros by default — that reads as
-    // "already fully in view", and `windowScrollTargetForRect` skips the scroll entirely. Push it
-    // below the viewport so this test exercises the same scroll the browser actually takes.
+    // jsdom lays nothing out, so the editor's rect is all zeros by default. Push it below the
+    // viewport so this test exercises the same geometry the browser actually computes.
     vi.spyOn(editor, "getBoundingClientRect").mockReturnValue({
       top: 900,
       bottom: 1400,
@@ -255,6 +283,73 @@ describe("JsonInputPane validation state", () => {
     );
     expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: "instant" }));
     scrollSpy.mockRestore();
+  });
+
+  it("centers the navigated-to line itself, not the editor's top edge", () => {
+    // Regression test: the old scroll target unioned the toolbar-to-editor-bottom rect and
+    // top-aligned it when taller than the viewport, so the actual highlighted line could land
+    // anywhere from just below the toolbar to off the bottom of the screen — not at vertical
+    // center, and not in the same place from one navigation to the next.
+    const scrollSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const display = formatAlignedForDisplay({ a: 1, b: 2 }, { a: 1, b: 2 });
+    const panelIndex = buildPanelIndex(
+      display.textA,
+      display.lineMapA,
+      display.placeholderLineMapA
+    );
+    const { props, rerender } = renderPane(display.textA, { panelIndex });
+    const editor = screen.getByRole("textbox", { name: "JSON for Baseline" });
+    vi.spyOn(editor, "getBoundingClientRect").mockReturnValue({
+      top: 900,
+      bottom: 1400,
+      height: 500,
+      left: 0,
+      right: 0,
+      width: 0,
+      x: 0,
+      y: 900,
+      toJSON() {
+        return this;
+      }
+    });
+    rerender(
+      <JsonInputPane
+        {...props}
+        panelNavigation={{ field: panelIndex.byPointer.get("/b")!, index: panelIndex, token: 1 }}
+      />
+    );
+    // "/b" is line 3 (`{`, `"a": 1,`, `"b": 2`): mocked editor top (900) + paddingTop (15) + two
+    // lineHeights (22.4 each) — jsdom's scrollHeight is 0, so scrollOffsetForLine clamps scrollTop
+    // to 0 regardless of placement.
+    const lineTopOnPage = 900 + 15 + 2 * 22.4;
+    const expectedTarget = window.scrollY + lineTopOnPage + 22.4 / 2 - window.innerHeight / 2;
+    expect(scrollSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ top: expect.closeTo(expectedTarget, 5) })
+    );
+    scrollSpy.mockRestore();
+  });
+
+  it("does not call synchronizeScroll from a JSON navigation", () => {
+    // Regression test: Previous/Next can navigate both panels in the same commit, each setting its
+    // own scrollTop directly. Also calling synchronizeScroll() here raced that cross-write against
+    // the other panel's own write and its requestAnimationFrame-timed re-entry guard, ping-ponging
+    // through native scroll events until React threw "Maximum update depth exceeded".
+    const synchronizeScroll = vi.fn();
+    const display = formatAlignedForDisplay({ a: 1, b: 2 }, { a: 1, b: 2 });
+    const panelIndex = buildPanelIndex(
+      display.textA,
+      display.lineMapA,
+      display.placeholderLineMapA
+    );
+    const { props, rerender } = renderPane(display.textA, { panelIndex, synchronizeScroll });
+    rerender(
+      <JsonInputPane
+        {...props}
+        synchronizeScroll={synchronizeScroll}
+        panelNavigation={{ field: panelIndex.byPointer.get("/b")!, index: panelIndex, token: 1 }}
+      />
+    );
+    expect(synchronizeScroll).not.toHaveBeenCalled();
   });
 
   it.each([null, {}, []])(

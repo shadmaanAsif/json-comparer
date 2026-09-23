@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  centerRectInWindow,
   minimapMarkerPercent,
   navigationTargetLine,
   scrollOffsetForLine,
   visibleLineRange,
-  windowScrollTargetForRect,
   type EditorViewportMetrics
 } from "./editor-navigation";
 
@@ -50,33 +50,27 @@ describe("editor navigation geometry", () => {
     expect(navigationTargetLine(lines, -1, 80, range)).toBe(40);
   });
 
-  it("leaves the window alone when the target rect is already fully visible", () => {
-    expect(windowScrollTargetForRect({ top: 0, bottom: 358, height: 358 }, 720, 1200)).toBeNull();
-    expect(windowScrollTargetForRect({ top: 100, bottom: 458, height: 358 }, 720, 1200)).toBeNull();
+  it("recenters a line even when it's already fully visible", () => {
+    // Unconditional, unlike a "scroll into view" check: a line sitting near the top edge of the
+    // viewport (top: 100, well within [0, 720]) still gets pulled to vertical center rather than
+    // left where it happened to land, so every navigation ends up in the same place.
+    const target = centerRectInWindow({ top: 100, height: 22.4 }, 720, 1200);
+    expect(target).toBeCloseTo(1200 + 100 + 11.2 - 360);
   });
 
-  it("scrolls the window up to reveal a rect entirely above the viewport", () => {
-    // top is far negative (well off-screen above), so the target centers the rect vertically.
-    const target = windowScrollTargetForRect({ top: -1065, bottom: -707, height: 358 }, 720, 2346);
-    expect(target).toBeCloseTo(2346 - 1065 - 181, 0);
+  it("scrolls the window up to center a line entirely above the viewport", () => {
+    const target = centerRectInWindow({ top: -1065, height: 358 }, 720, 2346);
+    expect(target).toBeCloseTo(2346 - 1065 + 179 - 360);
   });
 
-  it("scrolls the window down to reveal a rect entirely below the viewport", () => {
-    const target = windowScrollTargetForRect({ top: 900, bottom: 1258, height: 358 }, 720, 0);
-    expect(target).toBeGreaterThan(0);
+  it("scrolls the window down to center a line entirely below the viewport", () => {
+    const target = centerRectInWindow({ top: 900, height: 358 }, 720, 0);
+    expect(target).toBeCloseTo(900 + 179 - 360);
   });
 
   it("never targets a negative scroll position", () => {
-    const target = windowScrollTargetForRect({ top: -10, bottom: 348, height: 358 }, 720, 5);
+    const target = centerRectInWindow({ top: -10, height: 358 }, 720, 5);
     expect(target).toBe(0);
-  });
-
-  it("aligns an oversized rect to the top of the viewport instead of centering it off-screen", () => {
-    // A rect taller than the viewport (e.g. a finding-nav toolbar unioned with a tall expanded
-    // editor) would have its bottom pushed below the viewport by naive centering. Aligning its
-    // top to 0 instead keeps whatever sits at that top edge (the toolbar) fully visible.
-    const target = windowScrollTargetForRect({ top: 200, bottom: 1400, height: 1200 }, 720, 100);
-    expect(target).toBe(300);
   });
 
   it("places an onscreen minimap marker at the same on-screen fraction as its highlight", () => {

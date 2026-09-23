@@ -51,26 +51,24 @@ export function scrollOffsetForLine(
 }
 
 /**
- * Target window scrollY to bring `rect` fully into the viewport, or null if it already is.
- * `.workspace`'s decorative `overflow: hidden` (for its rounded corners) stops the browser's
- * native `scrollIntoView` ancestor walk from ever reaching the window, so a caller scrolled far
- * from the editor (e.g. a result row) sees no scroll at all. This bypasses that by targeting
- * the window directly from the element's viewport-relative rect.
+ * Target window scrollY that centers `rect`'s vertical midpoint in the viewport. `.workspace`'s
+ * decorative `overflow: hidden` (for its rounded corners) stops the browser's native
+ * `scrollIntoView` ancestor walk from ever reaching the window, so a caller scrolled far from the
+ * editor (e.g. a result row) would see no scroll at all — this bypasses that by targeting the
+ * window directly from the element's viewport-relative rect.
  *
- * When `rect` is taller than the viewport, this settles on aligning its top edge to the top of
- * the viewport rather than centering (centering would run its bottom off-screen with nothing
- * gained). Callers that need a fixed header to stay visible above the scrolled content (e.g. the
- * finding-nav toolbar) rely on this: passing a rect that spans from the header's own top down to
- * the content's bottom naturally keeps the header in view, because `position: sticky` isn't an
- * option here — it doesn't work inside `.workspace`'s `overflow: hidden` (verified in-browser).
+ * Unconditional, unlike a "scroll into view" check: a rect already on-screen but near an edge is
+ * still recentered, so a navigated-to line lands in the same place — vertical center — on every
+ * navigation, regardless of where it happened to be beforehand. That consistency also gives a
+ * popup opened right after (e.g. a line's "..." actions) roughly equal room above and below to
+ * place itself, rather than being squeezed against whichever edge the line landed near.
  */
-export function windowScrollTargetForRect(
-  rect: { top: number; bottom: number; height: number },
+export function centerRectInWindow(
+  rect: { top: number; height: number },
   viewportHeight: number,
   currentScrollY: number
-): number | null {
-  if (rect.top >= 0 && rect.bottom <= viewportHeight) return null;
-  return Math.max(0, currentScrollY + rect.top - Math.max(0, (viewportHeight - rect.height) / 2));
+): number {
+  return Math.max(0, currentScrollY + rect.top + rect.height / 2 - viewportHeight / 2);
 }
 
 /**

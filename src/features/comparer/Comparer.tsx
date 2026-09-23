@@ -645,6 +645,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           <button
             className="secondary-button"
             type="button"
+            disabled={isWorkspaceEmpty}
             aria-expanded={jsonPanelsExpanded}
             aria-controls="json-input-panels"
             onClick={() => setJsonPanelsExpanded((current) => !current)}

@@ -9,4 +9,4 @@ coverage
 .DS_Store
 plugins
 .claude-plugin
-samples/ignore/*
+samples/

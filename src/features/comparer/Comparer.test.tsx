@@ -42,6 +42,9 @@ describe("Comparer JSON panel layout", () => {
     expect(panels).toHaveClass("panels-expanded");
     expect(collapseButton).toHaveAttribute("aria-expanded", "true");
 
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
+      target: { value: "{}" }
+    });
     await user.click(collapseButton);
 
     expect(panels).not.toHaveClass("panels-expanded");
@@ -49,6 +52,21 @@ describe("Comparer JSON panel layout", () => {
       "aria-expanded",
       "false"
     );
+  });
+
+  it("disables the panel-size toggle while the workspace is empty", async () => {
+    render(<Comparer />);
+    const toggleButton = screen.getByRole("button", { name: "Collapse panels" });
+
+    expect(toggleButton).toBeDisabled();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
+      target: { value: "{}" }
+    });
+    expect(toggleButton).toBeEnabled();
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Clear all" }));
+    expect(toggleButton).toBeDisabled();
   });
 
   it("shrinks panels to half the viewport while both are empty, and restores the designated height once either has content", async () => {

@@ -105,7 +105,6 @@ export function JsonInputPane({
     DEFAULT_EDITOR_VIEWPORT_METRICS
   );
   const panelActions = usePanelEditorActions({
-    side,
     value,
     index: panelIndex,
     navigation: panelNavigation,
@@ -115,7 +114,6 @@ export function JsonInputPane({
     activeView,
     setActiveView,
     setScrollTop,
-    synchronizeScroll,
     onOpenActions
   });
   useEffect(() => {
@@ -214,9 +212,15 @@ export function JsonInputPane({
     const editor = editorRef.current;
     if (!editor) return;
 
-    const nextScrollTop = scrollOffsetForLine(line, editor.scrollHeight, editorMetrics, placement);
-    editor.scrollTop = nextScrollTop;
-    setScrollTop(editor.scrollTop);
+    // A line already fully visible (e.g. one the finding-nav toolbar just centered) is left
+    // alone: re-scrolling it to `placement` regardless — the gutter's click handler asks for
+    // "upper" on every click, including one made right after Previous/Next already centered this
+    // exact line — visibly relocated the value the instant its "..." actions were opened.
+    if (line < firstVisibleLine || line > lastVisibleLine) {
+      const nextScrollTop = scrollOffsetForLine(line, editor.scrollHeight, editorMetrics, placement);
+      editor.scrollTop = nextScrollTop;
+      setScrollTop(editor.scrollTop);
+    }
     setActiveNavigationLine(effectiveLineHighlights[line] ? line : null);
     editor.focus({ preventScroll: true });
     synchronizeScroll(side, editor);

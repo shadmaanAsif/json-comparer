@@ -1376,6 +1376,15 @@ td pre {
   cursor: pointer;
   font-weight: 800;
 }
+/* First disclosure in .results-collapsible — flush with the card's own top padding, unlike the
+   14px top margin every later .result-section uses to separate itself from the one before it. */
+.results-overview {
+  margin-top: 0;
+}
+.results-overview .results-heading {
+  flex: 1;
+  margin-bottom: 0;
+}
 .result-section > summary::marker,
 .result-section > summary::-webkit-details-marker {
   display: none;

@@ -91,6 +91,11 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   // results to showcase them without also spoiling the settings panel (see OnboardingTour's
   // onExpandResults, which intentionally never sets comparisonSettingsVisible).
   const [resultsExpanded, setResultsExpanded] = useState(false);
+  // The Comparison output overview (summary chips, outcome, filter toolbar) is its own
+  // disclosure, independent of resultsExpanded (whether the card shows at all) and of the
+  // section-level ones below it — collapsing it never hides Missing Fields, Structure Schema
+  // Compare, or Differences.
+  const [overviewExpanded, setOverviewExpanded] = useState(true);
   const [expandedSections, setExpandedSections] = useState({
     missing: true,
     structure: true,
@@ -286,6 +291,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const scrollToComparisonOutput = () => {
     setComparisonSettingsVisible(true);
     setResultsExpanded(true);
+    setOverviewExpanded(true);
     // Double rAF: the comparison-settings panel mounts instantly (no transition) in the same
     // commit, and .results starts its own grid-row transition right away too — one rAF isn't
     // reliably enough for the browser to finish that layout pass, and starting a smooth scroll
@@ -586,6 +592,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setShowOnlyInB(true);
     setExpandedSections({ missing: true, structure: true, differences: true });
     setResultsExpanded(true);
+    setOverviewExpanded(true);
     focusElement("results-path-filter");
   };
 
@@ -794,6 +801,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       {result && resultProjection && comparisonDurationMs !== null && (
         <ComparisonResults
           expanded={resultsExpanded}
+          overviewExpanded={overviewExpanded}
           result={result}
           counts={resultProjection.counts}
           comparisonDurationMs={comparisonDurationMs}
@@ -817,6 +825,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             if (patch.showOnlyInB !== undefined) setShowOnlyInB(patch.showOnlyInB);
             if (patch.showIgnored !== undefined) setShowIgnored(patch.showIgnored);
           }}
+          onOverviewChange={setOverviewExpanded}
           onSectionsChange={(patch) => setExpandedSections((current) => ({ ...current, ...patch }))}
           onToggleAllSections={toggleAllResultSections}
           onExport={reports.exportReport}

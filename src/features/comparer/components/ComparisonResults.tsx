@@ -34,6 +34,9 @@ export type ResultSectionKey = keyof ResultSectionState;
 export interface ComparisonResultsProps {
   /** Collapsed by default; Advanced View (or jumping to a specific finding) expands it. */
   expanded: boolean;
+  /** The Comparison output overview (summary chips, outcome, filter toolbar) is its own
+   *  disclosure, separate from the section-level ones below it. */
+  overviewExpanded: boolean;
   result: ComparisonResult;
   counts: ComparisonProjectionCounts;
   comparisonDurationMs: number;
@@ -47,6 +50,7 @@ export interface ComparisonResultsProps {
   sections: ResultSectionState;
   ignorePaths: string[];
   onFiltersChange: (patch: Partial<ResultFilters>) => void;
+  onOverviewChange: (expanded: boolean) => void;
   onSectionsChange: (patch: Partial<ResultSectionState>) => void;
   onToggleAllSections: () => void;
   onExport: (selectedOnly: boolean) => void;
@@ -87,6 +91,7 @@ function rowClassName(
 
 export function ComparisonResults({
   expanded,
+  overviewExpanded,
   result,
   counts,
   comparisonDurationMs,
@@ -100,6 +105,7 @@ export function ComparisonResults({
   sections,
   ignorePaths,
   onFiltersChange,
+  onOverviewChange,
   onSectionsChange,
   onToggleAllSections,
   onExport,
@@ -151,30 +157,61 @@ export function ComparisonResults({
       <div className="results-collapsible" inert={!expanded}>
         {/* Anchored to this overview block, not the whole (often page-length) section, so the
           tour popover has somewhere sane to render — and it stretches down through the
-          filter row since that's where the counts/chips the popover describes actually live. */}
-        <div data-tour="results">
-          <div className="results-heading">
-            <div>
-              <p className="eyebrow">Comparison output</p>
-              <h2 id="results-heading">Results</h2>
+          filter row since that's where the counts/chips the popover describes actually live.
+          It's its own disclosure (independent of the section-level ones below) so the summary
+          chips/outcome/filter toolbar can be tucked away without touching Missing Fields,
+          Structure Schema Compare, or Differences. */}
+        <details
+          className="result-section results-overview"
+          data-tour="results"
+          open={overviewExpanded}
+          onToggle={(event) => onOverviewChange(event.currentTarget.open)}
+        >
+          <summary>
+            <div className="results-heading">
+              <div>
+                <p className="eyebrow">Comparison output</p>
+                <h2 id="results-heading">Results</h2>
+              </div>
+              <div className="export-actions">
+                <button
+                  className="secondary-button expand-results-button"
+                  type="button"
+                  aria-expanded={allSectionsExpanded}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onToggleAllSections();
+                  }}
+                >
+                  {allSectionsExpanded ? "Collapse all" : "Expand all"}
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onExport(false);
+                  }}
+                >
+                  Export Missing Fields (.md)
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onExport(true);
+                  }}
+                >
+                  Export Selected ({selectedFindingIds.size})
+                </button>
+              </div>
             </div>
-            <div className="export-actions">
-              <button
-                className="secondary-button expand-results-button"
-                type="button"
-                aria-expanded={allSectionsExpanded}
-                onClick={onToggleAllSections}
-              >
-                {allSectionsExpanded ? "Collapse all" : "Expand all"}
-              </button>
-              <button className="secondary-button" type="button" onClick={() => onExport(false)}>
-                Export Missing Fields (.md)
-              </button>
-              <button className="secondary-button" type="button" onClick={() => onExport(true)}>
-                Export Selected ({selectedFindingIds.size})
-              </button>
-            </div>
-          </div>
+            <ResultSectionArrow />
+          </summary>
 
           <div className="summary-row" aria-label="Comparison summary">
             <span className="summary-chip removed">
@@ -264,7 +301,7 @@ export function ComparisonResults({
               </span>
             </div>
           </div>
-        </div>
+        </details>
 
         <details
           className="result-section"
@@ -276,10 +313,7 @@ export function ComparisonResults({
           }}
         >
           <summary>
-            <span className="result-section-title">
-              <ResultSectionArrow />
-              {RESULT_SECTION_LABELS.structure}
-            </span>
+            <span className="result-section-title">{RESULT_SECTION_LABELS.structure}</span>
             <span className="result-section-meta">
               <small>
                 {counts.structure.visible} / {counts.structure.total}
@@ -288,6 +322,7 @@ export function ComparisonResults({
                 sectionLabel={RESULT_SECTION_LABELS.structure}
                 actions={sectionActions("structure", structureFindings)}
               />
+              <ResultSectionArrow />
             </span>
           </summary>
           {structureFindings.length === 0 ? (
@@ -372,10 +407,7 @@ export function ComparisonResults({
           }}
         >
           <summary>
-            <span className="result-section-title">
-              <ResultSectionArrow />
-              {RESULT_SECTION_LABELS.missing}
-            </span>
+            <span className="result-section-title">{RESULT_SECTION_LABELS.missing}</span>
             <span className="result-section-meta">
               <small>
                 {counts.missing.visible} / {counts.missing.total}
@@ -386,6 +418,7 @@ export function ComparisonResults({
                 sectionLabel={RESULT_SECTION_LABELS.missing}
                 actions={sectionActions("missing", missingFindings)}
               />
+              <ResultSectionArrow />
             </span>
           </summary>
           {missingFindings.length === 0 ? (
@@ -451,10 +484,7 @@ export function ComparisonResults({
           }}
         >
           <summary>
-            <span className="result-section-title">
-              <ResultSectionArrow />
-              {RESULT_SECTION_LABELS.differences}
-            </span>
+            <span className="result-section-title">{RESULT_SECTION_LABELS.differences}</span>
             <span className="result-section-meta">
               <small>
                 {counts.differences.visible} / {counts.differences.total}
@@ -469,6 +499,7 @@ export function ComparisonResults({
                   (finding) => finding.kind !== "added" && finding.kind !== "removed"
                 )}
               />
+              <ResultSectionArrow />
             </span>
           </summary>
           {differences.length === 0 ? (

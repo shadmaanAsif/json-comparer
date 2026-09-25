@@ -30,7 +30,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v20";
+const TOUR_VERSION = "v21";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -238,8 +238,8 @@ export function buildOnboardingSteps(
       popover: {
         title: "Review and export the findings",
         description: hasResults
-          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Schema Compare, Missing Fields, and Differences — all open by default, so collapse or expand any of them as you like."
-          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Schema Compare, Missing Fields, and Differences — each open by default and covered next. Replay this tour after comparing to see them highlighted.",
+          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Schema Compare, Missing Fields, and Differences — all open by default, so collapse or expand any of them, or this whole summary, with the arrow on the right."
+          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Schema Compare, Missing Fields, and Differences — each open by default and covered next. This summary collapses too, with the arrow on the right. Replay this tour after comparing to see them highlighted.",
         side: "top",
         align: "center"
       }

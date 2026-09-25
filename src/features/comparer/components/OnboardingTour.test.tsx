@@ -32,9 +32,11 @@ afterEach(() => {
 function renderTour(overrides: Partial<OnboardingTourProps> = {}) {
   const props: OnboardingTourProps = {
     hasResults: false,
+    settingsRevealed: false,
     isWorkspaceEmpty: true,
     onLoadDemoData: vi.fn(),
     onRunComparison: vi.fn(),
+    onExpandResults: vi.fn(),
     onClearWorkspace: vi.fn(),
     ...overrides
   };
@@ -65,10 +67,13 @@ describe("OnboardingTour", () => {
     expect(config.showProgress).toBe(true);
     expect(config.steps?.every((step) => typeof step.data?.example === "string")).toBe(true);
     expect(config.steps?.map((step) => step.element)).toEqual([
-      '[data-tour="privacy"]',
+      // intro: always undefined — a centered, description-only welcome step with no anchor.
+      undefined,
       '[data-tour="json-inputs"]',
-      '[data-tour="array-mode"]',
-      '[data-tour="ignore-paths"]',
+      // array-mode and ignore-paths: undefined until Advanced View reveals comparison settings
+      // (settingsRevealed) — see the array-mode assertions below for their fallback copy.
+      undefined,
+      undefined,
       '[data-tour="primary-actions"]',
       // finding-nav and highlight-controls: undefined until a comparison has run — see the
       // "anchors the results overview" test below for their real anchors once hasResults is
@@ -79,12 +84,24 @@ describe("OnboardingTour", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      '[data-tour="about-section"]'
     ]);
     expect(config.steps?.[2]?.popover?.description).toContain("selected by default");
     expect(config.steps?.[2]?.data?.example).toContain("Default: Ordered");
     expect(config.steps?.[7]?.popover?.description).toContain("Shift+F10");
     expect(config.steps?.[7]?.data?.example).toContain("Copy value");
+  });
+
+  it("anchors array-mode and ignore-paths once Advanced View has revealed comparison settings", async () => {
+    const user = userEvent.setup();
+    renderTour({ settingsRevealed: true });
+
+    await user.click(screen.getByRole("button", { name: "Guided tour" }));
+
+    const config = driverMock.mock.calls[0]?.[0] as Config;
+    expect(findStep(config, '[data-tour="array-mode"]').data?.example).toBeUndefined();
+    expect(findStep(config, '[data-tour="ignore-paths"]').data?.example).toBeUndefined();
   });
 
   it("opens automatically once and remembers when the first tour is dismissed", async () => {
@@ -143,9 +160,15 @@ describe("OnboardingTour", () => {
 
   it("anchors the results overview and each result section when a comparison is available", async () => {
     const user = userEvent.setup();
-    renderTour({ hasResults: true, isWorkspaceEmpty: false });
+    const onExpandResults = vi.fn();
+    renderTour({ hasResults: true, isWorkspaceEmpty: false, onExpandResults });
 
     await user.click(screen.getByRole("button", { name: "Guided tour" }));
+
+    // The results section is collapsed until Advanced View expands it — a returning visitor
+    // who already has results skips the live demo (see below), so the tour must expand it
+    // itself or these steps would highlight an inert, invisible section.
+    expect(onExpandResults).toHaveBeenCalledOnce();
 
     const config = driverMock.mock.calls[0]?.[0] as Config;
     // highlight-controls and finding-nav are visited right after primary-actions and right
@@ -155,7 +178,7 @@ describe("OnboardingTour", () => {
       "Previous and Next"
     );
     expect(findStep(config, '[data-tour="finding-nav"]').popover?.description).toContain(
-      "View results"
+      "Advanced View"
     );
     expect(findStep(config, '[data-tour="highlight-controls"]').popover?.description).toContain(
       "Toggle missing fields"
@@ -254,8 +277,9 @@ describe("OnboardingTour", () => {
     it("loads a demo, runs the real comparison, and upgrades the results steps to real highlights once it resolves", async () => {
       const onLoadDemoData = vi.fn();
       const onRunComparison = vi.fn();
+      const onExpandResults = vi.fn();
       const user = userEvent.setup();
-      const { rerender, props } = renderTour({ onLoadDemoData, onRunComparison });
+      const { rerender, props } = renderTour({ onLoadDemoData, onRunComparison, onExpandResults });
 
       await user.click(screen.getByRole("button", { name: "Guided tour" }));
       const config = driverMock.mock.calls[0]?.[0] as Config;
@@ -295,6 +319,9 @@ describe("OnboardingTour", () => {
       });
 
       expect(moveNext).toHaveBeenCalledOnce();
+      // The demo expands the collapsed comparison-output section once its own results land,
+      // so the upgraded steps below highlight real, visible content instead of an inert section.
+      expect(onExpandResults).toHaveBeenCalledOnce();
       // highlight-controls and finding-nav are the two steps right after primary-actions —
       // the exact ones a first-time visitor would otherwise see with no results yet, since
       // the demo resolves before moveNext() advances past primary-actions into them. Not

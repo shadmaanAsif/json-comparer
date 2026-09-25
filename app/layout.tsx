@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "driver.js/dist/driver.css";
 import "./globals.css";
 import "@/features/comparer/comparer.css";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from "./site-config";
 
 const structuredData = {
@@ -48,9 +49,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
         {children}
+        <SiteFooter />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </body>
     </html>

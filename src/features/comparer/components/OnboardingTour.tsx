@@ -5,12 +5,20 @@ import { driver, type DriveStep, type Driver } from "driver.js";
 
 export interface OnboardingTourProps {
   hasResults: boolean;
+  /** True once Advanced View has revealed comparison settings (array mode, ignore paths). */
+  settingsRevealed: boolean;
   /** True only when both panels are empty — the tour may safely fill them with a demo. */
   isWorkspaceEmpty: boolean;
   /** Fills the panels with a tour-only demo pair; never called over real user input. */
   onLoadDemoData: () => void;
-  /** Runs the real comparison, same path a user's own Compare click takes. */
+  /** Runs the real comparison directly, without waiting on the auto-compare debounce, so the
+   *  live demo's timing stays deterministic instead of racing that timer. */
   onRunComparison: () => void;
+  /** Expands the collapsed comparison-output section so the results/result-* steps highlight
+   *  real, visible content instead of a collapsed (inert) section. Deliberately separate from
+   *  Advanced View's own settings reveal — the live demo calls this without ever revealing
+   *  comparison settings, so it doesn't spoil that surprise for a first-time visitor. */
+  onExpandResults: () => void;
   /** Resets the workspace; called only to remove a demo the tour itself introduced. */
   onClearWorkspace: () => void;
 }
@@ -22,7 +30,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v13";
+const TOUR_VERSION = "v21";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -73,10 +81,16 @@ function forgetLegacyTourSeenKeys() {
   }
 }
 
-export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
+export function buildOnboardingSteps(
+  hasResults: boolean,
+  settingsRevealed: boolean
+): DriveStep[] {
   return [
     {
-      element: '[data-tour="privacy"]',
+      // No dedicated element: the former privacy badge this step anchored to was removed as
+      // landing-page clutter. A centered, description-only welcome step (same fallback pattern
+      // used below for steps whose target doesn't exist yet) replaces it.
+      element: undefined,
       data: {
         example:
           'Baseline: {"status":"ok"}\nCandidate: {"status":"okay"} — compared locally, never uploaded'
@@ -102,28 +116,37 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
         align: "center"
       }
     },
+    // Comparison settings (this step and ignore-paths) stay out of the DOM until Advanced View
+    // is clicked after a compare — see comparisonSettingsVisible in Comparer.tsx. A first-time
+    // visitor reaches this step before that ever happens, so it falls back to description-only
+    // like the hasResults-gated steps below; unlike those, the live demo never clicks Advanced
+    // View, so this one never gets upgraded to a real highlight mid-demo.
     {
-      element: '[data-tour="array-mode"]',
+      element: settingsRevealed ? '[data-tour="array-mode"]' : undefined,
       data: {
-        example: 'Default: Ordered\nA: ["api", "stable"]\nB: ["stable", "api"] → mismatch'
+        example: settingsRevealed
+          ? undefined
+          : 'Default: Ordered\nA: ["api", "stable"]\nB: ["stable", "api"] → mismatch'
       },
       popover: {
         title: "Choose how arrays should match",
-        description:
-          "Ordered is selected by default: item positions must match. Switch to Unordered when duplicates should still count but position does not matter.",
+        description: settingsRevealed
+          ? "Ordered is selected by default: item positions must match. Switch to Unordered when duplicates should still count but position does not matter."
+          : "Click Advanced View after comparing to reveal comparison settings. Ordered is selected by default: item positions must match; switch to Unordered when duplicates should still count but position does not matter.",
         side: "bottom",
         align: "start"
       }
     },
     {
-      element: '[data-tour="ignore-paths"]',
+      element: settingsRevealed ? '[data-tour="ignore-paths"]' : undefined,
       data: {
-        example: "meta.timestamp\nitems.*.internalId\nconfig.**"
+        example: settingsRevealed ? undefined : "meta.timestamp\nitems.*.internalId\nconfig.**"
       },
       popover: {
         title: "Exclude expected noise",
-        description:
-          "Ignore stable differences such as timestamps. Exact paths include descendants, * matches one segment, and a final ** matches a whole subtree. Apply reruns the comparison with those rules.",
+        description: settingsRevealed
+          ? "Ignore stable differences such as timestamps. Exact paths include descendants, * matches one segment, and a final ** matches a whole subtree. Apply reruns the comparison with those rules."
+          : "Also revealed by Advanced View: ignore stable differences such as timestamps. Exact paths include descendants, * matches one segment, and a final ** matches a whole subtree.",
         side: "bottom",
         align: "start"
       }
@@ -131,12 +154,13 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
     {
       element: '[data-tour="primary-actions"]',
       data: {
-        example: "1. Load sample\n2. Choose array mode\n3. Compare responses"
+        example:
+          "1. Paste or drop JSON in both panels\n2. Comparison runs automatically\n3. Toggle Compare responses off to pause it"
       },
       popover: {
-        title: "Compare or practise with the sample",
+        title: "Comparison runs automatically",
         description:
-          "Load sample is the fastest safe way to explore. When both responses are ready, run Compare responses. Clear all resets the workspace, and the panel-size toggle next to it expands or collapses both JSON panels together.",
+          "As soon as both Baseline and Candidate hold valid JSON, they're compared — no extra step. Uncheck Compare responses to pause it. Clear all resets the workspace, and the panel-size toggle next to it makes both JSON panels taller or shorter together.",
         side: "bottom",
         align: "start"
       }
@@ -177,13 +201,13 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
     {
       element: hasResults ? '[data-tour="finding-nav"]' : undefined,
       data: {
-        example: hasResults ? undefined : "Finding 3 of 8 · Previous · Next · View results"
+        example: hasResults ? undefined : "Finding 3 of 8 · Previous · Next · Advanced View"
       },
       popover: {
         title: "Step through every finding",
         description: hasResults
-          ? "Once you compare, this navigator appears between the two panels and walks every highlighted line across both sides at once. Previous and Next move through them; View results jumps straight down to the comparison output."
-          : "Once you compare, this navigator appears between the two panels to step through every finding across both sides, with a View results shortcut down to the comparison output. Replay this tour after comparing to see it.",
+          ? "Once you compare, this navigator appears between the two panels and walks every highlighted line across both sides at once. Previous and Next move through them; Advanced View reveals comparison settings and scrolls straight down to the comparison output."
+          : "Once you compare, this navigator appears between the two panels to step through every finding across both sides. Advanced View reveals comparison settings and scrolls down to the comparison output. Replay this tour after comparing to see it.",
         side: "bottom",
         align: "center"
       }
@@ -214,8 +238,8 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
       popover: {
         title: "Review and export the findings",
         description: hasResults
-          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Schema Compare, Missing Fields, and Differences — all open by default, so collapse or expand any of them as you like."
-          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Schema Compare, Missing Fields, and Differences — each open by default and covered next. Replay this tour after comparing to see them highlighted.",
+          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Schema Compare, Missing Fields, and Differences — all open by default, so collapse or expand any of them, or this whole summary, with the arrow on the right."
+          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Schema Compare, Missing Fields, and Differences — each open by default and covered next. This summary collapses too, with the arrow on the right. Replay this tour after comparing to see them highlighted.",
         side: "top",
         align: "center"
       }
@@ -265,23 +289,41 @@ export function buildOnboardingSteps(hasResults: boolean): DriveStep[] {
         side: "top",
         align: "center"
       }
+    },
+    {
+      element: '[data-tour="about-section"]',
+      data: {
+        example:
+          "Baseline vs Candidate · auto-compare · array modes · ignore paths · Advanced View · exports"
+      },
+      popover: {
+        title: "One place to look it all up again",
+        description:
+          "This reference at the bottom of the page recaps everything covered here — Baseline and Candidate, auto-compare, ignore paths, Advanced View, and more. Come back to it anytime; you don't need to replay the tour to check a detail.",
+        side: "top",
+        align: "center"
+      }
     }
   ];
 }
 
 export function OnboardingTour({
   hasResults,
+  settingsRevealed,
   isWorkspaceEmpty,
   onLoadDemoData,
   onRunComparison,
+  onExpandResults,
   onClearWorkspace
 }: OnboardingTourProps) {
   const tourRef = useRef<Driver | null>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const hasResultsRef = useRef(hasResults);
+  const settingsRevealedRef = useRef(settingsRevealed);
   const isWorkspaceEmptyRef = useRef(isWorkspaceEmpty);
   const onLoadDemoDataRef = useRef(onLoadDemoData);
   const onRunComparisonRef = useRef(onRunComparison);
+  const onExpandResultsRef = useRef(onExpandResults);
   const onClearWorkspaceRef = useRef(onClearWorkspace);
   const hasStartedRef = useRef(false);
   /** True once this tour session has filled the panels with its own demo data. */
@@ -291,11 +333,21 @@ export function OnboardingTour({
 
   useEffect(() => {
     hasResultsRef.current = hasResults;
+    settingsRevealedRef.current = settingsRevealed;
     isWorkspaceEmptyRef.current = isWorkspaceEmpty;
     onLoadDemoDataRef.current = onLoadDemoData;
     onRunComparisonRef.current = onRunComparison;
+    onExpandResultsRef.current = onExpandResults;
     onClearWorkspaceRef.current = onClearWorkspace;
-  }, [hasResults, isWorkspaceEmpty, onLoadDemoData, onRunComparison, onClearWorkspace]);
+  }, [
+    hasResults,
+    settingsRevealed,
+    isWorkspaceEmpty,
+    onLoadDemoData,
+    onRunComparison,
+    onExpandResults,
+    onClearWorkspace
+  ]);
 
   /**
    * Announces the demo, loads the pair, pauses so it's visible landing in the panels, runs
@@ -367,14 +419,20 @@ export function OnboardingTour({
         if (!isRunningDemoRef.current) return;
       }
       if (hasResultsRef.current) {
-        const liveSteps = buildOnboardingSteps(true);
+        // Expand the comparison-output section so the results/result-* steps below highlight
+        // real, visible content — settingsRevealedRef stays false here regardless, since the
+        // live demo never clicks Advanced View, so array-mode/ignore-paths (also in resultSteps,
+        // via the same element===undefined filter) simply stay on their fallback copy; only the
+        // hasResults-gated steps actually upgrade.
+        onExpandResultsRef.current();
+        const liveSteps = buildOnboardingSteps(true, settingsRevealedRef.current);
         resultSteps.forEach((step, index) => {
           const live = liveSteps[resultStepIndexes[index]!];
           if (!live) return;
           step.element = live.element;
           step.popover = { ...step.popover, description: live.popover?.description };
           // The fallback example text becomes redundant once the real thing is on screen —
-          // buildOnboardingSteps(true) already omits it, so drop it here too.
+          // buildOnboardingSteps(true, ...) already omits it, so drop it here too.
           step.data = { ...step.data, example: live.data?.example };
         });
       }
@@ -389,11 +447,16 @@ export function OnboardingTour({
   const startTour = useCallback(() => {
     hasStartedRef.current = true;
     tourRef.current?.destroy();
+    // A returning visitor who already has real results skips runLiveDemo entirely (see the
+    // hasResultsRef check in onNextClick below) and gets the real results/result-* elements
+    // from this very first buildOnboardingSteps call — expand them now so the tour highlights
+    // visible content instead of the collapsed section.
+    if (hasResultsRef.current) onExpandResultsRef.current();
     const reduceMotion =
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const steps = buildOnboardingSteps(hasResultsRef.current);
+    const steps = buildOnboardingSteps(hasResultsRef.current, settingsRevealedRef.current);
     // The live demo triggers on primary-actions' own "Next" click, not panel-actions' — it must
     // resolve BEFORE highlight-controls and finding-nav (the next two steps) so a first-time
     // visitor sees those upgraded to their real highlights instead of description-only

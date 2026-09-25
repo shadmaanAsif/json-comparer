@@ -64,6 +64,8 @@ const emptyCounts: ComparisonProjectionCounts = {
 
 function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
   const props: ComparisonResultsProps = {
+    expanded: true,
+    overviewExpanded: true,
     result: emptyResult,
     counts: emptyCounts,
     comparisonDurationMs: 120,
@@ -82,6 +84,7 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
     sections: { missing: false, structure: false, differences: false },
     ignorePaths: [],
     onFiltersChange: vi.fn(),
+    onOverviewChange: vi.fn(),
     onSectionsChange: vi.fn(),
     onToggleAllSections: vi.fn(),
     onExport: vi.fn(),
@@ -265,6 +268,25 @@ describe("ComparisonResults disclosures", () => {
 
     expect(props.onFiltersChange).toHaveBeenNthCalledWith(1, { showOnlyInA: false });
     expect(props.onFiltersChange).toHaveBeenNthCalledWith(2, { showOnlyInB: false });
+  });
+
+  it("collapses the Comparison output overview independently of the sections below it", async () => {
+    const user = userEvent.setup();
+    const { props } = renderResults({ overviewExpanded: false });
+    const heading = screen.getByRole("heading", { name: "Results" });
+    const overviewSummary = heading.closest("summary")!;
+    const overviewDetails = overviewSummary.closest("details")!;
+
+    expect(overviewSummary.querySelector(".result-section-arrow")).toBeInTheDocument();
+    expect(overviewDetails).not.toHaveAttribute("open");
+
+    // A button inside the overview's own summary must not open its disclosure.
+    await user.click(screen.getByRole("button", { name: "Export Missing Fields (.md)" }));
+    expect(props.onExport).toHaveBeenCalledWith(false);
+    expect(overviewDetails).not.toHaveAttribute("open");
+
+    await user.click(overviewSummary);
+    expect(props.onOverviewChange).toHaveBeenCalledWith(true);
   });
 
   it("shows an arrow and toggles each result section with native summary controls", async () => {

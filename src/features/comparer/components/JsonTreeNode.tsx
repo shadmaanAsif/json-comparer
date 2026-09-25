@@ -3,7 +3,7 @@
 import { useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { toJsonPointer } from "@/domain/comparison/path";
 import type { PathSegment } from "@/domain/comparison/types";
-import type { HighlightCategory, LineHighlight } from "../types";
+import type { LineHighlight } from "../types";
 import type { PanelIndex } from "../utils/panel-context";
 
 export interface TreeFieldActions {
@@ -25,13 +25,6 @@ interface JsonTreeNodeProps {
   onExpandedChange?: (pointer: string, expanded: boolean) => void;
   actions: TreeFieldActions;
 }
-
-const highlightLabels: Record<HighlightCategory, string> = {
-  missing: "Missing",
-  structure: "Structure",
-  differences: "Changed",
-  invalid: "Invalid"
-};
 
 export function JsonTreeNode({
   name,
@@ -93,12 +86,6 @@ export function JsonTreeNode({
       <span aria-hidden="true">⋯</span>
     </button>
   );
-  const badge = category && (
-    <span className="tree-highlight-badge">
-      {highlightLabels[category]}
-      {highlight?.ignored ? " · Ignored" : ""}
-    </span>
-  );
   const entries = value !== null && typeof value === "object" ? Object.entries(value) : null;
   if (entries?.length) {
     const label = Array.isArray(value)
@@ -124,7 +111,6 @@ export function JsonTreeNode({
           >
             {name !== undefined && <span className="tree-key">{name}: </span>}
             {label}
-            {badge}
           </summary>
           <div>
             {entries.map(([key, child]) => (
@@ -170,7 +156,6 @@ export function JsonTreeNode({
       <span className="tree-key">{name ?? "(root)"}</span>
       {": "}
       <span>{content}</span>
-      {badge}
       {button}
     </div>
   );

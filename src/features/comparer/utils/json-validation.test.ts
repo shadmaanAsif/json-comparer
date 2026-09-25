@@ -10,4 +10,8 @@ describe("getJsonSyntaxError", () => {
   it("returns the parser message for invalid JSON", () => {
     expect(getJsonSyntaxError('{"broken":}')).toMatch(/JSON|position|character/i);
   });
+
+  it("flags a duplicate key even though JSON.parse accepts it", () => {
+    expect(getJsonSyntaxError('{"age":1,"age":2}')).toMatch(/Duplicate key "age"/);
+  });
 });

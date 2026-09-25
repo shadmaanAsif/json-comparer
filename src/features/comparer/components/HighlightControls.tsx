@@ -32,7 +32,7 @@ export function HighlightControls({
       data-tour="highlight-controls"
       tabIndex={-1}
     >
-      <legend>Highlight in JSON panels</legend>
+      <legend>Highlight Controls</legend>
       <span className="select-chip missing-chip">
         <button
           className="chip-toggle"

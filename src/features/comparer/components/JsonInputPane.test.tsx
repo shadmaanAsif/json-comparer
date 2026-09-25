@@ -512,9 +512,8 @@ describe("JsonInputPane validation state", () => {
       "tree-highlight-differences"
     );
     expect(screen.getByText("phone").closest(".tree-leaf")).toHaveClass("tree-highlight-missing");
-    expect(container.querySelectorAll(".tree-highlight-badge")).toHaveLength(2);
-    expect(screen.getByText("Changed")).toBeVisible();
-    expect(screen.getByText("Missing")).toBeVisible();
+    // Tree mode relies on background/border highlighting alone — no redundant text badges.
+    expect(container.querySelectorAll(".tree-highlight-badge")).toHaveLength(0);
 
     // The finding stepper now lives once between the panels (in Comparer), not per panel/view.
     expect(screen.queryByLabelText("Tree finding navigation")).not.toBeInTheDocument();
@@ -704,6 +703,34 @@ describe("JsonInputPane validation state", () => {
     expect(editor.scrollTop).toBeCloseTo(1615.8);
   });
 
+  it("scrolls an offscreen Find match into view instead of leaving it to the browser", async () => {
+    // Regression test: jumpFind used to only call editor.focus() + setSelectionRange(), which
+    // doesn't reliably scroll a textarea and never centers the match. It now routes through the
+    // same jumpToLine/scrollOffsetForLine math as every other jump in this file.
+    const user = userEvent.setup();
+    const lines = Array.from({ length: 60 }, (_, index) => `line${index}`);
+    const value = lines.join("\n");
+    renderPane(value);
+    const editor = screen.getByRole("textbox", { name: "JSON for Baseline" }) as HTMLTextAreaElement;
+    Object.defineProperties(editor, {
+      clientHeight: { configurable: true, value: 360 },
+      scrollHeight: { configurable: true, value: 1500 }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await user.type(screen.getByPlaceholderText("Find in JSON"), "line55");
+    expect(editor.scrollTop).toBe(0);
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // "line55" sits on document line 56 (1-indexed), well past the ~16 lines jsdom's default
+    // metrics treat as already visible, so a real scroll must have happened.
+    expect(editor.scrollTop).toBeCloseTo(15 + 55 * 22.4 + 22.4 / 2 - 180);
+    const matchStart = value.indexOf("line55");
+    expect(editor.selectionStart).toBe(matchStart);
+    expect(editor.selectionEnd).toBe(matchStart + "line55".length);
+  });
+
   it("updates JSON markers and navigation immediately when visible highlights change", () => {
     const value = ["{", '  "first": 1,', '  "second": 2', "}"].join("\n");
     const { container, props, rerender } = renderPane(value, {
@@ -764,10 +791,10 @@ describe("JsonInputPane validation state", () => {
     expect(container.querySelectorAll(".line-text-dim")).toHaveLength(1);
   });
 
-  it("dims an ignored highlight in the Tree view and labels its badge", async () => {
+  it("dims an ignored highlight in the Tree view via opacity alone, no text badge", async () => {
     const user = userEvent.setup();
     const value = ["{", '  "kept": 1,', '  "ignored": 2', "}"].join("\n");
-    renderPane(value, {
+    const { container } = renderPane(value, {
       lineHighlights: {
         2: { category: "differences", ignored: false },
         3: { category: "differences", ignored: true }
@@ -778,6 +805,69 @@ describe("JsonInputPane validation state", () => {
 
     expect(screen.getByText("kept").closest(".tree-leaf")).not.toHaveClass("is-ignored");
     expect(screen.getByText("ignored").closest(".tree-leaf")).toHaveClass("is-ignored");
-    expect(screen.getAllByText(/Changed/)[1]).toHaveTextContent("Changed · Ignored");
+    expect(container.querySelectorAll(".tree-highlight-badge")).toHaveLength(0);
+  });
+});
+
+describe("JsonInputPane paste handling", () => {
+  function getEditor() {
+    return screen.getByRole("textbox", { name: "JSON for Baseline" }) as HTMLTextAreaElement;
+  }
+
+  it("inserts ordinary pasted text at the cursor", () => {
+    const { props } = renderPane('{"a":1}');
+    const editor = getEditor();
+    editor.focus();
+    editor.setSelectionRange(7, 7);
+    fireEvent.paste(editor, { clipboardData: { getData: () => ',"b":2' } });
+    expect(props.onPaste).toHaveBeenCalledWith('{"a":1},"b":2');
+  });
+
+  it("loads a pasted URL instead of inserting it, into an empty panel", () => {
+    const { props } = renderPane("", { onPasteUrl: vi.fn() });
+    const editor = getEditor();
+    editor.focus();
+    fireEvent.paste(editor, {
+      clipboardData: { getData: () => "https://api.example.com/users/1" }
+    });
+    expect(props.onPasteUrl).toHaveBeenCalledWith("https://api.example.com/users/1");
+    expect(props.onPaste).not.toHaveBeenCalled();
+  });
+
+  it("loads a pasted URL instead of inserting it, when it replaces a fully selected panel", () => {
+    const value = '{"old":true}';
+    const { props } = renderPane(value, { onPasteUrl: vi.fn() });
+    const editor = getEditor();
+    editor.focus();
+    editor.setSelectionRange(0, value.length);
+    fireEvent.paste(editor, {
+      clipboardData: { getData: () => "  https://api.example.com/users/1  " }
+    });
+    expect(props.onPasteUrl).toHaveBeenCalledWith("https://api.example.com/users/1");
+    expect(props.onPaste).not.toHaveBeenCalled();
+  });
+
+  it("inserts a pasted URL literally instead of fetching it when it would not replace the whole panel", () => {
+    const value = '{"link":""}';
+    const { props } = renderPane(value, { onPasteUrl: vi.fn() });
+    const editor = getEditor();
+    editor.focus();
+    const cursor = value.indexOf('""') + 1;
+    editor.setSelectionRange(cursor, cursor);
+    fireEvent.paste(editor, {
+      clipboardData: { getData: () => "https://api.example.com/users/1" }
+    });
+    expect(props.onPasteUrl).not.toHaveBeenCalled();
+    expect(props.onPaste).toHaveBeenCalledWith('{"link":"https://api.example.com/users/1"}');
+  });
+
+  it("falls back to inserting the URL literally when no onPasteUrl handler is wired", () => {
+    const { props } = renderPane("");
+    const editor = getEditor();
+    editor.focus();
+    fireEvent.paste(editor, {
+      clipboardData: { getData: () => "https://api.example.com/users/1" }
+    });
+    expect(props.onPaste).toHaveBeenCalledWith("https://api.example.com/users/1");
   });
 });

@@ -12,7 +12,7 @@
   justify-content: space-between;
   gap: 32px;
   align-items: flex-start;
-  margin-bottom: 14px;
+  margin-bottom: 24px;
 }
 .hero > div:first-child {
   position: relative;
@@ -62,20 +62,6 @@
   font-weight: 800;
   letter-spacing: 0.14em;
 }
-.privacy-badge {
-  flex: none;
-  padding: 9px 13px;
-  border: 1px solid var(--privacy-border);
-  border-radius: 999px;
-  background: var(--privacy-bg);
-  color: var(--privacy-text);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-.privacy-badge span {
-  color: var(--accent);
-  margin-right: 6px;
-}
 .hero-actions {
   display: flex;
   align-items: center;
@@ -87,14 +73,14 @@
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--workspace-bg);
-  box-shadow: 0 24px 80px var(--workspace-shadow);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 24px 80px var(--workspace-shadow);
   overflow: hidden;
 }
-/* Level-1 row of .workspace: the panel title plus every workflow action (highlight toggles,
-   Compare, Load sample, Clear all, Expand/Collapse) read as one in-line cluster instead of being
-   split across a separate row shared with the finding navigator. Also carries the id
-   scrollToHighlightControls (Comparer.tsx) scrolls back up to from the narrow
-   workspace-side-panel column between the panels. */
+/* Level-1 row of .workspace: every workflow action (highlight toggles, Compare, Clear all,
+   panel-size toggle) reads as one in-line cluster instead of being split across a separate
+   row shared with the finding navigator. */
 .panel-toolbar-actions {
   display: flex;
   align-items: center;
@@ -104,12 +90,15 @@
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-2) 72%, transparent);
 }
-.panel-toolbar-actions > span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+/* Compare/Clear all/panel-size toggle come first in DOM order (so tab order matches the visual
+   layout) and sit at the row's left edge by default flex flow — see .highlight-controls'
+   margin-left: auto below, which pins the highlight chips to the right edge instead, whether or
+   not they're rendered. */
+.panel-toolbar-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
 }
 /* A narrow grid column between the two JSON panels, not a full-width row above them (see
    .input-grid). Centered vertically in that column rather than stretched to the tall expanded
@@ -134,7 +123,7 @@
    highlightControlsVisible flag that gates rendering the .workspace-side-panel wrapper) opens
    up the narrow middle column exactly when there's something to put in it. */
 .input-grid {
-  --json-panel-height: 520px;
+  --json-panel-height: 360px;
   --json-line-height: 22.4px;
   --json-editor-padding: 14px;
   display: grid;
@@ -150,7 +139,7 @@
   --json-panel-height: min(88vh, 1040px);
 }
 /* Wins over .panels-expanded (same specificity, declared later): while neither panel has JSON,
-   the designated 520px/88vh sizing has nothing to justify it, so both panels share the
+   the designated 360px/88vh sizing has nothing to justify it, so both panels share the
    viewport evenly instead. Any input restores the designated height (see clearWorkspace in
    Comparer.tsx for the isWorkspaceEmpty check driving this class). */
 .input-grid.panels-empty {
@@ -284,6 +273,7 @@
   border-radius: 11px;
   overflow: hidden;
   background: var(--editor-bg);
+  transition: height 0.2s ease;
 }
 .editor-with-gutter .input-panel textarea,
 .editor-with-gutter textarea {
@@ -372,8 +362,9 @@
   filter: saturate(1.25) brightness(1.12);
 }
 .full-line-highlight.is-ignored {
-  /* Matches .ignored-row's dimming in the results tables — shown only while "Show
-     ignored" is on, so an ignored finding still reads as suppressed, not active. */
+  /* Matches .ignored-row's dimming in the results tables. Unlike that row, this stays dimmed
+     regardless of the "Show ignored" toggle — the panel always signals a field is suppressed
+     from the diff, even while that finding is hidden from the results section below. */
   opacity: 0.55;
 }
 .line-text-dim-layer {
@@ -552,41 +543,6 @@
 .minimap-marker.line-invalid {
   background: var(--danger);
 }
-.offscreen-chip {
-  position: absolute;
-  z-index: 4;
-  right: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 5px 9px;
-  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
-  color: var(--text);
-  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.28);
-  opacity: 0.86;
-  cursor: pointer;
-  font-size: 0.7rem;
-  line-height: 1;
-  font-weight: 800;
-  white-space: nowrap;
-  transition:
-    opacity 0.12s ease,
-    transform 0.12s ease;
-}
-.offscreen-chip:hover,
-.offscreen-chip:focus-visible {
-  opacity: 1;
-  transform: scale(1.03);
-}
-.chip-above {
-  top: 9px;
-}
-.chip-below {
-  bottom: 9px;
-}
 .chip-dots {
   display: inline-flex;
   align-items: center;
@@ -657,7 +613,7 @@
 }
 /* The single finding navigator shared by both panels, stacked below HighlightControls inside the
    shared .workspace-side-panel column between the two JSON panels (see .input-grid) rather than a
-   full-width row above. Stacked into four fixed lines — status, Previous, Next, View results —
+   full-width row above. Stacked into four fixed lines — status, Previous, Next, Advanced View —
    instead of left to wrap freely, so the column stays narrow and centered with room to add more
    lines later without widening it. Animates in on mount, which happens exactly when a comparison
    first has findings to show (see the reduced-motion override at the end of this file). */
@@ -709,7 +665,7 @@
 }
 .workspace-finding-nav .finding-nav-step {
   /* A lighter highlight than .finding-nav-output's solid accent color — enough to read as
-     interactive at rest, without competing with View results for attention. */
+     interactive at rest, without competing with Advanced View for attention. */
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--text);
   transition:
@@ -787,6 +743,7 @@
   font:
     12px/1.65 ui-monospace,
     monospace;
+  transition: height 0.2s ease;
 }
 .tree-with-navigation {
   position: relative;
@@ -800,6 +757,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: height 0.2s ease;
 }
 [data-theme="light"] .json-tree {
   background: var(--editor-bg);
@@ -851,21 +809,6 @@
 .tree-highlight.is-ignored {
   opacity: 0.55;
 }
-.tree-highlight-badge {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  border: 1px solid color-mix(in srgb, var(--tree-highlight-color) 68%, transparent);
-  border-radius: 999px;
-  padding: 0 6px;
-  background: color-mix(in srgb, var(--tree-highlight-color) 14%, var(--surface));
-  color: color-mix(in srgb, var(--tree-highlight-color) 82%, white);
-  font-size: 0.62rem;
-  font-weight: 800;
-  line-height: 1.45;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
 .tree-key {
   color: var(--tree-key);
 }
@@ -901,7 +844,7 @@
   padding: 18px 22px;
   background: var(--panel-tint);
 }
-/* Inline in .panel-toolbar-actions (see Comparer.tsx), the same row as Compare/Load sample/Clear
+/* Inline in .panel-toolbar-actions (see Comparer.tsx), the same row as Compare/Clear
    all — not the narrow workspace-side-panel column between the panels, where the three chips'
    text content ("Structure schema", etc.) refuses to shrink below its own width: both a stacked
    card and a floating popover anchored from that ~112-148px column overflowed onto the Candidate
@@ -914,6 +857,7 @@
   align-items: center;
   flex-wrap: wrap;
   margin: 0;
+  margin-left: auto;
   padding: 5px 12px;
   /* scrollIntoView({ block: "start" }) respects this: without it, scrollToHighlightControls
      lands the fieldset flush against the viewport's very top edge, jammed under the browser's
@@ -946,7 +890,7 @@
 /* Jumps back up to and focuses the HighlightControls fieldset inline in .panel-toolbar-actions
    (see Comparer.tsx's scrollToHighlightControls), rather than reproducing the chips here — see
    .workspace-side-panel above for why they don't fit this column. Styled like
-   .workspace-finding-nav's own "View results" link (transparent, underline on hover) rather than
+   .workspace-finding-nav's own "Advanced View" link (transparent, underline on hover) rather than
    a Previous/Next pill, since it jumps away from this card instead of stepping within it. */
 .highlight-scroll-button {
   display: flex;
@@ -998,6 +942,7 @@
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 800;
+  box-shadow: var(--control-shadow);
   white-space: nowrap;
   transition:
     border-color 0.15s ease,
@@ -1126,6 +1071,7 @@
   cursor: pointer;
   font-weight: 800;
   font-size: 0.82rem;
+  box-shadow: var(--control-shadow);
 }
 .primary-button {
   border: 1px solid var(--accent);
@@ -1143,6 +1089,21 @@
 .secondary-button:hover {
   border-color: var(--control-hover-border);
 }
+.compare-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.compare-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary-text);
+  cursor: inherit;
+}
+.compare-toggle:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .status {
   margin: 0;
   color: var(--muted);
@@ -1155,18 +1116,45 @@
   color: var(--success);
 }
 
+/* Collapsed by default; Advanced View (or jumping to a specific finding) sets .is-expanded.
+   .results is the grid container so the single .results-collapsible child's track can animate
+   0fr -> 1fr (the standard technique for animating to an intrinsic/auto height); border-width,
+   box-shadow, and vertical padding are zeroed here too since a track collapsing to 0 does not
+   shrink this element's own padding or border for you — see .results-collapsible below for the
+   overflow:hidden + min-height:0 that actually clips the content while the track is 0fr. */
 .results {
+  display: grid;
+  grid-template-rows: 0fr;
   margin-top: 16px;
+  padding: 0 18px;
+  border-width: 0;
+  box-shadow: none;
+  transition:
+    grid-template-rows 0.3s ease,
+    padding 0.3s ease,
+    border-width 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.results.is-expanded {
+  grid-template-rows: 1fr;
   padding: 18px;
+  border-width: 1px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 24px 80px var(--workspace-shadow);
+}
+.results-collapsible {
+  overflow: hidden;
+  min-height: 0;
 }
 .summary-row {
   display: flex;
   gap: 9px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin: 0 16px 18px;
 }
 .comparison-outcome {
-  margin: -4px 0 18px;
+  margin: -4px 16px 18px;
   color: var(--muted);
   font-size: 0.84rem;
 }
@@ -1216,7 +1204,7 @@
   align-items: end;
   gap: 18px;
   padding: 15px;
-  margin-bottom: 12px;
+  margin: 0 16px 12px;
   border: 1px solid var(--border);
   border-radius: 11px;
   background: var(--surface);
@@ -1388,6 +1376,23 @@ td pre {
   cursor: pointer;
   font-weight: 800;
 }
+/* First disclosure in .results-collapsible — flush with the card's own top padding, unlike the
+   14px top margin every later .result-section uses to separate itself from the one before it. */
+.results-overview {
+  margin-top: 0;
+}
+.results-overview .results-heading {
+  flex: 1;
+  margin-bottom: 0;
+  align-items: flex-end;
+}
+/* The overview's title is two lines (eyebrow + "Results"), unlike every other section's
+   single-line title, so centering the arrow/buttons against that taller block leaves them
+   floating above the "Results" line instead of level with it. Bottom-align both instead so
+   they sit on the same line as "Results", matching the single-line sections below. */
+.results-overview > summary {
+  align-items: flex-end;
+}
 .result-section > summary::marker,
 .result-section > summary::-webkit-details-marker {
   display: none;
@@ -1520,12 +1525,6 @@ td pre {
 .warning {
   color: var(--changed);
 }
-footer {
-  padding: 24px 4px 0;
-  color: var(--muted);
-  font-size: 0.76rem;
-  text-align: center;
-}
 .scroll-top {
   position: fixed;
   right: 22px;
@@ -1538,6 +1537,50 @@ footer {
   color: var(--accent);
   cursor: pointer;
   font-weight: 800;
+}
+.about-section {
+  margin-top: 48px;
+  padding: 28px clamp(20px, 4vw, 40px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--workspace-bg);
+}
+.about-section h2 {
+  margin: 0 0 14px;
+  font-size: 1.3rem;
+}
+.about-section > p {
+  margin: 0 0 24px;
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+.about-section ul {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding-left: 22px;
+  max-width: 760px;
+}
+.about-section li {
+  padding-left: 4px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.about-section li::marker {
+  color: var(--accent);
+}
+.about-section li strong {
+  color: var(--text);
+}
+.about-section code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
 }
 .inline-curl {
   margin-top: 14px;
@@ -1651,12 +1694,14 @@ footer {
   .hero {
     display: block;
   }
-  .privacy-badge {
-    display: inline-block;
-    margin: 20px 0 0 62px;
-  }
   .panel-toolbar-actions {
     justify-content: center;
+  }
+  .panel-toolbar-buttons {
+    justify-content: center;
+  }
+  .highlight-controls {
+    margin-left: 0;
   }
   .highlight-controls legend {
     width: 100%;
@@ -1740,9 +1785,6 @@ footer {
   .find-bar label {
     flex-basis: calc(100% - 46px);
   }
-  .offscreen-chip {
-    right: 7px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1754,5 +1796,11 @@ footer {
   }
   .workspace-finding-nav {
     animation: none;
+  }
+  .editor-with-gutter,
+  .json-tree,
+  .input-panel .empty-state,
+  .results {
+    transition: none;
   }
 }

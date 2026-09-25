@@ -86,8 +86,16 @@ function fillInputs() {
     target: { value: '{"config":{"price":12},"new":null}' }
   });
 }
-async function compare(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Compare responses" }));
+// Comparison now runs on its own (debounced) once both panels hold valid JSON, so tests wait
+// for the auto-triggered worker instead of clicking a button.
+async function waitForAutoCompare() {
+  const priorCount = TestWorker.instances.length;
+  await waitFor(() => expect(TestWorker.instances.length).toBeGreaterThan(priorCount), {
+    timeout: 2000
+  });
+}
+async function compare(_user: ReturnType<typeof userEvent.setup>) {
+  await waitForAutoCompare();
   act(() => TestWorker.instances.at(-1)!.complete());
 }
 function openPrice() {
@@ -112,6 +120,30 @@ function expectLineActionsUnavailable() {
 }
 
 describe("Comparer panel actions", () => {
+  it("compares automatically once both panels hold valid JSON, with no click required", async () => {
+    render(<Comparer />);
+    fillInputs();
+    await waitForAutoCompare();
+    act(() => TestWorker.instances.at(-1)!.complete());
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+  });
+
+  it("does not auto-compare while the Compare responses checkbox is unchecked", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    await user.click(screen.getByRole("checkbox", { name: "Compare responses" }));
+    fillInputs();
+    // Long enough to clear the 500ms auto-compare debounce were it (wrongly) still armed.
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(TestWorker.instances).toHaveLength(0);
+    expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: "Compare responses" }));
+    await waitForAutoCompare();
+    act(() => TestWorker.instances.at(-1)!.complete());
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+  });
+
   it("expands all three result sections by default, including Differences", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
@@ -138,6 +170,26 @@ describe("Comparer panel actions", () => {
     );
   });
 
+  it("leaves the missing-fields highlight off by default, unlike structure and differences", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await compare(user);
+
+    expect(screen.getByRole("button", { name: "Missing fields" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(screen.getByRole("button", { name: "Structure schema" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "Differences" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
   it("includes the ignored count in the workspace status bar after a successful comparison", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
@@ -152,11 +204,39 @@ describe("Comparer panel actions", () => {
     );
   });
 
-  it("labels a JSON parse failure with the side's display name, not its internal letter", async () => {
+  it("keeps dimming an ignored field in the JSON panels after Show ignored is turned off, while the results section drops it", async () => {
     const user = userEvent.setup();
+    const { container } = render(<Comparer />);
+    fillInputs();
+    await compare(user);
+    const dialog = openPrice();
+    await user.click(within(dialog).getByRole("button", { name: "Ignore path" }));
+    act(() => TestWorker.instances.at(-1)!.complete());
+
+    expect(
+      container.querySelector('.input-panel[data-side="A"] .full-line-highlight.is-ignored')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show ignored" }));
+    expect(screen.getByRole("button", { name: "Show ignored" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+
+    // Results section (status bar's "of N" and "(ignored)" clause) drops the ignored finding...
+    expect(document.querySelector(".status.success")).toHaveTextContent(
+      "Showing 2 of 3 differences in 12 ms."
+    );
+    // ...but the JSON panel keeps signaling it, unaffected by the results-section toggle.
+    expect(
+      container.querySelector('.input-panel[data-side="A"] .full-line-highlight.is-ignored')
+    ).toBeInTheDocument();
+  });
+
+  it("labels a JSON parse failure with the side's display name, not its internal letter", async () => {
     render(<Comparer />);
     fillInputs();
-    await user.click(screen.getByRole("button", { name: "Compare responses" }));
+    await waitForAutoCompare();
     act(() =>
       TestWorker.instances
         .at(-1)!
@@ -263,6 +343,9 @@ describe("Comparer panel actions", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "JSON for Candidate" }), {
       target: { value: '{"items":[{"id":"b"}]}' }
     });
+    // Comparison settings (array mode) stay hidden until Advanced View is clicked.
+    await compare(user);
+    await user.click(screen.getByRole("button", { name: "Advanced View" }));
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
     // Switching array mode now compares automatically — no separate Compare responses click.
     act(() => TestWorker.instances.at(-1)!.complete());
@@ -293,6 +376,9 @@ describe("Comparer panel actions", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "JSON for Candidate" }), {
       target: { value: '{"items":[{"id":2},{"id":1}]}' }
     });
+    // Comparison settings (array mode) stay hidden until Advanced View is clicked.
+    await compare(user);
+    await user.click(screen.getByRole("button", { name: "Advanced View" }));
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
     // Switching array mode now compares automatically — no separate Compare responses click.
     act(() => TestWorker.instances.at(-1)!.complete());
@@ -387,10 +473,9 @@ describe("Comparer panel actions", () => {
   });
 
   it("discards a stale in-flight comparison and live-recompares the edited text instead", async () => {
-    const user = userEvent.setup();
     render(<Comparer />);
     fillInputs();
-    await user.click(screen.getByRole("button", { name: "Compare responses" }));
+    await waitForAutoCompare();
     const first = TestWorker.instances.at(-1)!;
     fireEvent.change(screen.getByRole("textbox", { name: "JSON for Baseline" }), {
       target: { value: '{"newInput":1}' }
@@ -420,6 +505,8 @@ describe("Comparer panel actions", () => {
     expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
     const stale = TestWorker.instances.at(-1)!;
 
+    // Comparison settings (array mode) stay hidden until Advanced View is clicked.
+    await user.click(screen.getByRole("button", { name: "Advanced View" }));
     await user.click(screen.getByRole("radio", { name: "Unordered arrays" }));
     const rerun = TestWorker.instances.at(-1)!;
     expect(rerun).not.toBe(stale);
@@ -439,16 +526,16 @@ describe("Comparer panel actions", () => {
     const user = userEvent.setup();
     render(<Comparer />);
     expect(
-      screen.queryByRole("group", { name: "Highlight in JSON panels" })
+      screen.queryByRole("group", { name: "Highlight Controls" })
     ).not.toBeInTheDocument();
 
     fillInputs();
     await compare(user);
-    expect(screen.getByRole("group", { name: "Highlight in JSON panels" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Highlight Controls" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Clear all" }));
     expect(
-      screen.queryByRole("group", { name: "Highlight in JSON panels" })
+      screen.queryByRole("group", { name: "Highlight Controls" })
     ).not.toBeInTheDocument();
   });
 
@@ -463,7 +550,7 @@ describe("Comparer panel actions", () => {
     await user.click(screen.getByRole("button", { name: "Highlight Controls" }));
 
     expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
-    expect(screen.getByRole("group", { name: "Highlight in JSON panels" })).toHaveFocus();
+    expect(screen.getByRole("group", { name: "Highlight Controls" })).toHaveFocus();
   });
 
   it("mirrors the current line onto the other panel and clears both on an outside click", async () => {

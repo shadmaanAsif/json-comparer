@@ -6,12 +6,8 @@ import { Comparer } from "./Comparer";
 afterEach(cleanup);
 
 describe("Comparer JSON panel layout", () => {
-  it("selects ordered array comparison by default", () => {
-    render(<Comparer />);
-
-    expect(screen.getByRole("radio", { name: "Ordered arrays" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Unordered arrays" })).not.toBeChecked();
-  });
+  // Array-mode default selection now lives in Comparer.panels.test.tsx: comparison settings are
+  // hidden until Advanced View is clicked, which needs a completed comparison via TestWorker.
 
   // Author byline is commented out on this branch (hideAuthor); see Comparer.tsx.
   // it("shows the configured author in the application header", () => {
@@ -37,7 +33,7 @@ describe("Comparer JSON panel layout", () => {
     const user = userEvent.setup();
     render(<Comparer />);
     const panels = screen.getByLabelText("JSON response inputs");
-    const collapseButton = screen.getByRole("button", { name: "Collapse panels" });
+    const collapseButton = screen.getByRole("button", { name: "Shorter panels" });
 
     expect(panels).toHaveClass("panels-expanded");
     expect(collapseButton).toHaveAttribute("aria-expanded", "true");
@@ -48,7 +44,7 @@ describe("Comparer JSON panel layout", () => {
     await user.click(collapseButton);
 
     expect(panels).not.toHaveClass("panels-expanded");
-    expect(screen.getByRole("button", { name: "Expand panels" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Taller panels" })).toHaveAttribute(
       "aria-expanded",
       "false"
     );
@@ -56,7 +52,7 @@ describe("Comparer JSON panel layout", () => {
 
   it("disables the panel-size toggle while the workspace is empty", async () => {
     render(<Comparer />);
-    const toggleButton = screen.getByRole("button", { name: "Collapse panels" });
+    const toggleButton = screen.getByRole("button", { name: "Shorter panels" });
 
     expect(toggleButton).toBeDisabled();
 

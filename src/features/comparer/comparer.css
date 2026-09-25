@@ -1151,10 +1151,10 @@
   display: flex;
   gap: 9px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin: 0 16px 18px;
 }
 .comparison-outcome {
-  margin: -4px 0 18px;
+  margin: -4px 16px 18px;
   color: var(--muted);
   font-size: 0.84rem;
 }
@@ -1204,7 +1204,7 @@
   align-items: end;
   gap: 18px;
   padding: 15px;
-  margin-bottom: 12px;
+  margin: 0 16px 12px;
   border: 1px solid var(--border);
   border-radius: 11px;
   background: var(--surface);

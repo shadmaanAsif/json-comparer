@@ -1384,6 +1384,14 @@ td pre {
 .results-overview .results-heading {
   flex: 1;
   margin-bottom: 0;
+  align-items: flex-end;
+}
+/* The overview's title is two lines (eyebrow + "Results"), unlike every other section's
+   single-line title, so centering the arrow/buttons against that taller block leaves them
+   floating above the "Results" line instead of level with it. Bottom-align both instead so
+   they sit on the same line as "Results", matching the single-line sections below. */
+.results-overview > summary {
+  align-items: flex-end;
 }
 .result-section > summary::marker,
 .result-section > summary::-webkit-details-marker {

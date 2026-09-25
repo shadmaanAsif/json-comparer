@@ -64,6 +64,7 @@ const emptyCounts: ComparisonProjectionCounts = {
 
 function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
   const props: ComparisonResultsProps = {
+    expanded: true,
     result: emptyResult,
     counts: emptyCounts,
     comparisonDurationMs: 120,

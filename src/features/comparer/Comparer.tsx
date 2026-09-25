@@ -19,8 +19,6 @@ import {
   APP_AUTHOR,
   LIVE_COMPARE_DEBOUNCE_MS,
   MAX_DOCUMENT_BYTES,
-  SAMPLE_A,
-  SAMPLE_B,
   SIDE_LABELS,
   TOUR_DEMO_A,
   TOUR_DEMO_B
@@ -31,6 +29,7 @@ import { useSynchronizedEditors } from "./hooks/useSynchronizedEditors";
 import type { ResponseSide, ReviewNote, WorkspaceStatus } from "./types";
 import { alignValidInputText } from "./utils/display-alignment";
 import { createLineHighlights } from "./utils/line-highlights";
+import { getJsonSyntaxIssue } from "./utils/json-validation";
 import { formatComparisonOutcome, projectComparisonResult } from "./utils/result-projections";
 
 interface ComparerProps {
@@ -70,10 +69,13 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [jsonPanelsExpanded, setJsonPanelsExpanded] = useState(true);
+  // Re-expand as soon as a pane gains content, even if the user had previously collapsed to the
+  // compact height (that manual choice only sticks while the panes already hold content).
+  const wasPaneEmptyRef = useRef({ a: true, b: true });
   // JSON/Tree view is shared so both panels always show the same mode (switching one switches both).
   const [panelView, setPanelView] = useState<"json" | "tree">("json");
   const [highlightToggles, setHighlightToggles] = useState({
-    missing: true,
+    missing: false,
     structure: true,
     differences: true
   });
@@ -81,6 +83,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   // aren't on screen yet. Stays visible through live re-compares and errors once shown; only
   // Clear all hides it again.
   const [highlightControlsVisible, setHighlightControlsVisible] = useState(false);
+  // Comparison settings (array mode, ignore paths) stay out of the way until the user asks for
+  // Advanced View.
+  const [comparisonSettingsVisible, setComparisonSettingsVisible] = useState(false);
+  // The full comparison-output section stays collapsed until Advanced View expands it — a
+  // separate flag from comparisonSettingsVisible so the guided tour's live demo can expand
+  // results to showcase them without also spoiling the settings panel (see OnboardingTour's
+  // onExpandResults, which intentionally never sets comparisonSettingsVisible).
+  const [resultsExpanded, setResultsExpanded] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     missing: true,
     structure: true,
@@ -162,33 +172,34 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     invalidateComparison();
   };
 
-  // Once a comparison has run, further typing re-compares live after a short pause instead of
-  // requiring another manual click — isActivelyComparing survives a transient parse error mid-edit
-  // (which nulls `result`) so live retries keep working while the user finishes typing valid JSON.
-  const [isActivelyComparing, setIsActivelyComparing] = useState(false);
-  const liveCompareTimerRef = useRef<number | null>(null);
-  useEffect(
-    () => () => {
-      if (liveCompareTimerRef.current !== null) window.clearTimeout(liveCompareTimerRef.current);
-    },
-    []
-  );
+  // Compare runs by itself — no manual click required. Whenever both panels hold valid JSON,
+  // a debounced effect below fires the comparison automatically, live, for as long as this stays
+  // checked. Unchecking pauses it (see the "Compare responses" checkbox in the toolbar).
+  const [autoCompareEnabled, setAutoCompareEnabled] = useState(true);
 
   const updateTypedInput = (side: ResponseSide, raw: string) => {
-    const nextTextA = side === "A" ? raw : textA;
-    const nextTextB = side === "B" ? raw : textB;
     if (side === "A") setTextA(raw);
     else setTextB(raw);
-    if (!isActivelyComparing) {
-      invalidateComparison();
+  };
+
+  // The single trigger for every automatic comparison: typing, paste, upload, and remote fetch
+  // all funnel into textA/textB, so watching just those two (debounced, to ride out a burst of
+  // keystrokes) covers every input path with one mechanism. Only clears a stale result/in-flight
+  // job when there's actually one to clear, so it never overwrites the pristine initial status.
+  useEffect(() => {
+    const bothValid =
+      textA.trim() !== "" &&
+      textB.trim() !== "" &&
+      !getJsonSyntaxIssue(textA) &&
+      !getJsonSyntaxIssue(textB);
+    if (!autoCompareEnabled || !bothValid) {
+      if (result !== null || busy) invalidateComparison();
       return;
     }
-    if (liveCompareTimerRef.current !== null) window.clearTimeout(liveCompareTimerRef.current);
-    liveCompareTimerRef.current = window.setTimeout(() => {
-      liveCompareTimerRef.current = null;
-      runComparison(undefined, nextTextA, nextTextB);
-    }, LIVE_COMPARE_DEBOUNCE_MS);
-  };
+    const timer = window.setTimeout(() => runComparison(), LIVE_COMPARE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textA, textB, autoCompareEnabled]);
 
   const resultProjection = useMemo(
     () =>
@@ -202,6 +213,21 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
         : null,
     [pathFilter, result, showIgnored, showOnlyInA, showOnlyInB]
   );
+  // Show ignored only filters the results section below. The JSON panels/tree keep dimming an
+  // ignored field regardless, so it's still visible while editing — hence a second projection
+  // that always includes ignored findings, independent of the results-section toggle above.
+  const panelHighlightProjection = useMemo(
+    () =>
+      result
+        ? projectComparisonResult(result, {
+            path: pathFilter,
+            showOnlyInA,
+            showOnlyInB,
+            showIgnored: true
+          })
+        : null,
+    [pathFilter, result, showOnlyInA, showOnlyInB]
+  );
   const ignorePathSuggestions = useMemo(
     () =>
       [...new Set((result?.findings ?? []).map((finding) => displayPath(finding.path)))].filter(
@@ -210,8 +236,9 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     [result]
   );
   const lineHighlights = useMemo(
-    () => createLineHighlights(resultProjection, textA, textB, highlightToggles, displayLineMaps),
-    [displayLineMaps, highlightToggles, resultProjection, textA, textB]
+    () =>
+      createLineHighlights(panelHighlightProjection, textA, textB, highlightToggles, displayLineMaps),
+    [displayLineMaps, highlightToggles, panelHighlightProjection, textA, textB]
   );
   // One finding navigator shared by both panels. The panels are line-aligned, so a single
   // ordered list of every highlighted line across both sides drives navigation for both.
@@ -256,10 +283,22 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     const index = findingLines.indexOf(line);
     if (index !== -1) setFindingCursor(index);
   };
-  const scrollToComparisonOutput = () =>
-    document
-      .getElementById("comparison-output")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToComparisonOutput = () => {
+    setComparisonSettingsVisible(true);
+    setResultsExpanded(true);
+    // Double rAF: the comparison-settings panel mounts instantly (no transition) in the same
+    // commit, and .results starts its own grid-row transition right away too — one rAF isn't
+    // reliably enough for the browser to finish that layout pass, and starting a smooth scroll
+    // mid-reflow can make it jump instead of animate. A second rAF waits for a fully settled
+    // frame first.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document
+          .getElementById("comparison-output")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+      )
+    );
+  };
   const scrollToHighlightControls = () => {
     const target = document.getElementById("workspace-highlight-controls");
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -296,13 +335,8 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setBusy(false);
   };
 
-  const invalidateComparison = () => {
+  const invalidateComparison = (message = "Inputs changed.") => {
     stopWorker();
-    if (liveCompareTimerRef.current !== null) {
-      window.clearTimeout(liveCompareTimerRef.current);
-      liveCompareTimerRef.current = null;
-    }
-    setIsActivelyComparing(false);
     setResult(null);
     setDisplayLineMaps(null);
     setComparisonDurationMs(null);
@@ -310,7 +344,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setNotes({});
     reports.clearPreview();
     panels.closeActions();
-    setStatus({ tone: "idle", message: "Inputs changed. Compare again to enable line actions." });
+    setStatus({ tone: "idle", message });
   };
 
   const runComparison = (
@@ -320,7 +354,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     overrideArrayMode?: ArrayMode
   ) => {
     stopWorker();
-    setIsActivelyComparing(true);
     setHighlightControlsVisible(true);
     const jobId = crypto.randomUUID();
     activeJobRef.current = jobId;
@@ -391,6 +424,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const clearWorkspace = () => {
     invalidateComparison();
     setHighlightControlsVisible(false);
+    setComparisonSettingsVisible(false);
     setTextA("");
     setTextB("");
     setCurlA(null);
@@ -494,17 +528,6 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
       }
     }));
 
-  const loadSample = () => {
-    invalidateComparison();
-    const aligned = alignValidInputText(SAMPLE_A, SAMPLE_B);
-    setTextA(aligned?.textA ?? SAMPLE_A);
-    setTextB(aligned?.textB ?? SAMPLE_B);
-    setStatus({
-      tone: "idle",
-      message: "Sample loaded and aligned. Choose an array mode and compare."
-    });
-  };
-
   const loadTourDemo = () => {
     invalidateComparison();
     const aligned = alignValidInputText(TOUR_DEMO_A, TOUR_DEMO_B);
@@ -551,6 +574,9 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setShowOnlyInB(true);
     if (finding.ignored) setShowIgnored(true);
     setExpandedSections((current) => ({ ...current, [section]: true }));
+    // The target row lives inside the collapsible comparison-output section — expand it too,
+    // or the row would be inert and unfocusable even though it's the thing being revealed.
+    setResultsExpanded(true);
     focusElement("finding-" + section + "-" + finding.id);
   };
   const filterPanelPath = () => {
@@ -559,10 +585,20 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setShowOnlyInA(true);
     setShowOnlyInB(true);
     setExpandedSections({ missing: true, structure: true, differences: true });
+    setResultsExpanded(true);
     focusElement("results-path-filter");
   };
 
   const isWorkspaceEmpty = !textA.trim() && !textB.trim();
+
+  useEffect(() => {
+    const isEmptyA = !textA.trim();
+    const isEmptyB = !textB.trim();
+    const justGainedContent =
+      (wasPaneEmptyRef.current.a && !isEmptyA) || (wasPaneEmptyRef.current.b && !isEmptyB);
+    if (justGainedContent) setJsonPanelsExpanded(true);
+    wasPaneEmptyRef.current = { a: isEmptyA, b: isEmptyB };
+  }, [textA, textB]);
 
   return (
     <main>
@@ -593,14 +629,13 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           </p>
         </div>
         <div className="hero-actions">
-          <div className="privacy-badge" data-tour="privacy">
-            <span aria-hidden="true">●</span> Local processing
-          </div>
           <OnboardingTour
             hasResults={result !== null}
+            settingsRevealed={comparisonSettingsVisible}
             isWorkspaceEmpty={isWorkspaceEmpty}
             onLoadDemoData={loadTourDemo}
             onRunComparison={() => runComparison()}
+            onExpandResults={() => setResultsExpanded(true)}
             onClearWorkspace={clearWorkspace}
           />
           <button
@@ -616,42 +651,45 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
 
       <section className="workspace" aria-label="JSON comparison workspace">
         <div className="panel-toolbar-actions" data-tour="primary-actions">
-          <span>JSON response panels</span>
+          <div className="panel-toolbar-buttons">
+            <label className="primary-button compare-toggle">
+              <input
+                type="checkbox"
+                checked={autoCompareEnabled}
+                disabled={busy}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setAutoCompareEnabled(checked);
+                  if (!checked) invalidateComparison("Auto-compare is off. Check the box to resume.");
+                }}
+              />
+              {busy ? "Comparing…" : "Compare responses"}
+            </label>
+            {busy && (
+              <button className="secondary-button" type="button" onClick={cancelComparison}>
+                Cancel
+              </button>
+            )}
+            <button className="secondary-button" type="button" onClick={clearWorkspace}>
+              Clear all
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={isWorkspaceEmpty}
+              aria-expanded={jsonPanelsExpanded}
+              aria-controls="json-input-panels"
+              onClick={() => setJsonPanelsExpanded((current) => !current)}
+            >
+              {jsonPanelsExpanded ? "Shorter panels" : "Taller panels"}
+            </button>
+          </div>
           {highlightControlsVisible && (
             <HighlightControls
               highlightVisibility={highlightToggles}
               onHighlightVisibilityChange={setHighlightToggles}
             />
           )}
-          <button
-            className="primary-button"
-            type="button"
-            disabled={busy}
-            onClick={() => runComparison()}
-          >
-            {busy ? "Comparing…" : "Compare responses"}
-          </button>
-          {busy && (
-            <button className="secondary-button" type="button" onClick={cancelComparison}>
-              Cancel
-            </button>
-          )}
-          <button className="secondary-button" type="button" onClick={loadSample}>
-            Load sample
-          </button>
-          <button className="secondary-button" type="button" onClick={clearWorkspace}>
-            Clear all
-          </button>
-          <button
-            className="secondary-button"
-            type="button"
-            disabled={isWorkspaceEmpty}
-            aria-expanded={jsonPanelsExpanded}
-            aria-controls="json-input-panels"
-            onClick={() => setJsonPanelsExpanded((current) => !current)}
-          >
-            {jsonPanelsExpanded ? "Collapse panels" : "Expand panels"}
-          </button>
         </div>
 
         <div
@@ -667,6 +705,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             value={textA}
             onChange={(raw) => updateTypedInput("A", raw)}
             onPaste={(raw) => updateImportedInput("A", raw)}
+            onPasteUrl={(url) => void runRemote("A", url).catch(() => undefined)}
             onFileLoad={(raw) => updateImportedInput("A", raw)}
             onAdd={() => setModalSide("A")}
             onPrettify={() => prettify("A")}
@@ -713,6 +752,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             value={textB}
             onChange={(raw) => updateTypedInput("B", raw)}
             onPaste={(raw) => updateImportedInput("B", raw)}
+            onPasteUrl={(url) => void runRemote("B", url).catch(() => undefined)}
             onFileLoad={(raw) => updateImportedInput("B", raw)}
             onAdd={() => setModalSide("B")}
             onPrettify={() => prettify("B")}
@@ -741,6 +781,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           ignorePathSuggestions={ignorePathSuggestions}
           isComparing={busy}
           status={displayedStatus}
+          settingsVisible={comparisonSettingsVisible}
           onArrayModeChange={(mode) => {
             setArrayMode(mode);
             runComparison(undefined, undefined, undefined, mode);
@@ -752,6 +793,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
 
       {result && resultProjection && comparisonDurationMs !== null && (
         <ComparisonResults
+          expanded={resultsExpanded}
           result={result}
           counts={resultProjection.counts}
           comparisonDurationMs={comparisonDurationMs}
@@ -845,13 +887,62 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
         />
       )}
 
-      <footer>
+      <section className="about-section" aria-labelledby="about-heading" data-tour="about-section">
+        <p className="eyebrow">About this tool</p>
+        <h2 id="about-heading">Everything this JSON diff tool checks</h2>
         <p>
-          URL and cURL import uses server-side target restrictions and SSRF protection. Public
-          targets require HTTPS; localhost requires the explicit development setting. Credentials
-          are stripped unless enabled by the administrator.
+          CompareFiles is a free tool to compare JSON online — paste two API responses, config
+          files, or payloads and see every difference instantly. The comparison runs entirely in
+          your browser, so nothing is ever uploaded or stored.
         </p>
-      </footer>
+        <ul>
+          <li>
+            <strong>Baseline and Candidate</strong> — Baseline (left) is the expected or reference
+            response; Candidate (right) is the one you&apos;re checking against it. Differences are
+            always reported as changes from Baseline to Candidate.
+          </li>
+          <li>
+            <strong>Compares automatically</strong> — as soon as both panels hold valid JSON, a
+            comparison runs with no extra step. Uncheck Compare responses to pause it while you
+            edit.
+          </li>
+          <li>
+            <strong>Field-by-field differences</strong> — value changes and type mismatches are
+            called out separately, not lumped together.
+          </li>
+          <li>
+            <strong>Missing-field detection</strong> — spot anything present on only one side, in
+            either direction.
+          </li>
+          <li>
+            <strong>Structure schema compare</strong> — catch shape drift, such as added, removed,
+            or renamed keys, independent of the actual values.
+          </li>
+          <li>
+            <strong>Ordered or unordered array comparison</strong> — match array items by
+            position, or by content when order doesn&apos;t matter.
+          </li>
+          <li>
+            <strong>Ignore paths</strong> — exclude noisy fields such as timestamps or request IDs
+            with an exact path, a <code>*</code> wildcard, or a recursive <code>**</code>, with
+            JSON Pointer support.
+          </li>
+          <li>
+            <strong>Paste, drop, or fetch</strong> — load JSON by pasting it directly, dragging in
+            a file, or importing from a URL or cURL command.
+          </li>
+          <li>
+            <strong>Advanced View</strong> — reveals comparison settings and the full results
+            below the panels: differences, missing fields, and structure findings, with filtering,
+            review notes, and per-field ignore controls.
+          </li>
+          <li>
+            <strong>Shareable reports</strong> — export findings as a Markdown report for a pull
+            request or ticket.
+          </li>
+        </ul>
+      </section>
+
       {showScrollTop && (
         <button
           className="scroll-top"

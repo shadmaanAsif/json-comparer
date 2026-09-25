@@ -1,3 +1,5 @@
+import { findDuplicateObjectKey } from "@/domain/comparison/parse";
+
 export interface JsonSyntaxIssue {
   message: string;
   line: number;
@@ -14,6 +16,17 @@ function errorLine(raw: string, message: string): number {
 
 export function getJsonSyntaxIssue(raw: string): JsonSyntaxIssue | null {
   if (!raw.trim()) return null;
+
+  // JSON.parse silently keeps only the last of a duplicate key, so leaving this undetected would
+  // let auto-compare send it to the worker, which would then silently reformat the duplicate away
+  // — flag it here instead, the same as any other JSON that isn't ready to compare yet.
+  const duplicate = findDuplicateObjectKey(raw);
+  if (duplicate) {
+    return {
+      message: `Duplicate key "${duplicate.key}" — rename or remove one copy`,
+      line: raw.slice(0, duplicate.index).split("\n").length
+    };
+  }
 
   try {
     JSON.parse(raw);

@@ -3,10 +3,10 @@ import type { HighlightCategory } from "../types";
 /**
  * The single finding navigator shared by both panels, living in its own narrow column between
  * them rather than floating over the panels. Stacked into four lines — status, Previous, Next,
- * View results — so it stays narrow and centered instead of stretching wide, leaving room to
+ * Advanced View — so it stays narrow and centered instead of stretching wide, leaving room to
  * add more options later without widening the column. Previous/Next step through every
- * highlighted line across the aligned panels; the last button jumps down to the comparison
- * output below.
+ * highlighted line across the aligned panels; the last button scrolls down to reveal the
+ * comparison output section below.
  */
 export function WorkspaceFindingNav({
   categories,
@@ -39,7 +39,7 @@ export function WorkspaceFindingNav({
         Next <span aria-hidden="true">↓</span>
       </button>
       <button type="button" className="finding-nav-output" onClick={onScrollToOutput}>
-        View results <span aria-hidden="true">⤓</span>
+        Advanced View <span aria-hidden="true">⤓</span>
       </button>
     </div>
   );

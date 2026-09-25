@@ -16,6 +16,7 @@
   --page-glow: #153149;
   --workspace-bg: rgba(10, 20, 29, 0.9);
   --workspace-shadow: rgba(0, 0, 0, 0.22);
+  --control-shadow: none;
   --editor-bg: #09131c;
   --editor-text: #dcebf0;
   --panel-tint: rgba(20, 35, 49, 0.6);
@@ -24,9 +25,6 @@
   --code-muted: #bed0d8;
   --tree-key: #78b8e8;
   --success: #8ee6c8;
-  --privacy-border: #295a54;
-  --privacy-bg: rgba(16, 63, 56, 0.55);
-  --privacy-text: #a7f3df;
   --primary-text: #06231e;
   --primary-hover: #70e8ca;
   --control-hover-border: #3b5b70;
@@ -39,19 +37,22 @@
   --bg: #f4f7f8;
   --surface: #ffffff;
   --surface-2: #edf3f5;
-  --border: #c9d7dd;
+  --border: #b9c9d1;
   --text: #16303b;
   --muted: #5b7280;
   --accent: #087f6b;
   --accent-dark: #dff5ef;
   --added: #087947;
   --removed: #b52f3b;
-  --changed: #8a5b00;
+  --changed: #b45309;
   --type: #6845a8;
   --danger: #b52f3b;
   --page-glow: #cfe9e3;
   --workspace-bg: rgba(255, 255, 255, 0.96);
-  --workspace-shadow: rgba(35, 65, 78, 0.13);
+  --workspace-shadow: rgba(23, 50, 66, 0.16);
+  --control-shadow:
+    0 1px 2px rgba(23, 50, 66, 0.07),
+    0 3px 8px rgba(23, 50, 66, 0.06);
   --editor-bg: #f7fafb;
   --editor-text: #1c3540;
   --panel-tint: #f2f6f7;
@@ -60,9 +61,6 @@
   --code-muted: #526c78;
   --tree-key: #0b6695;
   --success: #087947;
-  --privacy-border: #9dcec3;
-  --privacy-bg: #e4f4f0;
-  --privacy-text: #176454;
   --primary-text: #ffffff;
   --primary-hover: #076f5f;
   --control-hover-border: #78919d;
@@ -114,7 +112,7 @@ button:disabled {
 main {
   width: min(1620px, 100%);
   margin: 0 auto;
-  padding: 20px clamp(16px, 3vw, 48px) 24px;
+  padding: 20px clamp(16px, 3vw, 48px) 64px;
 }
 
 .fatal-error {

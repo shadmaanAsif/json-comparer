@@ -6,7 +6,7 @@ import { usePanelEditorActions } from "../hooks/usePanelEditorActions";
 import { useMeasuredLineOffsets } from "../hooks/useMeasuredLineOffsets";
 import type { PanelActionRequest, PanelNavigation } from "../hooks/usePanelInteractions";
 import type { PanelIndex } from "../utils/panel-context";
-import type { HighlightCategory, LineHighlight, ResponseSide } from "../types";
+import type { LineHighlight, ResponseSide } from "../types";
 import {
   DEFAULT_EDITOR_VIEWPORT_METRICS,
   minimapMarkerPercent,
@@ -15,7 +15,6 @@ import {
   type EditorViewportMetrics
 } from "../utils/editor-navigation";
 import { getJsonSyntaxIssue } from "../utils/json-validation";
-import { CategoryDots } from "./FindingNavigation";
 import { InfoTooltipButton } from "./InfoTooltipButton";
 import { JsonTree } from "./JsonTree";
 import { JsonLineGutter } from "./JsonLineGutter";
@@ -25,6 +24,10 @@ export interface JsonInputPaneProps {
   value: string;
   onChange: (value: string) => void;
   onPaste: (value: string) => void;
+  /** Called instead of `onPaste` when the clipboard held nothing but a fetchable URL and the
+   *  paste would have replaced this panel's entire content — loads that URL's response instead
+   *  of inserting the literal URL text (which is never valid JSON on its own). */
+  onPasteUrl?: (url: string) => void;
   onFileLoad: (value: string) => void;
   onAdd: () => void;
   onPrettify: () => void;
@@ -44,8 +47,8 @@ export interface JsonInputPaneProps {
   mirroredLine?: number | null;
   /** Reports this panel's own current line up so the partner panel can mirror it. */
   onActiveLineChange?: (line: number | null) => void;
-  /** Reports a line jumped to via this panel's own controls (the offscreen-finding chip, a
-   *  minimap marker) so the shared finding-nav cursor can stay in sync with Previous/Next. */
+  /** Reports a line jumped to via this panel's own controls (e.g. a minimap marker) so the
+   *  shared finding-nav cursor can stay in sync with Previous/Next. */
   onJumpToLine?: (line: number) => void;
   /** Shared JSON/Tree mode: when the workspace supplies both, switching one panel switches the
    *  other. Optional so the pane still works standalone with its own local view. */
@@ -53,11 +56,26 @@ export interface JsonInputPaneProps {
   onViewChange?: (view: "json" | "tree") => void;
 }
 
+// A clipboard payload that is nothing but an http(s) URL is never valid JSON on its own, so
+// there's no legitimate reason to insert it literally — the user almost certainly means "load
+// this," same as pasting it into Add's URL field.
+function bareUrl(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.includes("\n")) return null;
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "http:" || url.protocol === "https:" ? trimmed : null;
+  } catch {
+    return null;
+  }
+}
+
 export function JsonInputPane({
   side,
   value,
   onChange,
   onPaste,
+  onPasteUrl,
   onFileLoad,
   onAdd,
   onPrettify,
@@ -205,8 +223,6 @@ export function JsonInputPane({
     totalLines,
     editorMetrics
   );
-  const highlightsAbove = highlightedLines.filter((line) => line < firstVisibleLine);
-  const highlightsBelow = highlightedLines.filter((line) => line > lastVisibleLine);
 
   const jumpToLine = (line: number, placement: "center" | "upper" = "center") => {
     const editor = editorRef.current;
@@ -227,14 +243,6 @@ export function JsonInputPane({
     onJumpToLine?.(line);
   };
 
-  const categoriesFor = (targetLines: number[]) =>
-    (["missing", "structure", "differences", "invalid"] as const).filter((category) =>
-      targetLines.some((line) => effectiveLineHighlights[line]?.category === category)
-    );
-  const previousError =
-    highlightedLines.filter((line) => line < firstVisibleLine).at(-1) ?? highlightedLines.at(-1);
-  const nextError = highlightedLines.find((line) => line > lastVisibleLine) ?? highlightedLines[0];
-
   const matches = useMemo(() => {
     const output: number[] = [];
     if (!findText) return output;
@@ -253,7 +261,12 @@ export function JsonInputPane({
     const next = (findIndex + direction + matches.length) % matches.length;
     setFindIndex(next);
     const start = matches[next]!;
-    editorRef.current?.focus();
+    // A plain focus()+setSelectionRange() leaves scrolling to the browser's own "reveal the
+    // caret" behavior, which doesn't fire reliably and never centers the match — every other
+    // jump in this file goes through jumpToLine's explicit scrollOffsetForLine math instead, so
+    // route Find through it too before selecting the matched text.
+    const line = value.slice(0, start).split("\n").length;
+    jumpToLine(line);
     editorRef.current?.setSelectionRange(start, start + findText.length);
   };
 
@@ -343,9 +356,6 @@ export function JsonInputPane({
       )}
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">
-            {side === "A" ? "Expected response" : "Response under test"}
-          </span>
           <div className="panel-title-row">
             <h2 id={`response-${side}-heading`}>{SIDE_LABELS[side]}</h2>
             <InfoTooltipButton
@@ -393,9 +403,6 @@ export function JsonInputPane({
             onClick={() => fileInputRef.current?.click()}
           >
             Quick upload
-          </button>
-          <button className="text-button" type="button" onClick={() => onChange("")}>
-            Clear
           </button>
         </div>
       </div>
@@ -576,6 +583,12 @@ export function JsonInputPane({
                 const start = event.currentTarget.selectionStart;
                 const end = event.currentTarget.selectionEnd;
                 const pasted = event.clipboardData.getData("text");
+                const replacesWholeValue = !value.trim() || (start === 0 && end === value.length);
+                const url = replacesWholeValue ? bareUrl(pasted) : null;
+                if (url && onPasteUrl) {
+                  onPasteUrl(url);
+                  return;
+                }
                 onPaste(`${value.slice(0, start)}${pasted}${value.slice(end)}`);
               }}
               placeholder="Paste or drop JSON here"
@@ -603,22 +616,6 @@ export function JsonInputPane({
                   />
                 ))}
             </div>
-            {highlightsAbove.length > 0 && (
-              <OffscreenFindingChip
-                direction="above"
-                lines={highlightsAbove}
-                categories={categoriesFor(highlightsAbove)}
-                onClick={() => previousError && jumpToLine(previousError)}
-              />
-            )}
-            {highlightsBelow.length > 0 && (
-              <OffscreenFindingChip
-                direction="below"
-                lines={highlightsBelow}
-                categories={categoriesFor(highlightsBelow)}
-                onClick={() => nextError && jumpToLine(nextError)}
-              />
-            )}
           </div>
           <aside className="json-minimap" aria-label={`${SIDE_LABELS[side]} highlighted lines`}>
             {highlightedLines.map((line) => (
@@ -661,9 +658,7 @@ export function JsonInputPane({
 
       <div className="input-meta">
         <span>{new Blob([value]).size.toLocaleString()} bytes</span>
-        <span className={jsonError ? "input-validity error" : "input-validity"}>
-          {jsonError ? "Fix JSON syntax to compare" : "Processed locally"}
-        </span>
+        {jsonError && <span className="input-validity error">Fix JSON syntax to compare</span>}
       </div>
       {curlCommand !== null && (
         <div className="inline-curl">
@@ -700,30 +695,5 @@ export function JsonInputPane({
         </div>
       )}
     </section>
-  );
-}
-
-function OffscreenFindingChip({
-  direction,
-  lines,
-  categories,
-  onClick
-}: {
-  direction: "above" | "below";
-  lines: number[];
-  categories: HighlightCategory[];
-  onClick: () => void;
-}) {
-  const isAbove = direction === "above";
-  return (
-    <button
-      type="button"
-      className={`offscreen-chip chip-${direction}`}
-      onClick={onClick}
-      aria-label={`${lines.length} highlighted findings ${direction}. Go to ${isAbove ? "previous" : "next"} finding.`}
-    >
-      <CategoryDots categories={categories} />
-      <span aria-hidden="true">{isAbove ? "↑" : "↓"}</span> {lines.length} more {direction}
-    </button>
   );
 }

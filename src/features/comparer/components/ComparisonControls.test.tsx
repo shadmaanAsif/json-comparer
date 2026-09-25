@@ -16,6 +16,7 @@ function renderControls(overrides: Partial<ComparisonControlsProps> = {}) {
     ignorePathSuggestions: ["meta.timestamp", "data.amount", "data.currency"],
     isComparing: false,
     status: { tone: "idle", message: "Ready to compare." },
+    settingsVisible: true,
     onArrayModeChange: vi.fn(),
     onIgnorePathsChange: vi.fn(),
     onApplyIgnorePaths: vi.fn(),
@@ -49,6 +50,7 @@ describe("ComparisonControls", () => {
           ignorePathSuggestions={["meta.timestamp", "data.amount", "data.currency"]}
           isComparing={false}
           status={{ tone: "idle", message: "Ready to compare." }}
+          settingsVisible
           onArrayModeChange={vi.fn()}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={onApplyIgnorePaths}
@@ -109,6 +111,7 @@ describe("ComparisonControls", () => {
           ignorePathSuggestions={[]}
           isComparing={false}
           status={{ tone: "idle", message: "Ready to compare." }}
+          settingsVisible
           onArrayModeChange={vi.fn()}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={vi.fn()}
@@ -151,6 +154,7 @@ describe("ComparisonControls", () => {
           ignorePathSuggestions={[]}
           isComparing={false}
           status={{ tone: "idle", message: "Ready to compare." }}
+          settingsVisible
           onArrayModeChange={vi.fn()}
           onIgnorePathsChange={setIgnorePaths}
           onApplyIgnorePaths={onApplyIgnorePaths}

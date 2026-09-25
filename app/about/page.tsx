@@ -12,6 +12,9 @@ export default function AboutPage() {
   return (
     <main>
       <div className="content-page">
+        <a href="/" className="content-page-back">
+          ← Back to Compare
+        </a>
         <h1>About {SITE_NAME}</h1>
         <p>
           {SITE_NAME} compares two JSON documents — API responses, config files, exported

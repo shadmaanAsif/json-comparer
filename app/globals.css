@@ -124,6 +124,17 @@ main {
 .content-page {
   max-width: 720px;
 }
+.content-page-back {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.content-page-back:hover,
+.content-page-back:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
 .content-page h1 {
   margin-bottom: 8px;
 }

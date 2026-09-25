@@ -12,6 +12,9 @@ export default function DocsPage() {
   return (
     <main>
       <div className="content-page">
+        <a href="/" className="content-page-back">
+          ← Back to Compare
+        </a>
         <h1>Documentation</h1>
         <p>
           {SITE_NAME} compares a <strong>Baseline</strong> (the first document, and the schema

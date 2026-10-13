@@ -72,6 +72,7 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
     onlyInA: [],
     onlyInB: [],
     differences: [],
+    schemaDifferences: [],
     structureFindings: [],
     selectedFindingIds: new Set(),
     notesByFindingId: {},
@@ -103,6 +104,25 @@ function renderResults(overrides: Partial<ComparisonResultsProps> = {}) {
 }
 
 describe("ComparisonResults disclosures", () => {
+  it("offers Show ignored only when ignore paths have matched findings, outside the Only in filters", () => {
+    const { unmount } = renderResults();
+    expect(screen.queryByRole("button", { name: "Show ignored" })).not.toBeInTheDocument();
+    unmount();
+
+    renderResults({ counts: { ...emptyCounts, ignored: { visible: 1, total: 1 } } });
+    const ignoredToggle = screen.getByRole("button", { name: "Show ignored" });
+    expect(
+      within(screen.getByRole("group", { name: "Ignored findings" })).getByRole("button", {
+        name: "Show ignored"
+      })
+    ).toBe(ignoredToggle);
+    expect(
+      within(screen.getByRole("group", { name: "Result filters" })).queryByRole("button", {
+        name: "Show ignored"
+      })
+    ).not.toBeInTheDocument();
+  });
+
   it("allows structure findings to be selected and reviewed without duplicating missing reviews", async () => {
     const user = userEvent.setup();
     const { props } = renderResults({
@@ -214,7 +234,7 @@ describe("ComparisonResults disclosures", () => {
     expect(screen.getByText("Missing Fields").closest("summary")).toHaveTextContent(
       "12 / 20 · 0 selected"
     );
-    expect(screen.getByText("Structure Schema Compare").closest("summary")).toHaveTextContent(
+    expect(screen.getByText("Structure Changes").closest("summary")).toHaveTextContent(
       "0 / 30"
     );
     expect(screen.getByText("Differences").closest("summary")).toHaveTextContent("133 / 165");
@@ -253,7 +273,7 @@ describe("ComparisonResults disclosures", () => {
     });
 
     expect(
-      screen.queryByRole("group", { name: "Structure schema filters" })
+      screen.queryByRole("group", { name: "Structure changes filters" })
     ).not.toBeInTheDocument();
 
     const filters = screen.getByRole("group", { name: "Result filters" });
@@ -292,7 +312,7 @@ describe("ComparisonResults disclosures", () => {
   it("shows an arrow and toggles each result section with native summary controls", async () => {
     const user = userEvent.setup();
     const { props } = renderResults();
-    const summaries = ["Missing Fields", "Structure Schema Compare", "Differences"].map((title) =>
+    const summaries = ["Missing Fields", "Structure Changes", "Differences"].map((title) =>
       screen.getByText(title).closest("summary")!
     );
 
@@ -308,13 +328,13 @@ describe("ComparisonResults disclosures", () => {
     expect(props.onSectionsChange).toHaveBeenCalledWith({ missing: true });
   });
 
-  it("renders Structure Schema Compare before Missing Fields and Differences", () => {
+  it("renders Structure Changes before Missing Fields and Differences", () => {
     const { container } = renderResults();
     const sectionTitles = Array.from(
       container.querySelectorAll(".result-section > summary .result-section-title")
     ).map((element) => element.textContent?.trim());
 
-    expect(sectionTitles).toEqual(["Structure Schema Compare", "Missing Fields", "Differences"]);
+    expect(sectionTitles).toEqual(["Structure Changes", "Missing Fields", "Differences"]);
   });
 
   it("opens a section action menu without toggling the disclosure", async () => {
@@ -440,10 +460,58 @@ describe("ComparisonResults disclosures", () => {
     expect(props.onSelectFindings).toHaveBeenCalledWith([modified.id], true);
   });
 
+  it("lists schema findings in Differences alongside the value rows, selectable and reviewable", async () => {
+    const user = userEvent.setup();
+    const inconsistent: StructureFinding = {
+      id: "structure:inconsistent-in-a:/items/1",
+      kind: "inconsistent-in-a",
+      path: ["items", 1],
+      pointer: "/items/1",
+      detail: "Item 1 is missing id compared with item 0.",
+      ignored: false
+    };
+    const modified: Finding = {
+      id: "changed:/price",
+      kind: "changed",
+      path: ["price"],
+      pointer: "/price",
+      valueA: 1,
+      valueB: 2,
+      ignored: false
+    };
+    const { props } = renderResults({
+      differences: [modified],
+      schemaDifferences: [inconsistent],
+      counts: { ...emptyCounts, differences: { visible: 2, total: 2 } },
+      sections: { missing: false, structure: false, differences: true }
+    });
+
+    const differences = screen.getByText("Differences", { selector: ".result-section-title" })
+      .closest("details")!;
+    const rows = within(differences).getAllByRole("row");
+    // Header, the value row, then the schema row.
+    expect(rows).toHaveLength(3);
+    expect(rows[2]).toHaveTextContent("Inconsistent in Baseline");
+    expect(rows[2]).toHaveTextContent("Item 1 is missing id compared with item 0.");
+
+    await user.click(within(rows[2]!).getByRole("checkbox", { name: "Select schema items[1]" }));
+    expect(props.onToggleSelected).toHaveBeenCalledWith(inconsistent.id);
+    await user.click(within(rows[2]!).getByRole("radio", { name: "Needed" }));
+    expect(props.onNoteChange).toHaveBeenCalledWith(inconsistent.id, { status: "needed" });
+
+    await user.click(screen.getByRole("button", { name: "Differences actions" }));
+    await user.click(
+      within(screen.getByRole("menu", { name: "Differences actions" })).getByRole("menuitem", {
+        name: "Select all for report (2)"
+      })
+    );
+    expect(props.onSelectFindings).toHaveBeenCalledWith([modified.id, inconsistent.id], true);
+  });
+
   it("closes the section menu on Escape and returns focus to its trigger", async () => {
     const user = userEvent.setup();
     renderResults();
-    const trigger = screen.getByRole("button", { name: "Structure Schema Compare actions" });
+    const trigger = screen.getByRole("button", { name: "Structure Changes actions" });
 
     await user.click(trigger);
     expect(screen.getByRole("menu")).toBeVisible();

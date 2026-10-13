@@ -3,7 +3,13 @@ export type HighlightCategory = "missing" | "structure" | "differences" | "inval
 /** One rendered line/field's highlight: its category, and whether it's an ignored finding —
  *  rendered dimmed rather than at full strength. Always set from the underlying ignore-path
  *  match, independent of the results section's "Show ignored" toggle. */
-export type LineHighlight = { category: HighlightCategory; ignored: boolean };
+export type LineHighlight = {
+  category: HighlightCategory;
+  ignored: boolean;
+  /** A schema finding whose "Structure changes" chip is switched off: still shown, but rendered
+   *  dimmed like an ignored one. Omitted (never `false`) when not dimmed. */
+  dimmed?: boolean;
+};
 export type WorkspaceStatus = {
   tone: "idle" | "error" | "success";
   message: string;

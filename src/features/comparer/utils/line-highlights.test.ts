@@ -19,6 +19,36 @@ function project(result: ComparisonResult, overrides: Partial<ComparisonResultFi
 }
 
 describe("createLineHighlights", () => {
+  it("shows schema findings at full strength by default and dims them only when the structure toggle is off", () => {
+    const a = { nested: { changed: 1, removed: true } };
+    const b = { nested: { changed: 2 } };
+    const textA = JSON.stringify(a, null, 2);
+    const textB = JSON.stringify(b, null, 2);
+    const linesA = buildLineMap(textA);
+    const removedLine = linesA["/nested/removed"]!;
+    const changedLine = linesA["/nested/changed"]!;
+    const projection = project(compareJson(a, b));
+
+    const on = createLineHighlights(projection, textA, textB, toggles);
+    expect(on.a[removedLine]).toEqual({ category: "structure", ignored: false });
+
+    const off = createLineHighlights(projection, textA, textB, {
+      missing: false,
+      structure: false,
+      differences: true
+    });
+    expect(off.a[removedLine]).toEqual({ category: "structure", ignored: false, dimmed: true });
+    expect(off.a[changedLine]).toEqual({ category: "differences", ignored: false });
+
+    // A dimmed schema entry never masks an enabled highlight on the same line.
+    const withMissing = createLineHighlights(projection, textA, textB, {
+      missing: true,
+      structure: false,
+      differences: true
+    });
+    expect(withMissing.a[removedLine]).toEqual({ category: "missing", ignored: false });
+  });
+
   it("highlights a deeply nested field and its opposite-side aligned placeholder", () => {
     const a = { data: { config: { countries: [{ code: "AE" }] } } };
     const b = { data: { config: { countries: [{ code: "AE", phone: "+971" }] } } };
@@ -223,8 +253,17 @@ describe("createLineHighlights", () => {
       structure: false,
       differences: true
     });
-    expect(differencesOnly.a[onlyALine]).toBeUndefined();
-    expect(differencesOnly.b[onlyBLine]).toBeUndefined();
+    // Structure is off, so the schema findings stay on screen but dimmed rather than vanishing.
+    expect(differencesOnly.a[onlyALine]).toEqual({
+      category: "structure",
+      ignored: false,
+      dimmed: true
+    });
+    expect(differencesOnly.b[onlyBLine]).toEqual({
+      category: "structure",
+      ignored: false,
+      dimmed: true
+    });
     expect(differencesOnly.a[changedLine]).toEqual({ category: "differences", ignored: false });
 
     const noPathMatch = createLineHighlights(

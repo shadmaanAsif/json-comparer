@@ -75,13 +75,37 @@ export function createLineHighlights(
     target: Record<number, LineHighlight>,
     line: number | undefined,
     category: HighlightCategory,
-    ignored: boolean
+    ignored: boolean,
+    dimmed = false
   ) => {
-    if (
-      line &&
-      (!target[line] || HIGHLIGHT_PRIORITY[category] > HIGHLIGHT_PRIORITY[target[line].category])
-    )
-      target[line] = { category, ignored };
+    // A dimmed entry only ever fills an empty line, so it can't mask a full-strength highlight.
+    if (!line || (dimmed && target[line])) return;
+    if (!target[line] || HIGHLIGHT_PRIORITY[category] > HIGHLIGHT_PRIORITY[target[line].category])
+      target[line] = dimmed ? { category, ignored, dimmed } : { category, ignored };
+  };
+  const markStructure = (dimmed: boolean) => {
+    for (const finding of projection.structureFindings) {
+      if (finding.kind === "extra-in-b") {
+        mark(b, nearestMappedLine(finding.pointer, lineMapB), "structure", finding.ignored, dimmed);
+        mark(
+          a,
+          nearestMappedLine(finding.pointer, placeholderLineMapA),
+          "structure",
+          finding.ignored,
+          dimmed
+        );
+      } else {
+        mark(a, nearestMappedLine(finding.pointer, lineMapA), "structure", finding.ignored, dimmed);
+        if (finding.kind === "missing-in-b")
+          mark(
+            b,
+            nearestMappedLine(finding.pointer, placeholderLineMapB),
+            "structure",
+            finding.ignored,
+            dimmed
+          );
+      }
+    }
   };
 
   if (toggles.missing)
@@ -105,32 +129,20 @@ export function createLineHighlights(
         );
       }
     }
-  if (toggles.structure)
-    for (const finding of projection.structureFindings) {
-      if (finding.kind === "extra-in-b") {
-        mark(b, nearestMappedLine(finding.pointer, lineMapB), "structure", finding.ignored);
-        mark(
-          a,
-          nearestMappedLine(finding.pointer, placeholderLineMapA),
-          "structure",
-          finding.ignored
-        );
-      } else {
-        mark(a, nearestMappedLine(finding.pointer, lineMapA), "structure", finding.ignored);
-        if (finding.kind === "missing-in-b")
-          mark(
-            b,
-            nearestMappedLine(finding.pointer, placeholderLineMapB),
-            "structure",
-            finding.ignored
-          );
-      }
-    }
+  if (toggles.structure) markStructure(false);
   if (toggles.differences)
     for (const finding of projection.differences)
       if (finding.kind === "changed" || finding.kind === "type-changed") {
         mark(a, nearestMappedLine(finding.pointer, lineMapA), "differences", finding.ignored);
         mark(b, nearestMappedLine(finding.pointer, lineMapB), "differences", finding.ignored);
       }
+  // Schema changes stay on screen when their chip is off, just dimmed — placed last so every
+  // enabled category keeps priority on a shared line.
+  if (!toggles.structure) markStructure(true);
   return { a, b };
+}
+
+/** Whether a highlighted line is drawn dimmed: an ignored finding, or a switched-off schema one. */
+export function isDimmedHighlight(highlight: LineHighlight | undefined): boolean {
+  return !!highlight && (highlight.ignored || !!highlight.dimmed);
 }

@@ -74,9 +74,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const wasPaneEmptyRef = useRef({ a: true, b: true });
   // JSON/Tree view is shared so both panels always show the same mode (switching one switches both).
   const [panelView, setPanelView] = useState<"json" | "tree">("json");
+  // Only Differences is highlighted at first; Missing fields and Structure changes are opt-in.
   const [highlightToggles, setHighlightToggles] = useState({
     missing: false,
-    structure: true,
+    structure: false,
     differences: true
   });
   // Hidden until a comparison has actually run, so the legend never explains highlights that
@@ -93,12 +94,14 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
   const [resultsExpanded, setResultsExpanded] = useState(false);
   // The Comparison output overview (summary chips, outcome, filter toolbar) is its own
   // disclosure, independent of resultsExpanded (whether the card shows at all) and of the
-  // section-level ones below it — collapsing it never hides Missing Fields, Structure Schema
+  // section-level ones below it — collapsing it never hides Missing Fields, Structure Changes
   // Compare, or Differences.
   const [overviewExpanded, setOverviewExpanded] = useState(true);
+  // Differences is the complete list, so it opens first; Missing Fields and Structure Changes
+  // are subsets of it and start collapsed.
   const [expandedSections, setExpandedSections] = useState({
-    missing: true,
-    structure: true,
+    missing: false,
+    structure: false,
     differences: true
   });
   const workerRef = useRef<Worker | null>(null);
@@ -168,6 +171,11 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     [arrayMode, ignorePaths]
   );
 
+  // Bumped on every whole-value import. Importing text identical to what the panel already holds
+  // (the same response fetched again) leaves textA/textB unchanged, so React skips the auto-compare
+  // effect while invalidateComparison has already cleared the result — the panels would sit empty
+  // of findings until the user edited something.
+  const [importCount, setImportCount] = useState(0);
   const updateImportedInput = (side: ResponseSide, raw: string) => {
     const nextA = side === "A" ? raw : textA;
     const nextB = side === "B" ? raw : textB;
@@ -175,6 +183,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     setTextA(aligned?.textA ?? nextA);
     setTextB(aligned?.textB ?? nextB);
     invalidateComparison();
+    setImportCount((count) => count + 1);
   };
 
   // Compare runs by itself — no manual click required. Whenever both panels hold valid JSON,
@@ -204,7 +213,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     const timer = window.setTimeout(() => runComparison(), LIVE_COMPARE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [textA, textB, autoCompareEnabled]);
+  }, [textA, textB, autoCompareEnabled, importCount]);
 
   const resultProjection = useMemo(
     () =>
@@ -695,6 +704,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             <HighlightControls
               highlightVisibility={highlightToggles}
               onHighlightVisibilityChange={setHighlightToggles}
+              differenceCount={resultProjection?.counts.differences.visible ?? null}
             />
           )}
         </div>
@@ -808,6 +818,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
           onlyInA={resultProjection.onlyInA}
           onlyInB={resultProjection.onlyInB}
           differences={resultProjection.differences}
+          schemaDifferences={resultProjection.schemaDifferences}
           structureFindings={resultProjection.structureFindings}
           selectedFindingIds={selected}
           notesByFindingId={notes}
@@ -924,7 +935,7 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
             either direction.
           </li>
           <li>
-            <strong>Structure schema compare</strong> — catch shape drift, such as added, removed,
+            <strong>Structure changes</strong> — catch shape drift, such as added, removed,
             or renamed keys, independent of the actual values.
           </li>
           <li>

@@ -30,7 +30,7 @@ const RESULT_DIFFERENCES_SELECTOR = '[data-tour="result-differences"]';
  *  too. The version lives in the key's VALUE, not its name, so there's only ever this one
  *  key to overwrite — no new key accumulates in storage per bump. */
 const TOUR_SEEN_STORAGE_KEY = "json-comparer:onboarding-tour-seen";
-const TOUR_VERSION = "v21";
+const TOUR_VERSION = "v23";
 // One-time migration for the pre-v4 scheme, which encoded the version in the key NAME
 // (`${TOUR_SEEN_STORAGE_KEY}:v1`, `:v2`, `:v3`, ...) and left one orphaned key behind per
 // bump. TODO(remove after 2026-09-13): delete this constant, forgetLegacyTourSeenKeys, and
@@ -187,8 +187,8 @@ export function buildOnboardingSteps(
       popover: {
         title: "Control the editor highlights",
         description: hasResults
-          ? "Toggle missing fields, structure issues, or changed values in both JSON panels. These switches change the visual guidance only; they do not remove findings from the comparison. A shortcut between the two panels below jumps back up to this toolbar once it has scrolled out of view."
-          : "Once you compare, this appears in the toolbar so you can toggle missing fields, structure issues, or changed-value highlights. Replay this tour after comparing to see it.",
+          ? "Toggle missing fields, structure changes, or changed values in both JSON panels; only changed values are on at first. These switches change the visual guidance only; they do not remove findings from the comparison. A shortcut between the two panels below jumps back up to this toolbar once it has scrolled out of view."
+          : "Once you compare, this appears in the toolbar so you can toggle missing fields, structure changes, or changed-value highlights (only changed values are on at first). Replay this tour after comparing to see it.",
         side: "bottom",
         align: "start"
       }
@@ -238,8 +238,8 @@ export function buildOnboardingSteps(
       popover: {
         title: "Review and export the findings",
         description: hasResults
-          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Schema Compare, Missing Fields, and Differences — all open by default, so collapse or expand any of them, or this whole summary, with the arrow on the right."
-          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Schema Compare, Missing Fields, and Differences — each open by default and covered next. This summary collapses too, with the arrow on the right. Replay this tour after comparing to see them highlighted.",
+          ? "These counts, the path filter, and the source chips control what's shown in the three sections below: Structure Changes, Missing Fields, and Differences. Differences is open by default and the other two start collapsed; open or collapse any of them, or this whole summary, with the arrow on the right."
+          : "After comparing, this area shows totals, filters, and three collapsible sections — Structure Changes, Missing Fields, and Differences — Differences is open by default and the other two start collapsed, each covered next. This summary collapses too, with the arrow on the right. Replay this tour after comparing to see them highlighted.",
         side: "top",
         align: "center"
       }
@@ -249,13 +249,13 @@ export function buildOnboardingSteps(
       data: {
         example: hasResults
           ? undefined
-          : "meta.version: number in Baseline, string in Candidate → type mismatch"
+          : "meta.cached: only in Candidate → extra field"
       },
       popover: {
-        title: "Spot schema-level differences",
+        title: "Spot structure changes",
         description: hasResults
-          ? "Structure Schema Compare flags fields that are structurally missing, extra, or a different type between the two sides — independent of their actual values."
-          : "Structure Schema Compare flags fields that are structurally missing, extra, or a different type between the two sides. Replay this tour after comparing to see it highlighted.",
+          ? "Structure Changes flags fields that exist on only one side, or that differ in shape between array items — independent of their actual values."
+          : "Structure Changes flags fields that exist on only one side, or that differ in shape between array items. Replay this tour after comparing to see it highlighted.",
         side: "top",
         align: "center"
       }
@@ -279,13 +279,13 @@ export function buildOnboardingSteps(
     {
       element: hasResults ? RESULT_DIFFERENCES_SELECTOR : undefined,
       data: {
-        example: hasResults ? undefined : "data.amount: 100 → 150 (changed)"
+        example: hasResults ? undefined : "data.amount: 100 → 150 (changed) · plus every missing field and schema change"
       },
       popover: {
         title: "See exactly what changed",
         description: hasResults
-          ? "Differences lists every field present on both sides whose value or type changed, with the exact Baseline and Candidate values side by side."
-          : "Differences lists every field present on both sides whose value or type changed. Replay this tour after comparing to see it highlighted.",
+          ? "Differences is the complete list: every changed value or type with the exact Baseline and Candidate values side by side, plus every missing field and schema change."
+          : "Differences is the complete list: every changed value or type, plus every missing field and schema change. Replay this tour after comparing to see it highlighted.",
         side: "top",
         align: "center"
       }

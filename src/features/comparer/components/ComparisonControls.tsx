@@ -76,7 +76,7 @@ export function ComparisonControls({
             <IgnorePathSelector
               selectedPaths={ignorePaths}
               suggestions={ignorePathSuggestions}
-              disabled={isComparing}
+              applyDisabled={isComparing}
               onChange={onIgnorePathsChange}
               onApply={onApplyIgnorePaths}
             />

@@ -1,18 +1,36 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseIgnorePatterns } from "@/domain/comparison/path";
 
 export interface IgnorePathSelectorProps {
   selectedPaths: string[];
   suggestions: string[];
-  disabled?: boolean;
+  /** Disables Apply only. The field itself stays editable (and pasteable) while a comparison runs. */
+  applyDisabled?: boolean;
   onChange: (paths: string[]) => void;
   onApply: (paths: string[]) => void;
 }
 
+interface DropdownPlacement {
+  left: number;
+  width: number;
+  top?: number;
+  bottom?: number;
+  maxHeight: number;
+}
+
+const DROPDOWN_GAP = 6;
+const DROPDOWN_MARGIN = 12;
+const DROPDOWN_PREFERRED_HEIGHT = 200;
+const DROPDOWN_MIN_HEIGHT = 120;
+
+function cleanPaths(paths: string[]): string[] {
+  return paths.map((path) => path.trim()).filter(Boolean);
+}
+
 function uniquePaths(paths: string[]): string[] {
-  return [...new Set(paths.map((path) => path.trim()).filter(Boolean))];
+  return [...new Set(cleanPaths(paths))];
 }
 
 function pathsEqual(pathsA: string[], pathsB: string[]): boolean {
@@ -22,17 +40,63 @@ function pathsEqual(pathsA: string[], pathsB: string[]): boolean {
 export function IgnorePathSelector({
   selectedPaths,
   suggestions,
-  disabled = false,
+  applyDisabled = false,
   onChange,
   onApply
 }: IgnorePathSelectorProps) {
   const listboxId = useId();
+  const selectorRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [placement, setPlacement] = useState<DropdownPlacement | null>(null);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
-  const [editingPath, setEditingPath] = useState<string | null>(null);
+  // Chips are identified by position, not path: a repeated path is allowed (paste it, then edit
+  // the copy), so two chips can share the same text.
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
-  const normalizedSelectedPaths = useMemo(() => uniquePaths(selectedPaths), [selectedPaths]);
+  // The chips live outside the text input, so the browser's own select-all can't reach them.
+  // Ctrl/Cmd+A on an empty field marks them all selected; Ctrl/Cmd+C then copies the paths.
+  const [chipsSelected, setChipsSelected] = useState(false);
+  const normalizedSelectedPaths = useMemo(() => cleanPaths(selectedPaths), [selectedPaths]);
+  const allChipsSelected = chipsSelected && normalizedSelectedPaths.length > 0;
+
+  // The list is position: fixed against the field, not absolute inside it: its ancestors
+  // (.workspace) clip overflow, which cut the list off behind the results card below. Re-placed
+  // as chips wrap the field onto more rows, and on scroll/resize.
+  const chipCount = normalizedSelectedPaths.length;
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const place = () => {
+      const rect = selectorRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const below = window.innerHeight - rect.bottom - DROPDOWN_MARGIN - DROPDOWN_GAP;
+      const above = rect.top - DROPDOWN_MARGIN - DROPDOWN_GAP;
+      const openDown = below >= DROPDOWN_PREFERRED_HEIGHT || below >= above;
+      setPlacement({
+        left: rect.left,
+        width: rect.width,
+        top: openDown ? rect.bottom + DROPDOWN_GAP : undefined,
+        bottom: openDown ? undefined : window.innerHeight - rect.top + DROPDOWN_GAP,
+        maxHeight: Math.max(DROPDOWN_MIN_HEIGHT, openDown ? below : above)
+      });
+    };
+    place();
+    let frame = 0;
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        place();
+      });
+    };
+    window.addEventListener("scroll", schedule, true);
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [isOpen, chipCount]);
   const availableSuggestions = useMemo(() => {
     const selected = new Set(normalizedSelectedPaths);
     const needle = query.trim().toLowerCase();
@@ -42,29 +106,36 @@ export function IgnorePathSelector({
   }, [normalizedSelectedPaths, query, suggestions]);
 
   const addPaths = (paths: string[]) => {
-    const next = uniquePaths([...normalizedSelectedPaths, ...paths]);
-    if (!pathsEqual(next, normalizedSelectedPaths)) onChange(next);
+    const added = cleanPaths(paths);
+    if (added.length) onChange([...normalizedSelectedPaths, ...added]);
     setQuery("");
     setActiveOptionIndex(0);
     setIsOpen(true);
   };
 
   const pathsWithCommittedEdit = (): string[] => {
-    if (!editingPath) return normalizedSelectedPaths;
+    if (editingIndex === null) return normalizedSelectedPaths;
     const replacements = parseIgnorePatterns(editValue);
     if (!replacements.length) return normalizedSelectedPaths;
-    return uniquePaths(
-      normalizedSelectedPaths.flatMap((path) => (path === editingPath ? replacements : [path]))
+    return normalizedSelectedPaths.flatMap((path, index) =>
+      index === editingIndex ? replacements : [path]
     );
   };
 
   const stopEditing = () => {
-    setEditingPath(null);
+    setEditingIndex(null);
     setEditValue("");
   };
 
+  const removePathAt = (index: number) => {
+    onChange(normalizedSelectedPaths.filter((_, position) => position !== index));
+    if (editingIndex === null) return;
+    if (index < editingIndex) setEditingIndex(editingIndex - 1);
+    else if (index === editingIndex) stopEditing();
+  };
+
   const saveEditedPath = () => {
-    if (!editingPath || !parseIgnorePatterns(editValue).length) return;
+    if (editingIndex === null || !parseIgnorePatterns(editValue).length) return;
     const next = pathsWithCommittedEdit();
     if (!pathsEqual(next, normalizedSelectedPaths)) onChange(next);
     stopEditing();
@@ -72,7 +143,7 @@ export function IgnorePathSelector({
 
   const commitPendingPaths = (): string[] => {
     const editedPaths = pathsWithCommittedEdit();
-    const next = uniquePaths([...editedPaths, ...parseIgnorePatterns(query)]);
+    const next = [...editedPaths, ...parseIgnorePatterns(query)];
     if (!pathsEqual(next, normalizedSelectedPaths)) onChange(next);
     stopEditing();
     setQuery("");
@@ -88,18 +159,17 @@ export function IgnorePathSelector({
 
   return (
     <div className="ignore-field-controls">
-      <div className={`ignore-path-selector${isOpen ? " is-open" : ""}`}>
+      <div ref={selectorRef} className={`ignore-path-selector${isOpen ? " is-open" : ""}`}>
         <div className="ignore-path-input-shell">
-          {normalizedSelectedPaths.map((path) =>
-            editingPath === path ? (
-              <span className="ignore-path-chip is-editing" key={path}>
+          {normalizedSelectedPaths.map((path, index) =>
+            editingIndex === index ? (
+              <span className="ignore-path-chip is-editing" key={`${index}:${path}`}>
                 <input
                   className="ignore-path-chip-editor"
                   type="text"
                   aria-label={`Edit ignored path ${path}`}
                   value={editValue}
                   autoFocus
-                  disabled={disabled}
                   onChange={(event) => setEditValue(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -116,7 +186,7 @@ export function IgnorePathSelector({
                   type="button"
                   aria-label={`Save ignored path ${path}`}
                   title="Save path"
-                  disabled={disabled || !parseIgnorePatterns(editValue).length}
+                  disabled={!parseIgnorePatterns(editValue).length}
                   onClick={saveEditedPath}
                 >
                   <span aria-hidden="true">✓</span>
@@ -126,22 +196,23 @@ export function IgnorePathSelector({
                   type="button"
                   aria-label={`Cancel editing ignored path ${path}`}
                   title="Cancel editing"
-                  disabled={disabled}
                   onClick={stopEditing}
                 >
                   <span aria-hidden="true">↩</span>
                 </button>
               </span>
             ) : (
-              <span className="ignore-path-chip" key={path}>
+              <span
+                className={`ignore-path-chip${allChipsSelected ? " is-selected" : ""}`}
+                key={`${index}:${path}`}
+              >
                 <button
                   className="ignore-path-chip-label"
                   type="button"
                   aria-label={`Edit ignored path ${path}`}
                   title="Edit ignored path"
-                  disabled={disabled}
                   onClick={() => {
-                    setEditingPath(path);
+                    setEditingIndex(index);
                     setEditValue(path);
                     setIsOpen(false);
                   }}
@@ -156,8 +227,7 @@ export function IgnorePathSelector({
                   type="button"
                   aria-label={`Remove ignored path ${path}`}
                   title="Remove ignored path"
-                  disabled={disabled}
-                  onClick={() => onChange(normalizedSelectedPaths.filter((item) => item !== path))}
+                  onClick={() => removePathAt(index)}
                 >
                   <span aria-hidden="true">×</span>
                 </button>
@@ -177,11 +247,19 @@ export function IgnorePathSelector({
                 : undefined
             }
             value={query}
-            disabled={disabled}
             onFocus={() => setIsOpen(true)}
-            onBlur={() => setIsOpen(false)}
+            // Escape closes the list but leaves focus here, so onFocus alone can never reopen it.
+            onClick={() => {
+              setIsOpen(true);
+              setChipsSelected(false);
+            }}
+            onBlur={() => {
+              setIsOpen(false);
+              setChipsSelected(false);
+            }}
             onChange={(event) => {
               const nextQuery = event.target.value;
+              setChipsSelected(false);
               // Normally paste is caught by onPaste below, but some paste paths (middle-click
               // paste, certain mobile/IME flows) never fire a clipboard `paste` event and land
               // here instead — inputType still reports insertFromPaste, so treat it the same way
@@ -203,7 +281,36 @@ export function IgnorePathSelector({
               event.preventDefault();
               addPaths(pastedPaths);
             }}
+            onCopy={(event) => {
+              if (!allChipsSelected) return;
+              event.preventDefault();
+              // Same separators the paste handler splits on, so the list round-trips.
+              event.clipboardData.setData("text/plain", normalizedSelectedPaths.join(", "));
+            }}
             onKeyDown={(event) => {
+              const hasModifier = event.ctrlKey || event.metaKey;
+              const key = event.key.toLowerCase();
+              // With text typed, Ctrl/Cmd+A keeps its native meaning: select that text.
+              if (hasModifier && key === "a" && !query && normalizedSelectedPaths.length) {
+                event.preventDefault();
+                setChipsSelected(true);
+                return;
+              }
+              if (allChipsSelected && hasModifier && key === "c") {
+                // An input with no selected text may not fire `copy` in every browser, so write
+                // the clipboard here as well; onCopy writes the same text where `copy` does fire.
+                const text = normalizedSelectedPaths.join(", ");
+                void navigator.clipboard?.writeText(text).catch(() => {});
+                return;
+              }
+              if (allChipsSelected && !["shift", "control", "alt", "meta"].includes(key)) {
+                setChipsSelected(false);
+                // Only deselect: a stray Backspace must not also drop the last chip.
+                if (key === "backspace" || key === "delete") {
+                  event.preventDefault();
+                  return;
+                }
+              }
               if (event.key === "ArrowDown") {
                 event.preventDefault();
                 setIsOpen(true);
@@ -219,7 +326,7 @@ export function IgnorePathSelector({
               } else if (event.key === "Escape") {
                 setIsOpen(false);
               } else if (event.key === "Backspace" && !query && normalizedSelectedPaths.length) {
-                onChange(normalizedSelectedPaths.slice(0, -1));
+                removePathAt(normalizedSelectedPaths.length - 1);
               }
             }}
             placeholder={
@@ -231,7 +338,13 @@ export function IgnorePathSelector({
         </div>
 
         {isOpen && (
-          <div className="ignore-path-dropdown">
+          <div
+            className="ignore-path-dropdown"
+            style={placement ?? undefined}
+            // Keep focus in the input when the press lands on the list's padding or scrollbar,
+            // otherwise the blur closes the list before the click can register.
+            onMouseDown={(event) => event.preventDefault()}
+          >
             <div
               id={listboxId}
               className="ignore-path-options"
@@ -280,7 +393,7 @@ export function IgnorePathSelector({
       <button
         className="secondary-button"
         type="button"
-        disabled={disabled}
+        disabled={applyDisabled}
         onClick={() => onApply(commitPendingPaths())}
       >
         Apply

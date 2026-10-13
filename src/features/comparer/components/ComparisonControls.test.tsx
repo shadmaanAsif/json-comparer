@@ -37,7 +37,7 @@ describe("ComparisonControls", () => {
     expect(screen.getByText(/don't help two array items match/)).toBeVisible();
   });
 
-  it("searches detected paths and maintains unique removable chips", async () => {
+  it("searches detected paths and keeps every pasted path as its own removable chip", async () => {
     const user = userEvent.setup();
     const onApplyIgnorePaths = vi.fn();
 
@@ -78,13 +78,16 @@ describe("ComparisonControls", () => {
         getData: () => "data.amount, data.amount, , meta.timestamp"
       }
     });
-    expect(screen.getByRole("button", { name: "Remove ignored path data.amount" })).toBeVisible();
-    expect(screen.getAllByRole("button", { name: /Remove ignored path/ })).toHaveLength(3);
+    // Repeats are kept (paste a path again, then edit the copy), so nothing is merged away.
+    expect(screen.getAllByRole("button", { name: "Remove ignored path data.amount" })).toHaveLength(
+      2
+    );
+    expect(screen.getAllByRole("button", { name: /Remove ignored path/ })).toHaveLength(5);
 
-    await user.click(screen.getByRole("button", { name: "Remove ignored path data.amount" }));
-    expect(
-      screen.queryByRole("button", { name: "Remove ignored path data.amount" })
-    ).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Remove ignored path data.amount" })[0]);
+    expect(screen.getAllByRole("button", { name: "Remove ignored path data.amount" })).toHaveLength(
+      1
+    );
 
     await user.type(input, "config.custom.*.code");
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -95,6 +98,8 @@ describe("ComparisonControls", () => {
     expect(onApplyIgnorePaths).toHaveBeenCalledWith([
       "meta.timestamp",
       "data.currency",
+      "data.amount",
+      "meta.timestamp",
       "config.custom.*.code"
     ]);
   });
@@ -141,7 +146,7 @@ describe("ComparisonControls", () => {
     ).toBeVisible();
   });
 
-  it("edits an ignore-path chip inline and prevents empty or duplicate replacements", async () => {
+  it("edits an ignore-path chip inline, accepts a replacement that repeats another chip, and prevents empty ones", async () => {
     const user = userEvent.setup();
     const onApplyIgnorePaths = vi.fn();
 
@@ -188,8 +193,9 @@ describe("ComparisonControls", () => {
     await user.clear(duplicateEditor);
     await user.type(duplicateEditor, "data.amount{Enter}");
     expect(screen.getAllByRole("button", { name: "Edit ignored path data.amount" })).toHaveLength(
-      1
+      2
     );
+    await user.click(screen.getAllByRole("button", { name: "Remove ignored path data.amount" })[0]);
 
     await user.click(screen.getByRole("button", { name: "Edit ignored path data.amount" }));
     const emptyEditor = screen.getByRole("textbox", { name: "Edit ignored path data.amount" });

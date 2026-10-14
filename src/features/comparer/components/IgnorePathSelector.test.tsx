@@ -153,7 +153,7 @@ describe("IgnorePathSelector repeated paths", () => {
     const user = userEvent.setup();
     const { onChange } = renderWithSelected(["status", "status"]);
 
-    await user.click(screen.getAllByRole("button", { name: "Edit ignored path status" })[1]);
+    await user.click(screen.getAllByRole("button", { name: "Edit ignored path status" })[1]!);
     const editor = screen.getByRole("textbox", { name: "Edit ignored path status" });
     await user.clear(editor);
     await user.type(editor, "status.code{Enter}");
@@ -165,7 +165,7 @@ describe("IgnorePathSelector repeated paths", () => {
     const user = userEvent.setup();
     const { onChange } = renderWithSelected(["status", "user.name", "status"]);
 
-    await user.click(screen.getAllByRole("button", { name: "Remove ignored path status" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Remove ignored path status" })[0]!);
 
     expect(onChange).toHaveBeenCalledWith(["user.name", "status"]);
   });

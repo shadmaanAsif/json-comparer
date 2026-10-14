@@ -84,7 +84,9 @@ describe("ComparisonControls", () => {
     );
     expect(screen.getAllByRole("button", { name: /Remove ignored path/ })).toHaveLength(5);
 
-    await user.click(screen.getAllByRole("button", { name: "Remove ignored path data.amount" })[0]);
+    await user.click(
+      screen.getAllByRole("button", { name: "Remove ignored path data.amount" })[0]!
+    );
     expect(screen.getAllByRole("button", { name: "Remove ignored path data.amount" })).toHaveLength(
       1
     );
@@ -195,7 +197,9 @@ describe("ComparisonControls", () => {
     expect(screen.getAllByRole("button", { name: "Edit ignored path data.amount" })).toHaveLength(
       2
     );
-    await user.click(screen.getAllByRole("button", { name: "Remove ignored path data.amount" })[0]);
+    await user.click(
+      screen.getAllByRole("button", { name: "Remove ignored path data.amount" })[0]!
+    );
 
     await user.click(screen.getByRole("button", { name: "Edit ignored path data.amount" }));
     const emptyEditor = screen.getByRole("textbox", { name: "Edit ignored path data.amount" });

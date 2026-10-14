@@ -677,10 +677,42 @@
   background: var(--accent-dark);
   color: var(--accent);
 }
+.workspace-finding-nav .finding-nav-step:disabled {
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .workspace-finding-nav .finding-nav-count {
   color: var(--text);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+}
+/* The ignored tally reads as disabled on purpose: same 0.55 dimming the panels give an ignored
+   line, a dashed outline instead of the solid pills of the buttons below it, and a default
+   cursor — it reports a number, it isn't something to click. */
+.workspace-finding-nav .finding-nav-ignored {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  align-self: center;
+  padding: 2px 9px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+  cursor: default;
+  user-select: none;
+}
+.workspace-finding-nav .finding-nav-ignored-dot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
 }
 .workspace-finding-nav .finding-nav-output {
   background: transparent;

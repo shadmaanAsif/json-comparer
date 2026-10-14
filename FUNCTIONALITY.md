@@ -54,7 +54,7 @@ This file is the authoritative catalogue of functionality implemented in the Com
 - Highlighted gutter lines are clickable and scroll the corresponding source line into view.
 - A right-side minimap represents highlighted findings proportionally across the entire JSON document; each marker is keyboard/click navigable.
 - Floating “N more above/below” arrow chips appear when highlighted findings are outside the visible editor viewport and jump to the nearest finding.
-- A persistent color-coded previous/next finding stepper continues through every highlighted line and wraps at the beginning/end. Navigation centers the selected row using the current rendered panel height, keeps focus from shifting the page, and immediately synchronizes the partner panel.
+- A persistent color-coded previous/next finding stepper continues through every highlighted line that is not ignored and wraps at the beginning/end. Its "Finding X of Y" count excludes ignored lines; they are tallied on a separate dimmed, non-interactive "N ignored" line beneath it (dashed outline, same dimming as an ignored line in the panels) and are skipped by Previous/Next. When every finding is ignored the stepper stays visible as "No active findings" with Previous/Next disabled. Navigation centers the selected row using the current rendered panel height, keeps focus from shifting the page, and immediately synchronizes the partner panel.
 - The active finding is emphasized in the full-row overlay, line gutter, and minimap in both compact and expanded modes.
 - Expanded mode uses up to 86% of the viewport height, capped at 980 pixels, so substantially more JSON remains visible.
 - Document byte limits protect the browser from unexpectedly large inputs.

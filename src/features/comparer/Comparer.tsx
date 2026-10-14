@@ -28,7 +28,7 @@ import { useReportExports } from "./hooks/useReportExports";
 import { useSynchronizedEditors } from "./hooks/useSynchronizedEditors";
 import type { ResponseSide, ReviewNote, WorkspaceStatus } from "./types";
 import { alignValidInputText } from "./utils/display-alignment";
-import { createLineHighlights } from "./utils/line-highlights";
+import { collectFindingLines, createLineHighlights } from "./utils/line-highlights";
 import { getJsonSyntaxIssue } from "./utils/json-validation";
 import { formatComparisonOutcome, projectComparisonResult } from "./utils/result-projections";
 
@@ -255,21 +255,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
     [displayLineMaps, highlightToggles, panelHighlightProjection, textA, textB]
   );
   // One finding navigator shared by both panels. The panels are line-aligned, so a single
-  // ordered list of every highlighted line across both sides drives navigation for both.
-  const findingLines = useMemo(() => {
-    const lines = new Set<number>();
-    for (const key of Object.keys(lineHighlights.a)) lines.add(Number(key));
-    for (const key of Object.keys(lineHighlights.b)) lines.add(Number(key));
-    return [...lines].sort((first, second) => first - second);
-  }, [lineHighlights]);
-  const findingCategories = useMemo(() => {
-    const present = new Set<string>();
-    for (const highlight of Object.values(lineHighlights.a)) present.add(highlight.category);
-    for (const highlight of Object.values(lineHighlights.b)) present.add(highlight.category);
-    return (["missing", "structure", "differences", "invalid"] as const).filter((category) =>
-      present.has(category)
-    );
-  }, [lineHighlights]);
+  // ordered list of every highlighted line across both sides drives navigation for both. Lines
+  // whose every highlight is ignored are only tallied, so the count and Previous/Next agree.
+  const findingSummary = useMemo(() => collectFindingLines(lineHighlights), [lineHighlights]);
+  const findingLines = findingSummary.active;
   const [findingCursor, setFindingCursor] = useState(0);
   // Reset the cursor when the finding list itself changes, adjusted during render (React's
   // documented alternative to an effect) rather than after a commit, avoiding an extra render.
@@ -754,9 +743,10 @@ export function Comparer({ author = APP_AUTHOR }: ComparerProps) {
                 Highlight Controls <span aria-hidden="true">⤒</span>
               </button>
               <WorkspaceFindingNav
-                categories={findingCategories}
+                categories={findingSummary.categories}
                 current={findingCursor + 1}
                 total={findingLines.length}
+                ignored={findingSummary.ignoredCount}
                 onPrevious={() => stepFinding(-1)}
                 onNext={() => stepFinding(1)}
                 onScrollToOutput={scrollToComparisonOutput}

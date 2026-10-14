@@ -108,7 +108,7 @@
    button (see .highlight-scroll-button) and WorkspaceFindingNav stacked, so the column is put to
    use as soon as a comparison is active, not only once it has findings to navigate. The three
    highlight chips themselves live inline in .panel-toolbar-actions, not here — their text
-   content ("Structure schema", etc.) doesn't fit this column's ~112-148px width; a card or a
+   content ("Structure changes", etc.) doesn't fit this column's ~112-148px width; a card or a
    floating popover placed here previously both overflowed onto the JSON panel beside it. */
 .input-grid > .workspace-side-panel {
   grid-area: nav;
@@ -677,10 +677,42 @@
   background: var(--accent-dark);
   color: var(--accent);
 }
+.workspace-finding-nav .finding-nav-step:disabled {
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .workspace-finding-nav .finding-nav-count {
   color: var(--text);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+}
+/* The ignored tally reads as disabled on purpose: same 0.55 dimming the panels give an ignored
+   line, a dashed outline instead of the solid pills of the buttons below it, and a default
+   cursor — it reports a number, it isn't something to click. */
+.workspace-finding-nav .finding-nav-ignored {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  align-self: center;
+  padding: 2px 9px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+  cursor: default;
+  user-select: none;
+}
+.workspace-finding-nav .finding-nav-ignored-dot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
 }
 .workspace-finding-nav .finding-nav-output {
   background: transparent;
@@ -846,7 +878,7 @@
 }
 /* Inline in .panel-toolbar-actions (see Comparer.tsx), the same row as Compare/Clear
    all — not the narrow workspace-side-panel column between the panels, where the three chips'
-   text content ("Structure schema", etc.) refuses to shrink below its own width: both a stacked
+   text content ("Structure changes", etc.) refuses to shrink below its own width: both a stacked
    card and a floating popover anchored from that ~112-148px column overflowed onto the Candidate
    panel beside it. Carries the id scrollToHighlightControls both scrolls to and focuses (tabIndex
    -1: not in the normal tab order, only a programmatic landing target) — see
@@ -983,13 +1015,26 @@
     color-mix(in srgb, var(--added) 18%, var(--surface))
   );
 }
-.structure-chip[aria-pressed="true"] {
+.structure-chip:has(.chip-toggle[aria-pressed="true"]) {
+  color: var(--text);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent),
+    0 5px 18px rgba(0, 0, 0, 0.16);
   border-color: var(--type);
   background: color-mix(in srgb, var(--type) 18%, var(--surface));
 }
 .difference-chip[aria-pressed="true"] {
   border-color: var(--changed);
   background: color-mix(in srgb, var(--changed) 18%, var(--surface));
+}
+.chip-count {
+  min-width: 1.6em;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 .segmented {
   display: inline-flex;
@@ -1314,6 +1359,17 @@ td pre {
 .value-cell .text-button {
   padding-left: 0;
   color: var(--accent);
+}
+/* Quoted strings stay in the body text color; unquoted scalars are bold and accented, so the
+   string "true" and the boolean true can't be mistaken for each other at a glance. */
+.value-cell .value-boolean,
+.value-cell .value-number,
+.value-cell .value-null {
+  color: var(--accent);
+  font-weight: 700;
+}
+.value-cell .value-null {
+  font-style: italic;
 }
 .note-editor {
   display: grid;

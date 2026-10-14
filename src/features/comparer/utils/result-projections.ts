@@ -15,6 +15,9 @@ export interface ComparisonResultProjection {
   onlyInB: Finding[];
   differences: Finding[];
   structureFindings: StructureFinding[];
+  /** Schema findings the Differences section lists after the value rows — every one that is not
+   *  already shown there as a missing-field row. */
+  schemaDifferences: StructureFinding[];
   counts: ComparisonProjectionCounts;
 }
 
@@ -40,7 +43,7 @@ export function selectSectionFindings(
 ): (Finding | StructureFinding)[] {
   if (section === "structure") return projection.structureFindings;
   if (section === "missing") return [...projection.onlyInA, ...projection.onlyInB];
-  return projection.differences;
+  return [...projection.differences, ...projection.schemaDifferences];
 }
 
 export function formatComparisonOutcome(
@@ -75,6 +78,28 @@ function matchesStructureSource(
   return true;
 }
 
+/**
+ * Schema findings that add something to the Differences list. A baseline-only or candidate-only
+ * field is already a removed/added value row at the same pointer, so its schema twin is dropped
+ * there instead of being listed twice.
+ */
+function schemaFindingsBeyondMissing(
+  structure: StructureFinding[],
+  findings: Finding[]
+): StructureFinding[] {
+  const removed = new Set<string>();
+  const added = new Set<string>();
+  for (const finding of findings) {
+    if (finding.kind === "removed") removed.add(finding.pointer);
+    else if (finding.kind === "added") added.add(finding.pointer);
+  }
+  return structure.filter((finding) => {
+    if (finding.kind === "missing-in-b") return !removed.has(finding.pointer);
+    if (finding.kind === "extra-in-b") return !added.has(finding.pointer);
+    return true;
+  });
+}
+
 export function projectComparisonResult(
   result: ComparisonResult,
   filters: ComparisonResultFilters
@@ -102,6 +127,8 @@ export function projectComparisonResult(
     (finding) => finding.kind === "changed" || finding.kind === "type-changed"
   );
   const allMissing = [...allOnlyInA, ...allOnlyInB];
+  const schemaDifferences = schemaFindingsBeyondMissing(structureFindings, result.findings);
+  const allSchemaDifferences = schemaFindingsBeyondMissing(result.structure, result.findings);
 
   return {
     displayedFindings,
@@ -109,16 +136,24 @@ export function projectComparisonResult(
     onlyInB,
     differences: [...onlyInA, ...onlyInB, ...modified],
     structureFindings,
+    schemaDifferences,
     counts: {
-      differences: { visible: displayedFindings.length, total: result.findings.length },
+      differences: {
+        visible: displayedFindings.length + schemaDifferences.length,
+        total: result.findings.length + allSchemaDifferences.length
+      },
       missing: { visible: onlyInA.length + onlyInB.length, total: allMissing.length },
       structure: { visible: structureFindings.length, total: result.structure.length },
       onlyInA: { visible: onlyInA.length, total: allOnlyInA.length },
       onlyInB: { visible: onlyInB.length, total: allOnlyInB.length },
       modified: { visible: modified.length, total: allModified.length },
       ignored: {
-        visible: displayedFindings.filter((finding) => finding.ignored).length,
-        total: result.findings.filter((finding) => finding.ignored).length
+        visible:
+          displayedFindings.filter((finding) => finding.ignored).length +
+          schemaDifferences.filter((finding) => finding.ignored).length,
+        total:
+          result.findings.filter((finding) => finding.ignored).length +
+          allSchemaDifferences.filter((finding) => finding.ignored).length
       }
     }
   };

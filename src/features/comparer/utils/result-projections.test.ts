@@ -81,15 +81,43 @@ describe("projectComparisonResult", () => {
     const projection = projectComparisonResult(result, filters);
 
     expect(projection.counts).toEqual({
-      differences: { visible: 3, total: 4 },
+      // Value findings plus the schema findings that are not already a missing-field row.
+      differences: { visible: 6, total: 8 },
       missing: { visible: 2, total: 2 },
       structure: { visible: 3, total: 4 },
       onlyInA: { visible: 1, total: 1 },
       onlyInB: { visible: 1, total: 1 },
       modified: { visible: 1, total: 2 },
-      ignored: { visible: 0, total: 1 }
+      ignored: { visible: 0, total: 2 }
     });
     expect(projection.differences).toHaveLength(3);
+    expect(projection.schemaDifferences).toHaveLength(3);
+  });
+
+  it("lists schema findings in Differences, except twins of a missing-field row at the same path", () => {
+    const withTwins: ComparisonResult = {
+      ...result,
+      findings: [finding("removed", "gone"), finding("added", "fresh"), finding("changed", "price")],
+      structure: [
+        structureFinding("missing-in-b", "gone"),
+        structureFinding("extra-in-b", "fresh"),
+        // Same pointer, opposite direction: a different fact, so it is kept.
+        structureFinding("extra-in-b", "gone"),
+        structureFinding("inconsistent-in-a", "shape"),
+        structureFinding("a-empty-array", "list")
+      ]
+    };
+    const projection = projectComparisonResult(withTwins, filters);
+
+    expect(projection.schemaDifferences.map((item) => item.id)).toEqual([
+      "structure:extra-in-b:/gone",
+      "structure:inconsistent-in-a:/shape",
+      "structure:a-empty-array:/list"
+    ]);
+    // The Structure section itself still lists every schema finding.
+    expect(projection.structureFindings).toHaveLength(5);
+    // 3 value rows (removed, added, changed) + 3 schema rows; each one-sided field counts once.
+    expect(projection.counts.differences).toEqual({ visible: 6, total: 6 });
   });
 
   it("filters structure findings by the same only-in-A/B source filter as other findings", () => {
@@ -123,13 +151,14 @@ describe("projectComparisonResult", () => {
 
     expect(withIgnored.displayedFindings).toHaveLength(4);
     expect(withIgnored.structureFindings).toHaveLength(4);
-    expect(withIgnored.counts.differences).toEqual({ visible: 4, total: 4 });
+    expect(withIgnored.counts.differences).toEqual({ visible: 8, total: 8 });
     expect(withIgnored.counts.structure).toEqual({ visible: 4, total: 4 });
-    expect(withIgnored.counts.ignored).toEqual({ visible: 1, total: 1 });
+    expect(withIgnored.counts.ignored).toEqual({ visible: 2, total: 2 });
 
     const withoutIgnored = projectComparisonResult(result, filters);
     expect(withoutIgnored.displayedFindings.every((item) => !item.ignored)).toBe(true);
     expect(withoutIgnored.structureFindings.every((item) => !item.ignored)).toBe(true);
+    expect(withoutIgnored.schemaDifferences.every((item) => !item.ignored)).toBe(true);
   });
 
   it("updates zero, partial, and fully visible counts for combined source and path filters", () => {
@@ -137,7 +166,7 @@ describe("projectComparisonResult", () => {
       ...filters,
       showOnlyInA: false
     });
-    expect(partial.counts.differences).toEqual({ visible: 2, total: 4 });
+    expect(partial.counts.differences).toEqual({ visible: 4, total: 8 });
     expect(partial.counts.missing).toEqual({ visible: 1, total: 2 });
     expect(partial.counts.structure).toEqual({ visible: 2, total: 4 });
 
@@ -145,7 +174,7 @@ describe("projectComparisonResult", () => {
       ...filters,
       path: "does-not-exist"
     });
-    expect(zero.counts.differences).toEqual({ visible: 0, total: 4 });
+    expect(zero.counts.differences).toEqual({ visible: 0, total: 8 });
     expect(zero.counts.missing).toEqual({ visible: 0, total: 2 });
     expect(zero.counts.structure).toEqual({ visible: 0, total: 4 });
 

@@ -144,7 +144,7 @@ describe("Comparer panel actions", () => {
     expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
   });
 
-  it("expands all three result sections by default, including Differences", async () => {
+  it("opens only Differences by default and keeps Structure Changes and Missing Fields collapsed", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
     fillInputs();
@@ -153,16 +153,21 @@ describe("Comparer panel actions", () => {
       [...document.querySelectorAll(".result-section-title")]
         .find((el) => el.textContent?.trim() === title)
         ?.closest("details");
-    expect(detailsFor("Structure Schema Compare")).toHaveAttribute("open");
-    expect(detailsFor("Missing Fields")).toHaveAttribute("open");
+    expect(detailsFor("Structure Changes")).not.toHaveAttribute("open");
+    expect(detailsFor("Missing Fields")).not.toHaveAttribute("open");
     expect(detailsFor("Differences")).toHaveAttribute("open");
   });
 
-  it("shows ignored findings by default instead of requiring Show ignored to be turned on", async () => {
+  it("only offers Show ignored once an ignore path has matched, and shows ignored findings by default", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
     fillInputs();
     await compare(user);
+    expect(screen.queryByRole("button", { name: "Show ignored" })).not.toBeInTheDocument();
+
+    const dialog = openPrice();
+    await user.click(within(dialog).getByRole("button", { name: "Ignore path" }));
+    act(() => TestWorker.instances.at(-1)!.complete());
 
     expect(screen.getByRole("button", { name: "Show ignored" })).toHaveAttribute(
       "aria-pressed",
@@ -170,24 +175,48 @@ describe("Comparer panel actions", () => {
     );
   });
 
-  it("leaves the missing-fields highlight off by default, unlike structure and differences", async () => {
+  it("turns only the Differences highlight chip on by default, and counts missing, schema and value differences on it", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
     fillInputs();
     await compare(user);
 
-    expect(screen.getByRole("button", { name: "Missing fields" })).toHaveAttribute(
+    const chips = within(screen.getByRole("group", { name: "Highlight Controls" }));
+    expect(chips.getByRole("button", { name: "Missing fields" })).toHaveAttribute(
       "aria-pressed",
       "false"
     );
-    expect(screen.getByRole("button", { name: "Structure schema" })).toHaveAttribute(
+    expect(chips.getByRole("button", { name: "Structure changes" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(chips.getByRole("button", { name: /^Differences/ })).toHaveAttribute(
       "aria-pressed",
       "true"
     );
-    expect(screen.getByRole("button", { name: "Differences" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    // 2 missing fields (old, new) + 1 changed value (price). The schema findings for old/new
+    // are the same fields, so they are not counted a second time.
+    expect(chips.getByRole("button", { name: /^Differences/ })).toHaveTextContent(/\b3$/);
+  });
+
+  it("re-runs the comparison when identical text is imported again, as when re-fetching an unchanged response", async () => {
+    const user = userEvent.setup();
+    render(<Comparer />);
+    fillInputs();
+    await compare(user);
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+
+    const editor = screen.getByRole("textbox", {
+      name: "JSON for Baseline"
+    }) as HTMLTextAreaElement;
+    const sameText = editor.value;
+    editor.setSelectionRange(0, sameText.length);
+    fireEvent.paste(editor, { clipboardData: { getData: () => sameText } });
+    expect(editor.value).toBe(sameText);
+
+    await waitForAutoCompare();
+    act(() => TestWorker.instances.at(-1)!.complete());
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
   });
 
   it("includes the ignored count in the workspace status bar after a successful comparison", async () => {
@@ -525,18 +554,14 @@ describe("Comparer panel actions", () => {
   it("shows the highlight legend only once a comparison has run, and hides it again on Clear all", async () => {
     const user = userEvent.setup();
     render(<Comparer />);
-    expect(
-      screen.queryByRole("group", { name: "Highlight Controls" })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Highlight Controls" })).not.toBeInTheDocument();
 
     fillInputs();
     await compare(user);
     expect(screen.getByRole("group", { name: "Highlight Controls" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Clear all" }));
-    expect(
-      screen.queryByRole("group", { name: "Highlight Controls" })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Highlight Controls" })).not.toBeInTheDocument();
   });
 
   it("scrolls to and focuses the toolbar's highlight toggles from the shortcut between the panels", async () => {

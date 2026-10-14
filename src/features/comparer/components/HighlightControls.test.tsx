@@ -33,6 +33,41 @@ describe("HighlightControls", () => {
     );
   });
 
+  it("explains structure changes through an info button that does not toggle the chip", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <HighlightControls
+        highlightVisibility={{ missing: true, structure: true, differences: true }}
+        onHighlightVisibilityChange={onChange}
+      />
+    );
+
+    const info = screen.getByRole("button", { name: "About structure changes" });
+    await user.hover(info);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Compares shape, not values");
+    await user.click(info);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Structure changes" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  it("shows the combined difference count on the Differences chip once a result exists", () => {
+    const props = {
+      highlightVisibility: { missing: true, structure: true, differences: true },
+      onHighlightVisibilityChange: vi.fn()
+    };
+    const { rerender } = render(<HighlightControls {...props} />);
+    expect(screen.getByRole("button", { name: "Differences" })).toBeInTheDocument();
+
+    rerender(<HighlightControls {...props} differenceCount={12} />);
+    expect(screen.getByRole("button", { name: "Differences 12" })).toBeInTheDocument();
+    rerender(<HighlightControls {...props} differenceCount={0} />);
+    expect(screen.getByRole("button", { name: "Differences 0" })).toBeInTheDocument();
+  });
+
   it("toggles a highlight category without affecting the others", async () => {
     const user = userEvent.setup();
     const onHighlightVisibilityChange = vi.fn();
@@ -43,7 +78,7 @@ describe("HighlightControls", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Structure schema" }));
+    await user.click(screen.getByRole("button", { name: "Structure changes" }));
 
     expect(onHighlightVisibilityChange).toHaveBeenCalledWith({
       missing: true,

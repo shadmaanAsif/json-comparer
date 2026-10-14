@@ -42,7 +42,7 @@ export default function AboutPage() {
           Object key order never affects results, duplicate array items are compared as
           multisets in unordered mode, and every field is tracked by its exact RFC 6901 JSON
           Pointer path — so a rename three levels deep in a nested array is reported precisely,
-          not approximated. A separate Structure Schema comparison checks shape consistency
+          not approximated. A separate Structure Changes check flags shape consistency
           independent of the values themselves, which is useful when you care that two API
           responses agree on their contract even if the actual data differs.
         </p>

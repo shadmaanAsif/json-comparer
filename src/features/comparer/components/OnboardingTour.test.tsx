@@ -184,10 +184,10 @@ describe("OnboardingTour", () => {
       "Toggle missing fields"
     );
     expect(findStep(config, '[data-tour="results"]').popover?.description).toContain(
-      "open by default"
+      "start collapsed"
     );
     expect(findStep(config, '[data-tour="result-structure"]').popover?.description).toContain(
-      "structurally missing"
+      "exist on only one side"
     );
     expect(findStep(config, '[data-tour="result-missing"]').popover?.description).toContain(
       "review note"

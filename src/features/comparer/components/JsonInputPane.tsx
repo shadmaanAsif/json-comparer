@@ -15,6 +15,7 @@ import {
   type EditorViewportMetrics
 } from "../utils/editor-navigation";
 import { getJsonSyntaxIssue } from "../utils/json-validation";
+import { isDimmedHighlight } from "../utils/line-highlights";
 import { InfoTooltipButton } from "./InfoTooltipButton";
 import { JsonTree } from "./JsonTree";
 import { JsonLineGutter } from "./JsonLineGutter";
@@ -535,7 +536,7 @@ export function JsonInputPane({
                 <span
                   key={line}
                   className={`full-line-highlight line-${effectiveLineHighlights[line]!.category}${
-                    effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
+                    isDimmedHighlight(effectiveLineHighlights[line]) ? " is-ignored" : ""
                   }${selectedNavigationLine === line ? " is-active" : ""}`}
                   style={{
                     top: `${lineOffsets.lineTop(line) - scrollTop}px`,
@@ -604,7 +605,7 @@ export function JsonInputPane({
             />
             <div className="line-text-dim-layer" aria-hidden="true">
               {highlightedLines
-                .filter((line) => effectiveLineHighlights[line]!.ignored)
+                .filter((line) => isDimmedHighlight(effectiveLineHighlights[line]))
                 .map((line) => (
                   <span
                     key={line}
@@ -623,14 +624,18 @@ export function JsonInputPane({
                 key={line}
                 type="button"
                 className={`minimap-marker line-${effectiveLineHighlights[line]!.category}${
-                  effectiveLineHighlights[line]!.ignored ? " is-ignored" : ""
+                  isDimmedHighlight(effectiveLineHighlights[line]) ? " is-ignored" : ""
                 }${selectedNavigationLine === line ? " is-active" : ""}`}
                 style={{
                   top: `${minimapMarkerPercent(lineOffsets.lineTop(line), scrollTop, editorMetrics.clientHeight)}%`
                 }}
                 aria-label={`Go to highlighted line ${line}`}
                 title={`Line ${line} — ${effectiveLineHighlights[line]!.category}${
-                  effectiveLineHighlights[line]!.ignored ? " (ignored)" : ""
+                  effectiveLineHighlights[line]!.ignored
+                    ? " (ignored)"
+                    : effectiveLineHighlights[line]!.dimmed
+                      ? " (dimmed)"
+                      : ""
                 }`}
                 onClick={() => jumpToLine(line)}
               />

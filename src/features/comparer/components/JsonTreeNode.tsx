@@ -5,6 +5,7 @@ import { toJsonPointer } from "@/domain/comparison/path";
 import type { PathSegment } from "@/domain/comparison/types";
 import type { LineHighlight } from "../types";
 import type { PanelIndex } from "../utils/panel-context";
+import { isDimmedHighlight } from "../utils/line-highlights";
 
 export interface TreeFieldActions {
   index?: PanelIndex | null;
@@ -43,7 +44,7 @@ export function JsonTreeNode({
   const highlight = highlights[pointer];
   const category = highlight?.category;
   const canAct = !!actions.index?.byPointer.has(pointer);
-  const classes = `${category ? ` tree-highlight tree-highlight-${category}` : ""}${highlight?.ignored ? " is-ignored" : ""}${pointer === activePointer ? " is-active" : ""}${pointer === mirroredPointer ? " tree-row-mirror" : ""}${canAct && pointer === actions.selectedPointer ? " tree-field-selected" : ""}`;
+  const classes = `${category ? ` tree-highlight tree-highlight-${category}` : ""}${isDimmedHighlight(highlight) ? " is-ignored" : ""}${pointer === activePointer ? " is-active" : ""}${pointer === mirroredPointer ? " tree-row-mirror" : ""}${canAct && pointer === actions.selectedPointer ? " tree-field-selected" : ""}`;
   const select = () => {
     if (canAct) actions.onSelect(pointer);
   };

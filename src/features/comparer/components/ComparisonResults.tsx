@@ -43,6 +43,8 @@ export interface ComparisonResultsProps {
   onlyInA: Finding[];
   onlyInB: Finding[];
   differences: Finding[];
+  /** Schema findings the Differences section lists after its value rows. */
+  schemaDifferences: StructureFinding[];
   structureFindings: StructureFinding[];
   selectedFindingIds: ReadonlySet<string>;
   notesByFindingId: Record<string, ReviewNote>;
@@ -98,6 +100,7 @@ export function ComparisonResults({
   onlyInA,
   onlyInB,
   differences,
+  schemaDifferences,
   structureFindings,
   selectedFindingIds,
   notesByFindingId,
@@ -119,6 +122,7 @@ export function ComparisonResults({
   onNoteChange
 }: ComparisonResultsProps) {
   const missingFindings = [...onlyInA, ...onlyInB];
+  const differenceRows: SectionFinding[] = [...differences, ...schemaDifferences];
   const selectedMissingCount = result.findings.filter(
     (finding) =>
       (finding.kind === "added" || finding.kind === "removed") && selectedFindingIds.has(finding.id)
@@ -160,7 +164,7 @@ export function ComparisonResults({
           filter row since that's where the counts/chips the popover describes actually live.
           It's its own disclosure (independent of the section-level ones below) so the summary
           chips/outcome/filter toolbar can be tucked away without touching Missing Fields,
-          Structure Schema Compare, or Differences. */}
+          Structure Changes, or Differences. */}
         <details
           className="result-section results-overview"
           data-tour="results"
@@ -287,14 +291,20 @@ export function ComparisonResults({
                 >
                   {ONLY_IN_LABELS.B}
                 </FilterChip>
-                <FilterChip
-                  className="ignored-chip"
-                  pressed={filters.showIgnored}
-                  onClick={() => onFiltersChange({ showIgnored: !filters.showIgnored })}
-                >
-                  Show ignored
-                </FilterChip>
               </div>
+              {/* Only relevant once ignore paths have matched something. Its own flex item, so the
+                  row's space-between layout centers it between the filters and the count. */}
+              {counts.ignored.total > 0 && (
+                <div className="filter-chip-group" role="group" aria-label="Ignored findings">
+                  <FilterChip
+                    className="ignored-chip"
+                    pressed={filters.showIgnored}
+                    onClick={() => onFiltersChange({ showIgnored: !filters.showIgnored })}
+                  >
+                    Show ignored
+                  </FilterChip>
+                </div>
+              )}
               <span className="shown-count">
                 {counts.differences.visible} / {counts.differences.total} differences
                 {counts.ignored.visible > 0 ? ` (${counts.ignored.visible} ignored)` : ""}
@@ -332,7 +342,7 @@ export function ComparisonResults({
           ) : (
             <div className="table-scroll">
               <table>
-                <caption className="visually-hidden">Structure schema findings</caption>
+                <caption className="visually-hidden">Structure changes findings</caption>
                 <thead>
                   <tr>
                     <th scope="col" className="select-column">
@@ -493,7 +503,7 @@ export function ComparisonResults({
                 sectionLabel={RESULT_SECTION_LABELS.differences}
                 actions={sectionActions(
                   "differences",
-                  differences,
+                  differenceRows,
                   // Added/removed rows delegate review to Missing Fields, so they
                   // expose no report checkbox here.
                   (finding) => finding.kind !== "added" && finding.kind !== "removed"
@@ -502,7 +512,7 @@ export function ComparisonResults({
               <ResultSectionArrow />
             </span>
           </summary>
-          {differences.length === 0 ? (
+          {differenceRows.length === 0 ? (
             <EmptyResult title="No differences">
               The visible fields, values, and types match.
             </EmptyResult>
@@ -510,7 +520,7 @@ export function ComparisonResults({
             <div className="table-scroll">
               <table>
                 <caption className="visually-hidden">
-                  Exact missing, added, and modified values
+                  Exact missing, added, and modified values, and schema changes
                 </caption>
                 <thead>
                   <tr>
@@ -587,6 +597,49 @@ export function ComparisonResults({
                       </tr>
                     );
                   })}
+                  {schemaDifferences.map((finding) => (
+                    <tr
+                      key={finding.id}
+                      id={"finding-differences-" + finding.id}
+                      tabIndex={-1}
+                      className={rowClassName(finding, selectedFindingIds)}
+                    >
+                      <SelectFindingCell
+                        findingId={finding.id}
+                        label={`schema ${displayPath(finding.path)}`}
+                        selected={selectedFindingIds.has(finding.id)}
+                        onSelect={onToggleSelected}
+                      />
+                      <td className="row-actions-cell">
+                        <RowActionMenu
+                          label={`Row actions for ${displayPath(finding.path)}`}
+                          actions={buildRowActions({
+                            finding,
+                            ignorePaths,
+                            onIgnorePaths,
+                            onManageIgnores,
+                            onScrollToPanel
+                          })}
+                        />
+                      </td>
+                      <td>
+                        <FindingPath finding={finding} />
+                      </td>
+                      <td>
+                        <span className="kind-pill type-changed">
+                          {structureLabel(finding.kind)}
+                        </span>
+                      </td>
+                      <td colSpan={2}>{finding.detail}</td>
+                      <td>
+                        <FindingReview
+                          label={`schema ${displayPath(finding.path)}`}
+                          note={notesByFindingId[finding.id]}
+                          onChange={(patch) => onNoteChange(finding.id, patch)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

@@ -3,7 +3,7 @@ import { compareJson } from "@/domain/comparison/engine";
 import { formatAlignedForDisplay } from "@/domain/comparison/display-format";
 import { buildLineMap } from "@/domain/comparison/line-map";
 import type { ComparisonResult } from "@/domain/comparison/types";
-import { createLineHighlights } from "./line-highlights";
+import { collectFindingLines, createLineHighlights } from "./line-highlights";
 import { projectComparisonResult, type ComparisonResultFilters } from "./result-projections";
 
 const toggles = { missing: true, structure: true, differences: true };
@@ -19,6 +19,36 @@ function project(result: ComparisonResult, overrides: Partial<ComparisonResultFi
 }
 
 describe("createLineHighlights", () => {
+  it("shows schema findings at full strength by default and dims them only when the structure toggle is off", () => {
+    const a = { nested: { changed: 1, removed: true } };
+    const b = { nested: { changed: 2 } };
+    const textA = JSON.stringify(a, null, 2);
+    const textB = JSON.stringify(b, null, 2);
+    const linesA = buildLineMap(textA);
+    const removedLine = linesA["/nested/removed"]!;
+    const changedLine = linesA["/nested/changed"]!;
+    const projection = project(compareJson(a, b));
+
+    const on = createLineHighlights(projection, textA, textB, toggles);
+    expect(on.a[removedLine]).toEqual({ category: "structure", ignored: false });
+
+    const off = createLineHighlights(projection, textA, textB, {
+      missing: false,
+      structure: false,
+      differences: true
+    });
+    expect(off.a[removedLine]).toEqual({ category: "structure", ignored: false, dimmed: true });
+    expect(off.a[changedLine]).toEqual({ category: "differences", ignored: false });
+
+    // A dimmed schema entry never masks an enabled highlight on the same line.
+    const withMissing = createLineHighlights(projection, textA, textB, {
+      missing: true,
+      structure: false,
+      differences: true
+    });
+    expect(withMissing.a[removedLine]).toEqual({ category: "missing", ignored: false });
+  });
+
   it("highlights a deeply nested field and its opposite-side aligned placeholder", () => {
     const a = { data: { config: { countries: [{ code: "AE" }] } } };
     const b = { data: { config: { countries: [{ code: "AE", phone: "+971" }] } } };
@@ -223,8 +253,17 @@ describe("createLineHighlights", () => {
       structure: false,
       differences: true
     });
-    expect(differencesOnly.a[onlyALine]).toBeUndefined();
-    expect(differencesOnly.b[onlyBLine]).toBeUndefined();
+    // Structure is off, so the schema findings stay on screen but dimmed rather than vanishing.
+    expect(differencesOnly.a[onlyALine]).toEqual({
+      category: "structure",
+      ignored: false,
+      dimmed: true
+    });
+    expect(differencesOnly.b[onlyBLine]).toEqual({
+      category: "structure",
+      ignored: false,
+      dimmed: true
+    });
     expect(differencesOnly.a[changedLine]).toEqual({ category: "differences", ignored: false });
 
     const noPathMatch = createLineHighlights(
@@ -234,5 +273,52 @@ describe("createLineHighlights", () => {
       toggles
     );
     expect(noPathMatch).toEqual({ a: {}, b: {} });
+  });
+});
+
+describe("collectFindingLines", () => {
+  it("counts a line once across both sides and tallies ignored-only lines separately", () => {
+    const summary = collectFindingLines({
+      a: {
+        2: { category: "differences", ignored: false },
+        4: { category: "structure", ignored: true },
+        6: { category: "missing", ignored: true }
+      },
+      b: {
+        2: { category: "differences", ignored: false },
+        4: { category: "structure", ignored: true },
+        // Line 6 is ignored on side A but active on side B, so it stays navigable.
+        6: { category: "missing", ignored: false },
+        9: { category: "structure", ignored: true }
+      }
+    });
+
+    expect(summary.active).toEqual([2, 6]);
+    expect(summary.ignoredCount).toBe(2);
+  });
+
+  it("reports categories from active lines only, in a fixed order", () => {
+    const summary = collectFindingLines({
+      a: {
+        1: { category: "differences", ignored: false },
+        2: { category: "structure", ignored: true },
+        3: { category: "missing", ignored: false }
+      },
+      b: {}
+    });
+
+    // Structure only appears on an ignored line, so it gets no dot.
+    expect(summary.categories).toEqual(["missing", "differences"]);
+  });
+
+  it("returns nothing for empty highlights, and an ignored tally with no active lines when all are ignored", () => {
+    expect(collectFindingLines({ a: {}, b: {} })).toEqual({
+      active: [],
+      ignoredCount: 0,
+      categories: []
+    });
+    expect(
+      collectFindingLines({ a: { 5: { category: "differences", ignored: true } }, b: {} })
+    ).toEqual({ active: [], ignoredCount: 1, categories: [] });
   });
 });

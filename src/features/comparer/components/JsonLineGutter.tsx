@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { SIDE_LABELS } from "../constants";
 import type { LineHighlight, ResponseSide } from "../types";
 import type { PanelIndex } from "../utils/panel-context";
+import { isDimmedHighlight } from "../utils/line-highlights";
 
 export function JsonLineGutter({
   side,
@@ -72,7 +73,7 @@ export function JsonLineGutter({
           const actionable = !!panelIndex?.byLine.has(line);
           const classes = [
             highlights[line] ? "line-" + highlights[line].category : "",
-            highlights[line]?.ignored ? "is-ignored" : "",
+            isDimmedHighlight(highlights[line]) ? "is-ignored" : "",
             activeLine === line ? "is-active" : "",
             actionable ? "line-action-trigger" : "",
             actionable && hoveredLine === line ? "is-hovered" : ""

@@ -12,11 +12,14 @@ export interface HighlightVisibility {
 export interface HighlightControlsProps {
   highlightVisibility: HighlightVisibility;
   onHighlightVisibilityChange: (value: HighlightVisibility) => void;
+  /** Missing + schema + value differences combined; omitted while no comparison result exists. */
+  differenceCount?: number | null;
 }
 
 export function HighlightControls({
   highlightVisibility,
-  onHighlightVisibilityChange
+  onHighlightVisibilityChange,
+  differenceCount = null
 }: HighlightControlsProps) {
   const toggleHighlight = (category: keyof HighlightVisibility) => {
     onHighlightVisibilityChange({
@@ -51,15 +54,21 @@ export function HighlightControls({
           detail={`${ONLY_IN_LABELS.A} is highlighted in red, ${ONLY_IN_LABELS.B} in green.`}
         />
       </span>
-      <button
-        className="select-chip structure-chip"
-        type="button"
-        aria-pressed={highlightVisibility.structure}
-        onClick={() => toggleHighlight("structure")}
-      >
-        <i className="legend-structure" />
-        Structure schema
-      </button>
+      <span className="select-chip structure-chip">
+        <button
+          className="chip-toggle"
+          type="button"
+          aria-pressed={highlightVisibility.structure}
+          onClick={() => toggleHighlight("structure")}
+        >
+          <i className="legend-structure" />
+          Structure changes
+        </button>
+        <InfoTooltipButton
+          label="About structure changes"
+          detail="Compares shape, not values: fields found on only one side, and Baseline array items whose fields differ from the first item."
+        />
+      </span>
       <button
         className="select-chip difference-chip"
         type="button"
@@ -68,6 +77,12 @@ export function HighlightControls({
       >
         <i className="legend-difference" />
         Differences
+        {differenceCount !== null && (
+          <>
+            {" "}
+            <span className="chip-count">{differenceCount}</span>
+          </>
+        )}
       </button>
     </fieldset>
   );

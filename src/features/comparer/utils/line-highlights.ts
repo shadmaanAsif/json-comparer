@@ -75,13 +75,37 @@ export function createLineHighlights(
     target: Record<number, LineHighlight>,
     line: number | undefined,
     category: HighlightCategory,
-    ignored: boolean
+    ignored: boolean,
+    dimmed = false
   ) => {
-    if (
-      line &&
-      (!target[line] || HIGHLIGHT_PRIORITY[category] > HIGHLIGHT_PRIORITY[target[line].category])
-    )
-      target[line] = { category, ignored };
+    // A dimmed entry only ever fills an empty line, so it can't mask a full-strength highlight.
+    if (!line || (dimmed && target[line])) return;
+    if (!target[line] || HIGHLIGHT_PRIORITY[category] > HIGHLIGHT_PRIORITY[target[line].category])
+      target[line] = dimmed ? { category, ignored, dimmed } : { category, ignored };
+  };
+  const markStructure = (dimmed: boolean) => {
+    for (const finding of projection.structureFindings) {
+      if (finding.kind === "extra-in-b") {
+        mark(b, nearestMappedLine(finding.pointer, lineMapB), "structure", finding.ignored, dimmed);
+        mark(
+          a,
+          nearestMappedLine(finding.pointer, placeholderLineMapA),
+          "structure",
+          finding.ignored,
+          dimmed
+        );
+      } else {
+        mark(a, nearestMappedLine(finding.pointer, lineMapA), "structure", finding.ignored, dimmed);
+        if (finding.kind === "missing-in-b")
+          mark(
+            b,
+            nearestMappedLine(finding.pointer, placeholderLineMapB),
+            "structure",
+            finding.ignored,
+            dimmed
+          );
+      }
+    }
   };
 
   if (toggles.missing)
@@ -105,32 +129,57 @@ export function createLineHighlights(
         );
       }
     }
-  if (toggles.structure)
-    for (const finding of projection.structureFindings) {
-      if (finding.kind === "extra-in-b") {
-        mark(b, nearestMappedLine(finding.pointer, lineMapB), "structure", finding.ignored);
-        mark(
-          a,
-          nearestMappedLine(finding.pointer, placeholderLineMapA),
-          "structure",
-          finding.ignored
-        );
-      } else {
-        mark(a, nearestMappedLine(finding.pointer, lineMapA), "structure", finding.ignored);
-        if (finding.kind === "missing-in-b")
-          mark(
-            b,
-            nearestMappedLine(finding.pointer, placeholderLineMapB),
-            "structure",
-            finding.ignored
-          );
-      }
-    }
+  if (toggles.structure) markStructure(false);
   if (toggles.differences)
     for (const finding of projection.differences)
       if (finding.kind === "changed" || finding.kind === "type-changed") {
         mark(a, nearestMappedLine(finding.pointer, lineMapA), "differences", finding.ignored);
         mark(b, nearestMappedLine(finding.pointer, lineMapB), "differences", finding.ignored);
       }
+  // Schema changes stay on screen when their chip is off, just dimmed — placed last so every
+  // enabled category keeps priority on a shared line.
+  if (!toggles.structure) markStructure(true);
   return { a, b };
+}
+
+export interface FindingLines {
+  /** Highlighted lines carrying at least one non-ignored highlight, ascending: what the finding
+   *  navigator counts and steps through. */
+  active: number[];
+  /** Highlighted lines where every highlight is ignored: shown dimmed, never navigated to. */
+  ignoredCount: number;
+  /** Categories present on the active lines, in a fixed order. */
+  categories: HighlightCategory[];
+}
+
+const CATEGORY_ORDER = ["missing", "structure", "differences", "invalid"] as const;
+
+/** Splits the aligned panels' highlighted lines into the navigable (active) ones and an ignored
+ *  tally. The panels are line-aligned, so a line counts once even when both sides highlight it. */
+export function collectFindingLines(highlights: LineHighlights): FindingLines {
+  const lines = new Set<number>();
+  for (const key of Object.keys(highlights.a)) lines.add(Number(key));
+  for (const key of Object.keys(highlights.b)) lines.add(Number(key));
+
+  const active: number[] = [];
+  const present = new Set<HighlightCategory>();
+  let ignoredCount = 0;
+  for (const line of [...lines].sort((first, second) => first - second)) {
+    const onLine = [highlights.a[line], highlights.b[line]].filter(
+      (highlight): highlight is LineHighlight => !!highlight
+    );
+    const activeOnLine = onLine.filter((highlight) => !highlight.ignored);
+    if (!activeOnLine.length) {
+      ignoredCount += 1;
+      continue;
+    }
+    active.push(line);
+    for (const highlight of activeOnLine) present.add(highlight.category);
+  }
+  return { active, ignoredCount, categories: CATEGORY_ORDER.filter((c) => present.has(c)) };
+}
+
+/** Whether a highlighted line is drawn dimmed: an ignored finding, or a switched-off schema one. */
+export function isDimmedHighlight(highlight: LineHighlight | undefined): boolean {
+  return !!highlight && (highlight.ignored || !!highlight.dimmed);
 }

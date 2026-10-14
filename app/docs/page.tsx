@@ -50,11 +50,11 @@ export default function DocsPage() {
           item 0, item 1 against item 1, and so on. <strong>Unordered</strong> compares arrays as
           multisets: item order doesn&apos;t matter, but duplicates still count, so removing one
           of two identical entries is still reported as a removal. Switch modes with the array
-          mode control before comparing; it affects both value comparison and Structure Schema
-          Compare.
+          mode control before comparing; it affects both value comparison and Structure
+          Changes.
         </p>
 
-        <h2>Structure Schema Compare</h2>
+        <h2>Structure Changes</h2>
         <p>
           A separate pass compares the <em>shape</em> of the two documents — which fields exist —
           independent of their values, using Baseline as the schema reference. In Ordered mode,

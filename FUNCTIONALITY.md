@@ -9,7 +9,7 @@ This file is the authoritative catalogue of functionality implemented in the Com
 
 ## Comparison terminology
 
-- **Baseline:** the first JSON document and the structure-schema reference. `A` remains its internal identifier in code, worker messages, and finding kinds.
+- **Baseline:** the first JSON document and the Structure Changes reference. `A` remains its internal identifier in code, worker messages, and finding kinds.
 - **Candidate:** the second JSON document being compared with the baseline. `B` remains its internal identifier.
 - **Only in Baseline:** the path exists in the baseline and is missing from the candidate.
 - **Only in Candidate:** the path exists in the candidate and is missing from the baseline.
@@ -31,11 +31,11 @@ This file is the authoritative catalogue of functionality implemented in the Com
 - Structurally aligned JSON editors synchronize vertical scrolling by the same aligned line offset; temporarily unaligned manual input falls back to proportional scrolling.
 - Programmatic partner scrolling is guarded so it cannot create feedback loops or visible jitter.
 - Ordered comparisons recursively expand added or removed objects and arrays to the smallest meaningful leaf paths; empty containers remain meaningful findings at their own paths.
-- The Differences section includes exact Only in Baseline, Only in Candidate, and Modified rows with only the relevant Baseline and Candidate values.
+- The Differences section is the complete list: exact Only in Baseline, Only in Candidate, and Modified rows with only the relevant Baseline and Candidate values, followed by every Structure Changes finding that is not already one of those missing-field rows (a baseline-only or candidate-only field appears once, not as both a value row and a schema row). Schema rows show their detail text across the value columns.
 - Missing Fields rows are grouped under Only in Baseline and Only in Candidate.
 - Nested paths such as `data.config.countries[0].phone` retain their exact JSON Pointer identity for findings, structure/schema output, filtering, full-width editor-row highlighting, line-number highlighting, minimap markers, and navigation.
 - Result and JSON-highlight filters use independently selectable chips with explicit pressed states, side-specific colors, and keyboard operation.
-- Expand All and Collapse All control the Structure Schema, Missing Fields, and Differences sections together while each section remains independently expandable.
+- Expand All and Collapse All control the Structure Changes, Missing Fields, and Differences sections together while each section remains independently expandable.
 
 ## JSON input and navigation
 
@@ -54,7 +54,7 @@ This file is the authoritative catalogue of functionality implemented in the Com
 - Highlighted gutter lines are clickable and scroll the corresponding source line into view.
 - A right-side minimap represents highlighted findings proportionally across the entire JSON document; each marker is keyboard/click navigable.
 - Floating “N more above/below” arrow chips appear when highlighted findings are outside the visible editor viewport and jump to the nearest finding.
-- A persistent color-coded previous/next finding stepper continues through every highlighted line and wraps at the beginning/end. Navigation centers the selected row using the current rendered panel height, keeps focus from shifting the page, and immediately synchronizes the partner panel.
+- A persistent color-coded previous/next finding stepper continues through every highlighted line that is not ignored and wraps at the beginning/end. Its "Finding X of Y" count excludes ignored lines; they are tallied on a separate dimmed, non-interactive "N ignored" line beneath it (dashed outline, same dimming as an ignored line in the panels) and are skipped by Previous/Next. When every finding is ignored the stepper stays visible as "No active findings" with Previous/Next disabled. Navigation centers the selected row using the current rendered panel height, keeps focus from shifting the page, and immediately synchronizes the partner panel.
 - The active finding is emphasized in the full-row overlay, line gutter, and minimap in both compact and expanded modes.
 - Expanded mode uses up to 86% of the viewport height, capped at 980 pixels, so substantially more JSON remains visible.
 - Document byte limits protect the browser from unexpectedly large inputs.
@@ -107,7 +107,7 @@ This file is the authoritative catalogue of functionality implemented in the Com
 - Comparison runs in a cancellable Web Worker with depth and finding-count limits.
 - Truncated results are clearly marked incomplete.
 
-## Structure Schema Compare
+## Structure Changes
 
 - Structure results are separate from value differences.
 - The baseline acts as the schema reference.
@@ -118,27 +118,31 @@ This file is the authoritative catalogue of functionality implemented in the Com
 
 ## Highlights and ignore rules
 
-- Independent highlight chips control Missing Fields, Structure Schema, and Differences.
+- Independent highlight chips control Missing Fields, Structure Changes, and Differences, and only Differences starts on; Missing Fields and Structure Changes start off. The Differences chip carries the count of rows in the Differences section — missing, schema, and value differences, each field counted once.
 - Missing fields use direction-aware colors: red for values present only in the baseline and green for values present only in the candidate.
 - Structure findings use purple; value/type differences use amber.
-- When a one-sided path is both a Missing Fields finding and a Structure Schema finding, purple Structure Schema highlighting takes visual priority while that category is enabled; disabling Structure Schema falls back to the direction-aware Missing Fields color.
+- When a one-sided path is both a Missing Fields finding and a Structure Changes finding, purple Structure Changes highlighting takes visual priority while that category is enabled; disabling Structure Changes falls back to the direction-aware Missing Fields color. A schema finding with no other enabled highlight on its line is not hidden when its chip is off: it stays visible, dimmed like an ignored one.
 - Highlight markers appear in the JSON line-number gutters and right-side minimaps and jump to their source lines.
 - Ignore rules accept exact JSON/dotted paths, single-segment `*`, and subtree `**` patterns. Exact paths implicitly include every descendant, and a terminal `*` includes each matched child subtree, so both `config.partnerConfig.MOT_config` and `config.partnerConfig.*` suppress nested findings without requiring `**`.
-- Focusing Ignore Paths opens a searchable list of paths detected by the latest comparison. Suggestions and pasted comma/newline-separated patterns become editable, removable, deduplicated chips; free-typed text remains in the input until Enter or Apply explicitly commits it, and custom wildcard patterns remain supported. Selecting a chip label opens its inline editor: Enter or Save commits, Escape or Cancel restores the original, and Apply commits a valid active edit.
+- The Ignore Paths field stays editable and pasteable while a comparison runs (only Apply waits), and its suggestion list floats above the surrounding panels instead of being clipped by them; clicking the focused field reopens a list that Escape closed.
+- Ctrl/Cmd+A in the empty Ignore Paths field highlights every chip, and Ctrl/Cmd+C then copies all paths as one comma-separated line that pastes straight back in. Any other key, a click, typing, or leaving the field clears the highlight (Backspace/Delete only clear it, they never remove a chip). With text typed in the field, Ctrl/Cmd+A keeps its native meaning.
+- Focusing Ignore Paths opens a searchable list of paths detected by the latest comparison. Suggestions and pasted comma/newline-separated patterns become editable, removable chips (a path can be pasted again, so the copy can be edited into a different rule); free-typed text remains in the input until Enter or Apply explicitly commits it, and custom wildcard patterns remain supported. Selecting a chip label opens its inline editor: Enter or Save commits, Escape or Cancel restores the original, and Apply commits a valid active edit.
 - The Apply button beside Ignore Paths reruns the current comparison so ignored flags, visible/total counts, result tables, structure findings, and JSON highlights refresh immediately.
 - Ignored findings remain in the result model but are excluded from visible highlights and rows while Show Ignored is off.
-- Show Ignored reveals ignored rows with visible labels and dimmed styling in Missing Fields, Structure Schema Compare, and Differences.
+- Show Ignored reveals ignored rows with visible labels and dimmed styling in Missing Fields, Structure Changes, and Differences. The toggle is offered only once an ignore path has matched a finding, centered in the results filter row between the Only in chips and the count.
+- Result value cells print strings in their JSON quotes and show booleans, numbers, and null unquoted in bold accent text, so the string "true" never reads as the boolean true. Structure Changes rows report field presence only and carry no values.
+- Importing identical text again (for example fetching an unchanged response) still triggers a fresh comparison.
 - Result rows, full-line JSON/Tree highlights, minimap markers, and previous/next navigation consume the same filtered projection, including path, source, schema-source, ignored, and highlight-category selections.
 
 ## Result sections and filters
 
-- Structure Schema Compare is displayed before Missing Fields and Differences. Structure Schema Compare and Missing Fields open by default; Differences starts collapsed. Every section remains independently collapsible. Each native disclosure header includes a visible right/down arrow that communicates its collapsed or expanded state.
+- Structure Changes is displayed before Missing Fields and Differences. Differences is open by default; Structure Changes and Missing Fields start collapsed. Every section remains independently collapsible. Each native disclosure header includes a visible right/down arrow that communicates its collapsed or expanded state.
 - Missing Fields direction filters:
   - Only in Baseline — present in the baseline, missing from the candidate.
   - Only in Candidate — present in the candidate, missing from the baseline.
   - Show Ignored.
 - A shared path search composes with the direction and ignored filters.
-- The comparison outcome uses `{visible} of {total} differences shown in {duration} ms`; visible is after display filters and total is before them, including ignored findings. Each Structure Schema Compare, Missing Fields, and Differences disclosure reports the same visible/total semantics and updates immediately with active filters.
+- The comparison outcome uses `{visible} of {total} differences shown in {duration} ms`; visible is after display filters and total is before them, including ignored findings. Each Structure Changes, Missing Fields, and Differences disclosure reports the same visible/total semantics and updates immediately with active filters.
 - Each section header carries a `⋯` actions menu, matching the per-line `⋯` affordance in the JSON editors. It opens without expanding or collapsing its own section, closes on Escape or an outside click, and moves focus through its items with the arrow keys, Home, and End. Every action applies only to that section's currently visible rows:
   - Copy visible paths — copies the visible JSON Pointers as a newline-separated list, and reports when clipboard access is blocked.
   - Export this section (.md) — downloads a Markdown report for that section alone and opens the same read-only preview as the other exports. Disabled when every visible row is ignored, because reports exclude ignored findings.
@@ -146,7 +150,7 @@ This file is the authoritative catalogue of functionality implemented in the Com
   - Ignore visible paths — adds the visible paths that can be expressed as exact ignore rules, then reruns the comparison. It never adds a rule the per-line panel would refuse, and becomes Restore ignored paths once every visible row in the section is already covered by its own exact rule.
 - Missing, modified, and structure findings support session-only selection, a native three-option review-status radio group (Not reviewed, Reviewed, or Needed), and free-text notes. Missing findings are reviewed in the Missing Fields table rather than duplicated in Differences.
 - Long values use an exact 70-character preview with Show more/Show less.
-- Differences has a dedicated value/type comparison table.
+- Differences has a dedicated comparison table for value/type changes, missing fields, and schema changes.
 - Summary chips report Only in Baseline, Only in Candidate, changed, structure, and ignored totals.
 
 ## Markdown export and preview
